@@ -602,7 +602,10 @@ Future<void> packInnoSetup({
   // 生成 ISS 配置文件
   final appNameCapitalized =
       '${appName.substring(0, 1).toUpperCase()}${appName.substring(1)}';
-  final archMode = arch == 'x64' ? 'ArchitecturesInstallIn64BitMode=x64' : '';
+  // 支持 x64 和 arm64 架构的 Inno Setup 配置
+  final archMode = (arch == 'x64' || arch == 'arm64')
+      ? 'ArchitecturesInstallIn64BitMode=$arch'
+      : '';
   final outputDir = p.dirname(outputPath);
   final outputFileName = p.basenameWithoutExtension(outputPath);
 

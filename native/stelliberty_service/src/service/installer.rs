@@ -2,7 +2,7 @@
 
 use anyhow::{Result, bail};
 
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 use anyhow::Context;
 
 #[cfg(any(windows, target_os = "linux"))]
@@ -488,31 +488,180 @@ pub fn stop_service() -> Result<()> {
     Ok(())
 }
 
-// ============ macOS 占位实现 ============
-// macOS 不支持系统服务管理，提供友好的错误提示
+// ============ macOS launchd 实现 ============
+
+#[cfg(target_os = "macos")]
+use std::fs;
+#[cfg(target_os = "macos")]
+use std::path::Path;
+#[cfg(target_os = "macos")]
+use std::process::Command;
+
+#[cfg(target_os = "macos")]
+const SERVICE_LABEL: &str = "com.stelliberty.service";
+#[cfg(target_os = "macos")]
+const SERVICE_PLIST_PATH: &str = "/Library/LaunchDaemons/com.stelliberty.service.plist";
+
+#[cfg(target_os = "macos")]
+fn get_launchd_plist(binary_path: &str) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/stelliberty-service.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/stelliberty-service-error.log</string>
+</dict>
+</plist>"#,
+        SERVICE_LABEL, binary_path
+    )
+}
+
+#[cfg(target_os = "macos")]
+fn execute_with_privilege(script: &str) -> Result<()> {
+    let command = format!(
+        r#"do shell script "{}" with administrator privileges"#,
+        script.replace('"', "\\\"")
+    );
+
+    let status = Command::new("osascript")
+        .args(["-e", &command])
+        .status()
+        .context("执行 osascript 失败")?;
+
+    if !status.success() {
+        bail!("命令执行失败，退出码：{}", status.code().unwrap_or(-1));
+    }
+
+    Ok(())
+}
 
 #[cfg(target_os = "macos")]
 pub fn install_service() -> Result<()> {
-    bail!(
-        "macOS 平台暂不支持系统服务安装。\n\
-         建议使用以下方式运行：\n\
-         1. 直接运行：{}\n\
-         2. 使用 launchd（需手动配置 plist 文件）",
-        std::env::current_exe()?.display()
+    println!("正在安装 Stelliberty Service (launchd)...");
+
+    let service_binary = std::env::current_exe().context("无法获取当前程序路径")?;
+    println!("服务程序: {}", service_binary.display());
+
+    // 检查服务是否已安装
+    if Path::new(SERVICE_PLIST_PATH).exists() {
+        println!("服务文件已存在，正在检查状态...");
+
+        let status = Command::new("launchctl")
+            .args(["list", SERVICE_LABEL])
+            .output();
+
+        if let Ok(output) = status
+            && output.status.success()
+        {
+            println!("服务已在运行中");
+            return Ok(());
+        }
+    }
+
+    // 生成 plist 内容
+    let plist_content = get_launchd_plist(&service_binary.display().to_string());
+
+    // 创建临时文件
+    let temp_plist = format!("/tmp/{}.plist", SERVICE_LABEL);
+    fs::write(&temp_plist, plist_content).context("创建临时 plist 文件失败")?;
+
+    // 使用 AppleScript 提权执行安装命令
+    let install_script = format!(
+        "cp {} {} && chmod 644 {} && launchctl load {}",
+        temp_plist, SERVICE_PLIST_PATH, SERVICE_PLIST_PATH, SERVICE_PLIST_PATH
     );
+
+    execute_with_privilege(&install_script)?;
+
+    // 清理临时文件
+    let _ = fs::remove_file(&temp_plist);
+
+    println!("服务安装成功");
+    println!();
+    println!("可以使用以下命令管理服务:");
+    println!("sudo launchctl list {}  - 查看状态", SERVICE_LABEL);
+    println!("sudo launchctl stop {}  - 停止服务", SERVICE_LABEL);
+    println!("sudo launchctl start {} - 启动服务", SERVICE_LABEL);
+
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
 pub fn uninstall_service() -> Result<()> {
-    bail!("macOS 平台暂不支持系统服务管理");
+    println!("正在卸载 Stelliberty Service (launchd)...");
+
+    if !Path::new(SERVICE_PLIST_PATH).exists() {
+        println!("服务未安装");
+        return Ok(());
+    }
+
+    // 使用 AppleScript 提权执行卸载命令
+    let uninstall_script = format!(
+        "launchctl unload {} && rm -f {}",
+        SERVICE_PLIST_PATH, SERVICE_PLIST_PATH
+    );
+
+    execute_with_privilege(&uninstall_script)?;
+
+    println!("服务卸载成功");
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
 pub fn start_service() -> Result<()> {
-    bail!("macOS 平台暂不支持系统服务管理");
+    println!("正在启动 Stelliberty Service...");
+
+    if !Path::new(SERVICE_PLIST_PATH).exists() {
+        bail!(
+            "服务未安装，请先运行: sudo {} install",
+            std::env::current_exe()?.display()
+        );
+    }
+
+    // 检查服务是否已在运行
+    let status = Command::new("launchctl")
+        .args(["list", SERVICE_LABEL])
+        .output()
+        .context("检查服务状态失败")?;
+
+    if status.status.success() {
+        println!("服务已在运行中");
+        return Ok(());
+    }
+
+    // 使用 AppleScript 提权启动服务
+    let start_script = format!("launchctl start {}", SERVICE_LABEL);
+    execute_with_privilege(&start_script)?;
+
+    println!("服务启动成功");
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
 pub fn stop_service() -> Result<()> {
-    bail!("macOS 平台暂不支持系统服务管理");
+    println!("正在停止 Stelliberty Service...");
+
+    if !Path::new(SERVICE_PLIST_PATH).exists() {
+        bail!("服务未安装");
+    }
+
+    // 使用 AppleScript 提权停止服务
+    let stop_script = format!("launchctl stop {}", SERVICE_LABEL);
+    execute_with_privilege(&stop_script)?;
+
+    println!("服务停止成功");
+    Ok(())
 }

@@ -1,7 +1,11 @@
 // 统一的服务安装/卸载/管理（Windows Service / Linux systemd）
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 
+#[cfg(any(windows, target_os = "linux"))]
+use anyhow::Context;
+
+#[cfg(any(windows, target_os = "linux"))]
 const SERVICE_NAME: &str = "StellibertyService";
 
 // ============ Windows Service 实现 ============
@@ -482,4 +486,33 @@ pub fn stop_service() -> Result<()> {
 
     println!("服务停止成功");
     Ok(())
+}
+
+// ============ macOS 占位实现 ============
+// macOS 不支持系统服务管理，提供友好的错误提示
+
+#[cfg(target_os = "macos")]
+pub fn install_service() -> Result<()> {
+    bail!(
+        "macOS 平台暂不支持系统服务安装。\n\
+         建议使用以下方式运行：\n\
+         1. 直接运行：{}\n\
+         2. 使用 launchd（需手动配置 plist 文件）",
+        std::env::current_exe()?.display()
+    );
+}
+
+#[cfg(target_os = "macos")]
+pub fn uninstall_service() -> Result<()> {
+    bail!("macOS 平台暂不支持系统服务管理");
+}
+
+#[cfg(target_os = "macos")]
+pub fn start_service() -> Result<()> {
+    bail!("macOS 平台暂不支持系统服务管理");
+}
+
+#[cfg(target_os = "macos")]
+pub fn stop_service() -> Result<()> {
+    bail!("macOS 平台暂不支持系统服务管理");
 }

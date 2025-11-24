@@ -1,10 +1,16 @@
 // 统一的服务运行逻辑（Windows Service / Linux systemd）
 
+#[cfg(any(windows, target_os = "linux"))]
 use crate::clash::ClashManager;
+#[cfg(any(windows, target_os = "linux"))]
 use crate::ipc::IpcServer;
+#[cfg(any(windows, target_os = "linux"))]
 use crate::service::handler;
+#[cfg(target_os = "linux")]
 use anyhow::Result;
+#[cfg(any(windows, target_os = "linux"))]
 use std::sync::Arc;
+#[cfg(any(windows, target_os = "linux"))]
 use tokio::sync::{RwLock, mpsc};
 
 #[cfg(windows)]

@@ -5,6 +5,7 @@ pub mod installer;
 pub mod runner;
 
 // Re-export 常用项
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 pub use installer::*;
 
 // Re-export runner 的函数

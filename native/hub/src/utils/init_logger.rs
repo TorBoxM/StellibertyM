@@ -1,7 +1,5 @@
-// 日志系统初始化
-//
-// 目的：配置统一的日志格式，与 Flutter 日志风格保持一致
-// 支持文件日志输出到 running.logs（与 Dart 前端共享）
+// 应用日志系统（App Log，区别于 Core Log）
+// 功能：统一格式、双输出（控制台+文件）、自动轮转（10MB）、受 Dart 端开关控制
 
 use chrono::Local;
 use env_logger;
@@ -12,15 +10,13 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-// 日志文件大小限制（10MB）
-const MAX_LOG_FILE_SIZE: u64 = 10 * 1024 * 1024;
+const MAX_LOG_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB 轮转阈值
 
-// 全局日志文件路径
 static LOG_FILE_PATH: Lazy<Mutex<Option<PathBuf>>> = Lazy::new(|| Mutex::new(None));
+static APP_LOG_ENABLED: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(true)); // 应用日志开关（Dart 端控制）
 
-// 全局日志配置单例
 static LOGGER: Lazy<()> = Lazy::new(|| {
-    // 获取日志文件路径并设置
+    // 初始化日志文件路径（与 Dart PathService 一致）
     if let Ok(app_data) = get_app_data_dir() {
         let log_path = app_data.join("running.logs");
         if let Ok(mut path_guard) = LOG_FILE_PATH.lock() {
@@ -31,25 +27,22 @@ static LOGGER: Lazy<()> = Lazy::new(|| {
         eprintln!("[RustLog] 无法获取应用数据目录，应用日志将被禁用");
     }
 
-    // Release 模式下完全禁用控制台日志输出
-    // Debug 模式下：
-    // - 项目代码使用 debug 级别
-    // - 第三方库（tungstenite、reqwest 等）使用 warn 级别（过滤掉它们的 debug 日志）
+    // 日志级别：Release 不能为 "off"（否则 format 回调不执行，文件无法写入）
+    // Debug: debug，Release: info，第三方库: warn
     let default_level = if cfg!(debug_assertions) {
         "debug,tungstenite=warn,tokio_tungstenite=warn,reqwest=warn,hyper=warn,h2=warn"
     } else {
-        "off" // Release 模式下禁用控制台日志
+        "info,tungstenite=warn,tokio_tungstenite=warn,reqwest=warn,hyper=warn,h2=warn"
     };
     let env = env_logger::Env::default().default_filter_or(default_level);
 
     env_logger::Builder::from_env(env)
         .format(|buf, record| {
-            // 获取当前时间戳（YYYY/MM/DD HH:mm:ss 格式）
             let timestamp = Local::now().format("%Y/%m/%d %H:%M:%S");
-
             let file = record.file().unwrap_or("unknown");
             let path_with_dots = file.replace(['/', '\\'], ".");
 
+            // ANSI 颜色代码（用于控制台）
             const GREEN: &str = "\x1B[32m";
             const YELLOW: &str = "\x1B[33m";
             const RED: &str = "\x1B[31m";
@@ -64,9 +57,8 @@ static LOGGER: Lazy<()> = Lazy::new(|| {
                 log::Level::Trace => ("RustTrace", CYAN),
             };
 
-            // 格式化日志：根据编译模式区分
+            // 控制台输出：仅 Debug 模式
             if cfg!(debug_assertions) {
-                // 调试模式：控制台包含文件路径
                 writeln!(
                     buf,
                     "{}[{}]{} {} {} >> {}",
@@ -77,23 +69,11 @@ static LOGGER: Lazy<()> = Lazy::new(|| {
                     path_with_dots,
                     record.args()
                 )?;
-            } else {
-                // 发布模式：控制台不输出（上面已设置 off）
-                // 但这里依然格式化，以防有其他用途
-                writeln!(
-                    buf,
-                    "{}[{}]{} {} >> {}",
-                    color,
-                    level_str,
-                    RESET,
-                    timestamp,
-                    record.args()
-                )?;
             }
 
-            // 写入文件（无论 debug 还是 release 都写入）
+            // 文件输出：所有模式写入
             let file_log = if cfg!(debug_assertions) {
-                // 调试模式：包含文件路径
+                // Debug：包含文件路径（便于定位）
                 format!(
                     "[{}] {} {} >> {}",
                     level_str,
@@ -102,11 +82,11 @@ static LOGGER: Lazy<()> = Lazy::new(|| {
                     record.args()
                 )
             } else {
-                // 发布模式：移除文件路径
+                // Release：简洁格式（无文件路径）
                 format!("[{}] {} >> {}", level_str, timestamp, record.args())
             };
 
-            // 写入文件（静默失败，不影响日志记录）
+            // 异步写入文件（失败静默）
             let _ = write_to_file(&file_log);
 
             Ok(())
@@ -114,18 +94,23 @@ static LOGGER: Lazy<()> = Lazy::new(|| {
         .init();
 });
 
-// 写入日志到文件
+// 写入日志到文件（受 Dart 端开关控制，多进程安全，失败静默）
 fn write_to_file(log_line: &str) -> std::io::Result<()> {
+    // 检查开关状态
+    let enabled = APP_LOG_ENABLED.lock().map(|g| *g).unwrap_or(true);
+    if !enabled {
+        return Ok(());
+    }
+
     let path_guard = match LOG_FILE_PATH.lock() {
         Ok(guard) => guard,
         Err(_) => return Ok(()), // 锁失败，静默返回
     };
 
     if let Some(ref path) = *path_guard {
-        // 检查文件大小，超过限制时轮转
         check_and_rotate_log(path)?;
 
-        // 追加写入日志（操作系统保证多进程追加的原子性）
+        // 追加写入（OS 保证原子性）
         let mut file = OpenOptions::new()
             .create(true)
             .append(true) // 关键：追加模式
@@ -140,21 +125,14 @@ fn write_to_file(log_line: &str) -> std::io::Result<()> {
 
 // 检查并轮转日志文件
 fn check_and_rotate_log(path: &PathBuf) -> std::io::Result<()> {
-    // 检查文件是否存在且超过大小限制
     if let Ok(metadata) = fs::metadata(path)
         && metadata.len() > MAX_LOG_FILE_SIZE
     {
-        // 重命名旧文件（避免与 Dart 冲突）
         let backup_path = path.with_extension("logs.old");
-
-        // 如果旧备份存在，先删除
         let _ = fs::remove_file(&backup_path);
+        let _ = fs::rename(path, &backup_path); // 失败时下次再试
 
-        // 重命名当前文件为备份（原子操作）
-        // 如果失败（Dart 正在写入），静默忽略，下次再试
-        let _ = fs::rename(path, &backup_path);
-
-        // 写入新文件的首行提示
+        // 写入新文件首行提示
         let mut file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -162,7 +140,7 @@ fn check_and_rotate_log(path: &PathBuf) -> std::io::Result<()> {
             .open(path)?;
 
         let clear_msg = format!(
-            "[RustInfo] {} >> 应用日志文件已达到 {:.2} MB，已轮转到 running.logs.old\n",
+            "[RustInfo] {} >> 日志文件已达 {:.2} MB，已轮转\n",
             Local::now().format("%Y/%m/%d %H:%M:%S"),
             metadata.len() as f64 / 1024.0 / 1024.0
         );
@@ -173,10 +151,8 @@ fn check_and_rotate_log(path: &PathBuf) -> std::io::Result<()> {
     Ok(())
 }
 
-// 获取应用数据目录（与 Dart PathService 保持一致）
+// 获取应用数据目录（便携模式：可执行文件同级 data/ 目录）
 fn get_app_data_dir() -> Result<PathBuf, String> {
-    // 桌面平台：使用可执行文件同级的 data 目录（便携模式）
-    // 这与 Dart 的 PathService._determineAppDataPath() 逻辑一致
     use std::env;
 
     let binary_path = env::current_exe().map_err(|e| format!("无法获取可执行文件路径：{}", e))?;
@@ -188,9 +164,15 @@ fn get_app_data_dir() -> Result<PathBuf, String> {
     Ok(binary_dir.join("data"))
 }
 
-// 初始化日志系统
-//
-// 目的：配置环境日志记录器，支持多次调用而不会 panic
+/// 设置应用日志启用状态（由 Dart 端通过 rinf 消息调用，线程安全，实时生效）
+pub fn set_app_log_enabled(enabled: bool) {
+    if let Ok(mut guard) = APP_LOG_ENABLED.lock() {
+        *guard = enabled;
+    }
+}
+
+/// 初始化日志系统（幂等、懒加载、线程安全）
 pub fn setup_logger() {
     Lazy::force(&LOGGER);
+    super::messages::init(); // 启动消息监听器
 }

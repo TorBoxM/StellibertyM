@@ -8,6 +8,7 @@ import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/providers/content_provider.dart';
 import 'package:stelliberty/utils/logger.dart';
 import 'package:stelliberty/ui/widgets/setting/lazy_mode_card.dart';
+import 'package:stelliberty/src/bindings/signals/signals.dart';
 
 // 应用行为设置页面
 class BehaviorSettingsPage extends StatefulWidget {
@@ -249,6 +250,10 @@ class _BehaviorSettingsPageState extends State<BehaviorSettingsPage> {
 
     try {
       await AppPreferences.instance.setAppLogEnabled(value);
+
+      // 同步应用日志开关到 Rust 端
+      SetAppLogEnabled(enabled: value).sendSignalToRust();
+
       Logger.info('应用日志已${value ? '启用' : '禁用'}');
     } catch (e) {
       // 持久化失败，回滚 UI 状态

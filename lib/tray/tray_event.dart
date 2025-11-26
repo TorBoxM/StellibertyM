@@ -7,6 +7,7 @@ import 'package:stelliberty/clash/manager/manager.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/providers/subscription_provider.dart';
 import 'package:stelliberty/storage/preferences.dart';
+import 'package:stelliberty/tray/tray_manager.dart';
 
 // 托盘事件处理器,处理托盘图标的各种交互事件
 class TrayEventHandler with TrayListener {
@@ -249,6 +250,9 @@ class TrayEventHandler with TrayListener {
   Future<void> exitApp() async {
     Logger.info('正在退出应用...');
 
+    // 立即停止托盘图标更新，避免退出时图标闪烁
+    AppTrayManager().beginExit();
+
     try {
       // 1. 先停止 Clash 进程(若正在运行)
       if (_clashProvider != null && _clashProvider!.isRunning) {
@@ -267,8 +271,8 @@ class TrayEventHandler with TrayListener {
         Logger.error('保存窗口状态失败：$e');
       }
 
-      // 3. 销毁窗口并退出
-      await windowManager.destroy();
+      // 3. 退出
+
       exit(0);
     } catch (e) {
       Logger.error('退出应用时发生错误：$e');

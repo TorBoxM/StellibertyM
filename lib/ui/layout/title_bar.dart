@@ -8,6 +8,7 @@ import 'package:stelliberty/utils/window_state.dart';
 import 'package:stelliberty/storage/preferences.dart';
 import 'package:stelliberty/utils/logger.dart';
 import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/tray/tray_manager.dart';
 
 // 自定义标题栏组件
 class WindowTitleBar extends StatelessWidget {
@@ -145,6 +146,9 @@ class WindowButtons extends StatelessWidget {
 
     // 完全退出应用
     Logger.info('用户点击关闭按钮，开始清理流程...');
+
+    // 立即停止托盘图标更新，避免退出时图标闪烁
+    AppTrayManager().beginExit();
 
     // 1. 先停止 Clash 进程（最重要）
     try {

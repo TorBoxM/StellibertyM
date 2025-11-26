@@ -16,6 +16,7 @@ class AppTrayManager {
   AppTrayManager._internal();
 
   bool _isInitialized = false;
+  bool _isExiting = false; // 退出标志，防止退出时托盘图标继续变化
   final TrayEventHandler _eventHandler = TrayEventHandler();
   ClashProvider? _clashProvider;
   SubscriptionProvider? _subscriptionProvider;
@@ -88,6 +89,11 @@ class AppTrayManager {
 
   // Clash 状态变化时更新托盘菜单和图标
   Future<void> _updateTrayMenuOnStateChange() async {
+    // 退出时不再更新托盘图标，避免视觉干扰
+    if (_isExiting) {
+      return;
+    }
+
     if (_isInitialized &&
         _clashProvider != null &&
         _subscriptionProvider != null) {
@@ -319,9 +325,16 @@ class AppTrayManager {
     }
   }
 
+  // 开始退出流程（由 TrayEventHandler 调用）
+  void beginExit() {
+    _isExiting = true;
+    Logger.info('托盘管理器：开始退出流程，停止图标更新');
+  }
+
   // 销毁托盘
   Future<void> dispose() async {
     if (_isInitialized) {
+      _isExiting = true; // 确保退出标志已设置
       // 移除监听器
       if (_clashProvider != null) {
         _clashProvider!.removeListener(_updateTrayMenuOnStateChange);

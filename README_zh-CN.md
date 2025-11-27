@@ -5,7 +5,7 @@
 [![简体中文](https://img.shields.io/badge/简体中文-red.svg)](./README_zh-CN.md)
 [![English](https://img.shields.io/badge/English-blue.svg)](./README.md)
 
-![Version](https://img.shields.io/github/v/release/Kindness-Kismet/Stelliberty?style=flat-square&label=version)
+![Version](https://img.shields.io/github/v/release/Kindness-Kismet/Stelliberty?include_prereleases&style=flat-square&label=version)
 ![Flutter](https://img.shields.io/badge/Flutter-3.38%2B-02569B?style=flat-square&logo=flutter)
 ![Rust](https://img.shields.io/badge/Rust-1.91%2B-orange?style=flat-square&logo=rust)
 ![License](https://img.shields.io/badge/license-Stelliberty-green?style=flat-square)

@@ -21,7 +21,6 @@ class HomeSidebar extends StatelessWidget {
           color: windowEffectProvider.windowEffectBackgroundColor,
           child: Column(
             children: [
-              // UY Scuti 标题
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: Center(

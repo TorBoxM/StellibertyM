@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'package:stelliberty/clash/data/traffic_data_model.dart';
 import 'package:stelliberty/utils/logger.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
@@ -28,9 +29,9 @@ class TrafficMonitor {
   // 流量数据流（供外部监听）
   Stream<TrafficData>? get trafficStream => _controller?.stream;
 
-  // 获取波形图历史数据（只读副本）
-  List<double> get uploadHistory => List.from(_uploadHistory);
-  List<double> get downloadHistory => List.from(_downloadHistory);
+  // 获取波形图历史数据（只读视图，零复制）
+  List<double> get uploadHistory => UnmodifiableListView(_uploadHistory);
+  List<double> get downloadHistory => UnmodifiableListView(_downloadHistory);
 
   // 是否正在监控
   bool get isMonitoring => _isMonitoring;

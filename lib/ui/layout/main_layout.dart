@@ -47,12 +47,20 @@ class _DynamicContentArea extends StatelessWidget {
     return Consumer<ContentProvider>(
       builder: (context, provider, child) {
         return ContentBody(
-          child: Align(
-            alignment: Alignment.topLeft, // 强制内容靠左上对齐
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _buildContent(provider.currentView),
-            ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeInOut,
+            switchOutCurve: Curves.easeInOut,
+            transitionBuilder: (child, animation) {
+              // 使用纯淡入淡出，不带位置变化
+              return FadeTransition(opacity: animation, child: child);
+            },
+            layoutBuilder: (currentChild, previousChildren) {
+              // 关键修复：只显示当前页面，忽略旧页面的布局影响
+              // 这样避免了 Stack 层叠导致的位置计算问题
+              return currentChild ?? const SizedBox.shrink();
+            },
+            child: _buildContent(provider.currentView),
           ),
         );
       },

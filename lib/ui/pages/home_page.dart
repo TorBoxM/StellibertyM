@@ -25,38 +25,48 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 0, 3.0, 5.0),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            // 第一行：代理控制卡片 + TUN 模式卡片
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: ProxySwitchCard()),
-                  const SizedBox(width: 24),
-                  Expanded(child: TunModeCard()),
-                ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 24),
+                    // 第一行：代理控制卡片 + TUN 模式卡片
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: ProxySwitchCard()),
+                          const SizedBox(width: 24),
+                          Expanded(child: TunModeCard()),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // 第二行：流量统计卡片（占据整行）
+                    TrafficStatsCard(),
+                    const SizedBox(height: 24),
+                    // 第三行：Clash 信息卡片 + 出站模式卡片
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: ClashInfoCard()),
+                          const SizedBox(width: 24),
+                          Expanded(child: OutboundModeCard()),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            // 第二行：流量统计卡片（占据整行）
-            TrafficStatsCard(),
-            const SizedBox(height: 24),
-            // 第三行：Clash 信息卡片 + 出站模式卡片
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: ClashInfoCard()),
-                  const SizedBox(width: 24),
-                  Expanded(child: OutboundModeCard()),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

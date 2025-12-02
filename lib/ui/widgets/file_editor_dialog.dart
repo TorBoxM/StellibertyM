@@ -30,12 +30,20 @@ class FileEditorDialog extends StatefulWidget {
   // 是否为只读模式
   final bool readOnly;
 
+  // 自定义标题（可选，如果提供则使用此标题而不是默认的"文件编辑器"）
+  final String? customTitle;
+
+  // 是否隐藏副标题（文件名）
+  final bool hideSubtitle;
+
   const FileEditorDialog({
     super.key,
     required this.fileName,
     required this.initialContent,
     this.onSave,
     this.readOnly = false,
+    this.customTitle,
+    this.hideSubtitle = false,
   });
 
   // 显示文件编辑器对话框
@@ -45,6 +53,8 @@ class FileEditorDialog extends StatefulWidget {
     required String initialContent,
     Future<bool> Function(String content)? onSave,
     bool readOnly = false,
+    String? customTitle,
+    bool hideSubtitle = false,
   }) {
     return showDialog<void>(
       context: context,
@@ -54,6 +64,8 @@ class FileEditorDialog extends StatefulWidget {
         initialContent: initialContent,
         onSave: onSave,
         readOnly: readOnly,
+        customTitle: customTitle,
+        hideSubtitle: hideSubtitle,
       ),
     );
   }
@@ -64,6 +76,7 @@ class FileEditorDialog extends StatefulWidget {
 
 class _FileEditorDialogState extends State<FileEditorDialog> {
   late final CodeLineEditingController _controller;
+  final TextEditingController _searchController = TextEditingController();
 
   // 内容是否被修改
   bool _isModified = false;
@@ -83,6 +96,11 @@ class _FileEditorDialogState extends State<FileEditorDialog> {
   // 标记是否已 dispose（防止异步操作在 dispose 后执行）
   bool _disposed = false;
 
+  // 搜索相关
+  int _searchResultCount = 0;
+  int _currentSearchIndex = -1;
+  final List<int> _searchPositions = [];
+
   @override
   void initState() {
     super.initState();
@@ -90,14 +108,29 @@ class _FileEditorDialogState extends State<FileEditorDialog> {
     // 先创建空编辑器（不添加 listener，避免触发修改检测）
     _controller = CodeLineEditingController.fromText('');
 
+    // 监听搜索框变化，内容改变时清空搜索结果
+    _searchController.addListener(_onSearchTextChanged);
+
     // 等对话框完全显示后再加载内容
     _loadContentAfterDialogReady();
   }
 
+  // 搜索框文本变化回调
+  void _onSearchTextChanged() {
+    // 如果搜索框内容变化且之前有搜索结果，清空结果提示用户重新搜索
+    if (_searchResultCount > 0) {
+      setState(() {
+        _searchResultCount = 0;
+        _currentSearchIndex = -1;
+        _searchPositions.clear();
+      });
+    }
+  }
+
   // 等对话框加载完成后再异步填充内容
   Future<void> _loadContentAfterDialogReady() async {
-    // 等待对话框动画完成（300ms）+ 缓冲时间
-    await Future.delayed(const Duration(milliseconds: 300));
+    // 等待对话框动画完成（500ms）+ 缓冲时间
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (_disposed || !mounted) return;
 
@@ -125,8 +158,126 @@ class _FileEditorDialogState extends State<FileEditorDialog> {
     _disposed = true;
     // 移除 listener 再 dispose
     _controller.removeListener(_onContentChanged);
+    _searchController.removeListener(_onSearchTextChanged);
     _controller.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  // 执行搜索
+  void _performSearch() {
+    final query = _searchController.text;
+
+    if (query.isEmpty) {
+      setState(() {
+        _searchResultCount = 0;
+        _currentSearchIndex = -1;
+        _searchPositions.clear();
+      });
+      return;
+    }
+
+    final text = _controller.text;
+    final lowerQuery = query.toLowerCase();
+    final lowerText = text.toLowerCase();
+
+    _searchPositions.clear();
+    int index = 0;
+    while (index < text.length) {
+      final foundIndex = lowerText.indexOf(lowerQuery, index);
+      if (foundIndex == -1) break;
+      _searchPositions.add(foundIndex);
+      index = foundIndex + 1;
+    }
+
+    setState(() {
+      _searchResultCount = _searchPositions.length;
+      // 如果已经有搜索结果，循环到下一个；否则从第一个开始
+      if (_searchPositions.isNotEmpty) {
+        if (_currentSearchIndex == -1) {
+          _currentSearchIndex = 0;
+        } else {
+          _currentSearchIndex =
+              (_currentSearchIndex + 1) % _searchPositions.length;
+        }
+        // 跳转到搜索结果位置
+        _jumpToSearchResult();
+      } else {
+        _currentSearchIndex = -1;
+      }
+    });
+  }
+
+  // 跳转到下一个搜索结果
+  void _goToNextResult() {
+    if (_searchPositions.isEmpty) return;
+    setState(() {
+      _currentSearchIndex = (_currentSearchIndex + 1) % _searchPositions.length;
+    });
+    _jumpToSearchResult();
+  }
+
+  // 跳转到上一个搜索结果
+  void _goToPreviousResult() {
+    if (_searchPositions.isEmpty) return;
+    setState(() {
+      _currentSearchIndex =
+          (_currentSearchIndex - 1 + _searchPositions.length) %
+          _searchPositions.length;
+    });
+    _jumpToSearchResult();
+  }
+
+  // 跳转到当前搜索结果并选中文本
+  void _jumpToSearchResult() {
+    if (_currentSearchIndex < 0 ||
+        _currentSearchIndex >= _searchPositions.length) {
+      return;
+    }
+
+    final position = _searchPositions[_currentSearchIndex];
+    final queryLength = _searchController.text.length;
+
+    // 计算目标位置所在的行号和列号
+    final textBeforePosition = _controller.text.substring(0, position);
+    final lineNumber = '\n'.allMatches(textBeforePosition).length;
+    final lastLineBreak = textBeforePosition.lastIndexOf('\n');
+    final columnInLine = lastLineBreak == -1
+        ? position
+        : position - lastLineBreak - 1;
+
+    // 设置光标位置并选中文本
+    final endPosition = position + queryLength;
+    final textBeforeEnd = _controller.text.substring(0, endPosition);
+    final endLineNumber = '\n'.allMatches(textBeforeEnd).length;
+    final endLastLineBreak = textBeforeEnd.lastIndexOf('\n');
+    final endColumnInLine = endLastLineBreak == -1
+        ? endPosition
+        : endPosition - endLastLineBreak - 1;
+
+    // 使用 CodeLineSelection 设置选中范围
+    final selection = CodeLineSelection(
+      baseIndex: lineNumber,
+      baseOffset: columnInLine,
+      extentIndex: endLineNumber,
+      extentOffset: endColumnInLine,
+    );
+
+    _controller.selection = selection;
+
+    // 确保选中的文本可见（滚动到视图内）
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (_disposed || !mounted) return;
+
+      // 使用 makePositionVisible 方法滚动到目标行
+      try {
+        _controller.makePositionVisible(
+          CodeLinePosition(index: lineNumber, offset: columnInLine),
+        );
+      } catch (e) {
+        Logger.error('滚动到搜索结果失败: $e');
+      }
+    });
   }
 
   // 内容变化回调
@@ -167,12 +318,14 @@ class _FileEditorDialogState extends State<FileEditorDialog> {
   @override
   Widget build(BuildContext context) {
     return ModernDialog(
-      title: context.translate.fileEditor.title,
+      title: widget.customTitle ?? context.translate.fileEditor.title,
       subtitle: widget.fileName,
+      hideSubtitle: widget.hideSubtitle,
       titleIcon: Icons.code,
       isModified: _isModified,
       maxWidth: 900,
       maxHeightRatio: 0.9,
+      headerWidget: _buildEnhancedSearchBox(),
       content: _buildEditor(),
       actionsLeft: Text(
         context.translate.fileEditor.stats
@@ -206,6 +359,120 @@ class _FileEditorDialogState extends State<FileEditorDialog> {
           ),
       ],
       onClose: () => Navigator.of(context).pop(),
+    );
+  }
+
+  // 构建增强的搜索框（带搜索按钮和导航按钮）
+  Widget _buildEnhancedSearchBox() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: TextField(
+              controller: _searchController,
+              onSubmitted: (_) => _performSearch(),
+              decoration: InputDecoration(
+                hintText: '搜索文本内容',
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 20,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear,
+                          size: 20,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          _performSearch();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.white.withValues(alpha: 0.5),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // 搜索按钮
+        IconButton(
+          onPressed: _performSearch,
+          icon: const Icon(Icons.search, size: 20),
+          tooltip: '搜索',
+          style: IconButton.styleFrom(
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.1),
+          ),
+        ),
+        const SizedBox(width: 4),
+        // 上一个结果
+        IconButton(
+          onPressed: _searchPositions.isEmpty ? null : _goToPreviousResult,
+          icon: const Icon(Icons.keyboard_arrow_up, size: 20),
+          tooltip: '上一个',
+          style: IconButton.styleFrom(
+            backgroundColor: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.white.withValues(alpha: 0.5),
+          ),
+        ),
+        const SizedBox(width: 4),
+        // 下一个结果
+        IconButton(
+          onPressed: _searchPositions.isEmpty ? null : _goToNextResult,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+          tooltip: '下一个',
+          style: IconButton.styleFrom(
+            backgroundColor: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.white.withValues(alpha: 0.5),
+          ),
+        ),
+        if (_searchResultCount > 0) ...[
+          const SizedBox(width: 12),
+          Text(
+            '${_currentSearchIndex + 1}/$_searchResultCount',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -356,9 +623,7 @@ class _FileEditorDialogState extends State<FileEditorDialog> {
 
       if (success) {
         ModernToast.success(context, context.translate.fileEditor.saveSuccess);
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
+        Navigator.of(context).pop();
       } else {
         setState(() {
           _isSaving = false;

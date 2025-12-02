@@ -649,6 +649,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         fileName: '${latestSubscription.name}.yaml',
         initialContent: content,
         readOnly: true, // 只读模式
+        customTitle: '运行时配置', // 自定义标题
+        hideSubtitle: true, // 隐藏副标题（文件名）
         onSave: null, // 只读模式无需保存回调
       );
     } catch (error) {

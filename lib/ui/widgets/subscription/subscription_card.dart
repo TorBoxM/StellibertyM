@@ -207,7 +207,7 @@ class SubscriptionCard extends StatelessWidget {
             ),
           ),
         // 更多操作菜单（使用自定义弹出菜单）
-        _buildModernPopupMenu(context),
+        _buildModernPopupMenu(context, isDisabled),
       ],
     );
   }
@@ -278,11 +278,11 @@ class SubscriptionCard extends StatelessWidget {
   // 构建现代化弹出菜单
   // 使用 ModernPopupMenu 替代标准 PopupMenuButton，
   // 提供 Windows 11 风格的交互体验
-  Widget _buildModernPopupMenu(BuildContext context) {
+  Widget _buildModernPopupMenu(BuildContext context, bool isDisabled) {
     return ModernPopupBox(
       targetBuilder: (open) => IconButton(
         icon: const Icon(Icons.more_vert),
-        onPressed: () => open(),
+        onPressed: isDisabled ? null : () => open(),
         style: IconButton.styleFrom(
           padding: const EdgeInsets.all(8),
           minimumSize: const Size(32, 32),
@@ -316,11 +316,13 @@ class SubscriptionCard extends StatelessWidget {
             label: context.translate.subscription.menu.providerView,
             onPressed: onViewProvider,
           ),
-          PopupMenuItemData(
-            icon: Icons.copy,
-            label: context.translate.subscription.menu.copyLink,
-            onPressed: () => _copyUrl(context),
-          ),
+          // 本地文件订阅不显示复制链接选项
+          if (!subscription.isLocalFile)
+            PopupMenuItemData(
+              icon: Icons.copy,
+              label: context.translate.subscription.menu.copyLink,
+              onPressed: () => _copyUrl(context),
+            ),
           PopupMenuItemData(
             icon: Icons.delete,
             label: context.translate.subscription.menu.delete,

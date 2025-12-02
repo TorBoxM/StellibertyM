@@ -200,7 +200,13 @@ class _UwpLoopbackDialogState extends State<UwpLoopbackDialog> {
       maxWidth: screenSize.width - 400, // 特殊尺寸：左右各200px间距
       maxHeightRatio:
           (screenSize.height - 100) / screenSize.height, // 上下各50px间距
-      headerWidget: _buildSearchField(),
+      searchController: _searchController,
+      searchHint: context.translate.uwpLoopback.searchPlaceholder,
+      onSearchChanged: (value) {
+        setState(() {
+          // 搜索状态由 ModernDialog 管理，这里只需要触发重建
+        });
+      },
       content: _buildContent(),
       actionsLeftButtons: [
         DialogActionButton(
@@ -228,73 +234,6 @@ class _UwpLoopbackDialogState extends State<UwpLoopbackDialog> {
         ),
       ],
       onClose: _isSaving ? null : () => Navigator.of(context).pop(),
-    );
-  }
-
-  Widget _buildSearchField() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Consumer<UwpLoopbackState>(
-      builder: (context, state, _) {
-        return Material(
-          color: Colors.transparent,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.2),
-              ),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) => state.setSearchQuery(value),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 14,
-              ),
-              decoration: InputDecoration(
-                hintText: context.translate.uwpLoopback.searchPlaceholder,
-                hintStyle: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
-                  fontSize: 14,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.5),
-                  size: 20,
-                ),
-                suffixIcon: state.searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.clear,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.5),
-                          size: 20,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          state.setSearchQuery('');
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -340,7 +279,14 @@ class _UwpLoopbackDialogState extends State<UwpLoopbackDialog> {
           );
         }
 
-        final filteredApps = state.filteredApps;
+        // 使用 _searchController.text 进行过滤
+        final searchQuery = _searchController.text.toLowerCase();
+        final filteredApps = searchQuery.isEmpty
+            ? state.apps
+            : state.apps.where((app) {
+                return app.displayName.toLowerCase().contains(searchQuery) ||
+                    app.packageFamilyName.toLowerCase().contains(searchQuery);
+              }).toList();
 
         if (filteredApps.isEmpty) {
           return Center(

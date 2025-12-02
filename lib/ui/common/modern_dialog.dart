@@ -39,8 +39,16 @@ class ModernDialog extends StatefulWidget {
   // 副标题（可选）
   final String? subtitle;
 
+  // 是否隐藏副标题（即使 subtitle 有值也不显示）
+  final bool hideSubtitle;
+
   // 标题下方的自定义区域（如搜索框等）
   final Widget? headerWidget;
+
+  // 搜索框相关参数
+  final TextEditingController? searchController;
+  final String? searchHint;
+  final ValueChanged<String>? onSearchChanged;
 
   // 标题图标（可选）
   final IconData? titleIcon;
@@ -89,7 +97,11 @@ class ModernDialog extends StatefulWidget {
     this.title,
     this.titleWidget,
     this.subtitle,
+    this.hideSubtitle = false,
     this.headerWidget,
+    this.searchController,
+    this.searchHint,
+    this.onSearchChanged,
     this.titleIcon,
     this.titleIconColor,
     this.showCloseButton = true,
@@ -108,6 +120,11 @@ class ModernDialog extends StatefulWidget {
        assert(
          actionsLeft == null || actionsLeftButtons == null,
          'actionsLeft 和 actionsLeftButtons 不能同时使用',
+       ),
+       assert(
+         searchController == null ||
+             (searchHint != null && onSearchChanged != null),
+         '如果提供 searchController，必须同时提供 searchHint 和 onSearchChanged',
        );
 
   @override
@@ -216,6 +233,7 @@ class _ModernDialogState extends State<ModernDialog>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildHeader(),
+                  if (widget.searchController != null) _buildSearchBox(),
                   if (widget.headerWidget != null) _buildHeaderWidget(),
                   Flexible(child: widget.content),
                   _buildActions(),
@@ -228,7 +246,72 @@ class _ModernDialogState extends State<ModernDialog>
     );
   }
 
-  // 构建 headerWidget 区域（与顶栏相同的背景样式，但无底部边框）
+  // 构建搜索框区域（无底部边框）
+  Widget _buildSearchBox() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.white.withValues(alpha: 0.3),
+      ),
+      child: TextField(
+        controller: widget.searchController,
+        onChanged: widget.onSearchChanged,
+        decoration: InputDecoration(
+          hintText: widget.searchHint,
+          prefixIcon: Icon(
+            Icons.search,
+            size: 20,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+          suffixIcon: widget.searchController!.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.clear,
+                    size: 20,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  onPressed: () {
+                    widget.searchController!.clear();
+                    widget.onSearchChanged?.call('');
+                  },
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.white.withValues(alpha: 0.5),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+          hintStyle: TextStyle(
+            fontSize: 14,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+        style: TextStyle(
+          fontSize: 14,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+    );
+  }
+
+  // 构建 headerWidget 区域（与顶栏相同的背景样式，无底部边框）
   Widget _buildHeaderWidget() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -238,12 +321,6 @@ class _ModernDialogState extends State<ModernDialog>
         color: isDark
             ? Colors.white.withValues(alpha: 0.06)
             : Colors.white.withValues(alpha: 0.3),
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.3),
-            width: 1,
-          ),
-        ),
       ),
       child: widget.headerWidget!,
     );
@@ -326,7 +403,7 @@ class _ModernDialogState extends State<ModernDialog>
                     ],
                   ],
                 ),
-                if (widget.subtitle != null) ...[
+                if (widget.subtitle != null && !widget.hideSubtitle) ...[
                   const SizedBox(height: 2),
                   Text(
                     widget.subtitle!,

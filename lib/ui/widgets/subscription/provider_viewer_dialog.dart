@@ -40,10 +40,41 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
   String? _errorMessage;
   bool _isSyncingAll = false;
 
+  // 搜索相关
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     _loadProviders();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // 搜索变化回调
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
+  }
+
+  // 获取过滤后的提供者列表
+  List<Provider> get _filteredProviders {
+    if (_searchQuery.isEmpty) {
+      return _providers;
+    }
+    return _providers.where((provider) {
+      return provider.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (provider.path?.toLowerCase().contains(_searchQuery.toLowerCase()) ??
+              false);
+    }).toList();
   }
 
   // 通用的 Provider 过滤方法
@@ -402,6 +433,13 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
       titleIcon: Icons.cloud_sync,
       maxWidth: 720,
       maxHeightRatio: 0.8,
+      searchController: _searchController,
+      searchHint: '搜索提供者名称或路径',
+      onSearchChanged: (value) {
+        setState(() {
+          _searchQuery = value;
+        });
+      },
       content: _buildContent(),
       actionsLeftButtons: [
         DialogActionButton(
@@ -474,11 +512,11 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
       );
     }
 
-    // 按类型分组
-    final proxyProviders = _providers
+    // 按类型分组（使用过滤后的列表）
+    final proxyProviders = _filteredProviders
         .where((p) => p.type == ProviderType.proxy)
         .toList();
-    final ruleProviders = _providers
+    final ruleProviders = _filteredProviders
         .where((p) => p.type == ProviderType.rule)
         .toList();
 

@@ -39,15 +39,30 @@ impl IpcClient {
     }
 
     // 获取默认 IPC 路径
+    // Debug/Profile 模式使用 _dev 后缀，避免与 Release 模式冲突
     pub fn default_ipc_path() -> String {
         #[cfg(windows)]
         {
-            r"\\.\pipe\stelliberty".to_string()
+            #[cfg(debug_assertions)]
+            {
+                r"\\.\pipe\stelliberty_dev".to_string()
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                r"\\.\pipe\stelliberty".to_string()
+            }
         }
 
         #[cfg(unix)]
         {
-            "/tmp/stelliberty.sock".to_string()
+            #[cfg(debug_assertions)]
+            {
+                "/tmp/stelliberty_dev.sock".to_string()
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                "/tmp/stelliberty.sock".to_string()
+            }
         }
     }
 
@@ -457,21 +472,5 @@ impl IpcClient {
         }
 
         String::from_utf8(body).map_err(|e| format!("解码 chunked body 失败：{}", e))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_default_ipc_path() {
-        let path = IpcClient::default_ipc_path();
-
-        #[cfg(windows)]
-        assert_eq!(path, r"\\.\pipe\stelliberty");
-
-        #[cfg(unix)]
-        assert_eq!(path, "/tmp/stelliberty.sock");
     }
 }

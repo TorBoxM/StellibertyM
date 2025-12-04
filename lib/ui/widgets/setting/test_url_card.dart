@@ -7,8 +7,10 @@ import 'package:stelliberty/clash/storage/preferences.dart';
 import 'package:stelliberty/ui/common/modern_feature_card.dart';
 import 'package:stelliberty/ui/common/modern_text_field.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
+import 'package:stelliberty/ui/widgets/modern_toast.dart';
+import 'package:stelliberty/utils/logger.dart';
 
-// 测速链接配置卡片
+// 延迟测试网址配置卡片
 class TestUrlCard extends StatefulWidget {
   const TestUrlCard({super.key});
 
@@ -18,6 +20,7 @@ class TestUrlCard extends StatefulWidget {
 
 class _TestUrlCardState extends State<TestUrlCard> {
   late final TextEditingController _testUrlController;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -31,6 +34,40 @@ class _TestUrlCardState extends State<TestUrlCard> {
   void dispose() {
     _testUrlController.dispose();
     super.dispose();
+  }
+
+  // 保存配置
+  Future<void> _saveConfig() async {
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final clashProvider = Provider.of<ClashProvider>(context, listen: false);
+      clashProvider.configService.setTestUrl(_testUrlController.text);
+
+      if (mounted) {
+        ModernToast.success(
+          context,
+          context.translate.clashFeatures.testUrl.saveSuccess,
+        );
+      }
+    } catch (e) {
+      Logger.error('保存延迟测试网址失败: $e');
+      if (mounted) {
+        ModernToast.error(
+          context,
+          context.translate.clashFeatures.testUrl.saveFailed.replaceAll(
+            '{error}',
+            e.toString(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   @override
@@ -83,24 +120,32 @@ class _TestUrlCardState extends State<TestUrlCard> {
                       setState(() {
                         _testUrlController.text = ClashDefaults.defaultTestUrl;
                       });
-                      final clashProvider = Provider.of<ClashProvider>(
-                        context,
-                        listen: false,
-                      );
-                      clashProvider.configService.setTestUrl(
-                        _testUrlController.text,
-                      );
                     },
                   ),
                 ),
               ),
-              onSubmitted: (value) {
-                final clashProvider = Provider.of<ClashProvider>(
-                  context,
-                  listen: false,
-                );
-                clashProvider.configService.setTestUrl(value);
-              },
+            ),
+            const SizedBox(height: 16),
+            // 保存按钮
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton.icon(
+                  onPressed: _isSaving ? null : _saveConfig,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save, size: 18),
+                  label: Text(
+                    _isSaving
+                        ? context.translate.clashFeatures.testUrl.saving
+                        : context.translate.common.save,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -6,7 +6,9 @@ import 'package:stelliberty/ui/common/modern_text_field.dart';
 import 'package:stelliberty/ui/common/modern_switch.dart';
 import 'package:stelliberty/ui/widgets/modern_multiline_text_field.dart';
 import 'package:stelliberty/ui/notifiers/system_proxy_notifier.dart';
+import 'package:stelliberty/ui/widgets/modern_toast.dart';
 import 'package:stelliberty/i18n/i18n.dart';
+import 'package:stelliberty/utils/logger.dart';
 
 // 系统代理配置卡片
 class SystemProxyCard extends StatefulWidget {
@@ -18,6 +20,7 @@ class SystemProxyCard extends StatefulWidget {
 
 class _SystemProxyCardState extends State<SystemProxyCard> {
   late SystemProxyNotifier _viewModel;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -40,6 +43,36 @@ class _SystemProxyCardState extends State<SystemProxyCard> {
       return context.translate.systemProxy.bypassHelperMac;
     } else {
       return context.translate.systemProxy.bypassHelper;
+    }
+  }
+
+  // 保存配置
+  Future<void> _saveConfig() async {
+    if (_isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      await _viewModel.saveConfig();
+
+      if (mounted) {
+        ModernToast.success(context, context.translate.systemProxy.saveSuccess);
+      }
+    } catch (e) {
+      Logger.error('保存系统代理配置失败: $e');
+      if (mounted) {
+        ModernToast.error(
+          context,
+          context.translate.systemProxy.saveFailed.replaceAll(
+            '{error}',
+            e.toString(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -161,7 +194,6 @@ class _SystemProxyCardState extends State<SystemProxyCard> {
           labelText: context.translate.systemProxy.proxyHost,
           hintText: context.translate.systemProxy.proxyHostHint,
           helperText: context.translate.systemProxy.proxyHostHelper,
-          onChanged: _viewModel.saveProxyHost,
           showDropdownIcon: true,
         ),
       ),
@@ -243,7 +275,6 @@ class _SystemProxyCardState extends State<SystemProxyCard> {
             bottom: 2,
           ),
           scrollbarRightPadding: 0.0,
-          onChanged: _viewModel.saveBypassRules,
         ),
       ] else ...[
         // PAC 脚本标签
@@ -264,7 +295,6 @@ class _SystemProxyCardState extends State<SystemProxyCard> {
             bottom: 2,
           ),
           scrollbarRightPadding: 0.0,
-          onChanged: _viewModel.savePacScript,
         ),
         const SizedBox(height: 8),
         // 恢复默认按钮
@@ -274,6 +304,30 @@ class _SystemProxyCardState extends State<SystemProxyCard> {
           label: Text(context.translate.clashFeatures.testUrl.restoreDefault),
         ),
       ],
+
+      const SizedBox(height: 16),
+
+      // 保存按钮
+      Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FilledButton.icon(
+            onPressed: _isSaving ? null : _saveConfig,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save, size: 18),
+            label: Text(
+              _isSaving
+                  ? context.translate.systemProxy.saving
+                  : context.translate.common.save,
+            ),
+          ),
+        ],
+      ),
     ];
   }
 }

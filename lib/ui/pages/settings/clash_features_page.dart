@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stelliberty/providers/content_provider.dart';
@@ -121,12 +122,19 @@ class _ClashFeaturesPageState extends State<ClashFeaturesPage> {
                         .title,
                   ),
                   subtitle: Text(
-                    context
-                        .translate
-                        .clashFeatures
-                        .navigation
-                        .systemIntegration
-                        .subtitle,
+                    Platform.isWindows
+                        ? context
+                              .translate
+                              .clashFeatures
+                              .navigation
+                              .systemIntegration
+                              .subtitleWindows
+                        : context
+                              .translate
+                              .clashFeatures
+                              .navigation
+                              .systemIntegration
+                              .subtitle,
                   ),
                   onTap: () => provider.switchView(
                     ContentView.settingsClashSystemIntegration,

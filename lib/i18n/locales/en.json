@@ -449,11 +449,14 @@
       "subtitle": "Find process information that initiates connections"
     },
     "testUrl": {
-      "title": "Test URL",
+      "title": "Delay Test URL",
       "subtitle": "Custom delay test URL",
-      "label": "Test URL",
+      "label": "Delay Test URL",
       "restoreDefault": "Restore Default",
-      "hint": "Hint: Press Enter to save changes"
+      "hint": "",
+      "saveSuccess": "Delay test URL saved",
+      "saveFailed": "Failed to save delay test URL: {error}",
+      "saving": "Saving..."
     },
     "externalController": {
       "title": "External Controller",
@@ -464,7 +467,11 @@
       "subtitle": "Send periodic probe packets to maintain long connections",
       "intervalLabel": "Send Interval",
       "intervalUnit": "seconds",
-      "hint": "Recommended: 15-60 seconds. Too small will increase traffic consumption. Changes will automatically restart Clash"
+      "hint": "Recommended: 15-60 seconds. Too small will increase traffic consumption. Changes will automatically restart Clash",
+      "intervalError": "Please enter a valid interval in seconds (greater than 0)",
+      "saveSuccess": "TCP Keep-Alive settings saved",
+      "saveFailed": "Failed to save TCP Keep-Alive settings: {error}",
+      "saving": "Saving..."
     },
     "logLevel": {
       "title": "Core Log Level",
@@ -508,7 +515,8 @@
       },
       "systemIntegration": {
         "title": "System Integration",
-        "subtitle": "System Proxy Config, TUN Virtual Network Card"
+        "subtitle": "System Proxy, TUN Virtual Network Card",
+        "subtitleWindows": "System Proxy, TUN Virtual Network Card, UWP Loopback"
       },
       "dnsConfig": {
         "title": "DNS Config",
@@ -520,7 +528,7 @@
       },
       "logsDebug": {
         "title": "Logs & Debug",
-        "subtitle": "Log Level, Test URL, User-Agent"
+        "subtitle": "Log Level, Delay Test URL, User-Agent"
       }
     },
     "networkSettings": {
@@ -805,7 +813,10 @@
     "pacScriptLabel": "PAC Script",
     "pacScriptHelper": "PAC script content for automatic proxy decision\nNote: Proxy address and port will be replaced automatically when saved",
     "pacScriptPlaceholder": "function FindProxyForURL(url, host) {\n  // Write your PAC script logic here\n  return \"PROXY 127.0.0.1:7890\";\n}",
-    "restoreDefaultPac": "Restore Default PAC Script"
+    "restoreDefaultPac": "Restore Default PAC Script",
+    "saveSuccess": "System proxy settings saved",
+    "saveFailed": "Failed to save system proxy settings: {error}",
+    "saving": "Saving..."
   },
   "tunConfig": {
     "title": "Virtual Network Card Configuration",
@@ -821,13 +832,19 @@
     "stackSystem": "System Kernel Network Stack",
     "mtuError": "MTU cannot be empty",
     "mtuInvalid": "Please enter a valid number",
-    "mtuRange": "MTU range: 1280-9000"
+    "mtuRange": "MTU range: 1280-9000",
+    "saveSuccess": "TUN configuration saved",
+    "saveFailed": "Failed to save TUN configuration: {error}",
+    "saving": "Saving..."
   },
   "portSettings": {
     "title": "Port Settings",
     "portError": "Port number cannot be empty",
     "portInvalid": "Please enter a valid number",
-    "portRange": "Port range: 1-65535"
+    "portRange": "Port range: 1-65535",
+    "saveSuccess": "Port settings saved",
+    "saveFailed": "Failed to save port settings: {error}",
+    "saving": "Saving..."
   },
   "logLevel": {
     "silent": "Silent",

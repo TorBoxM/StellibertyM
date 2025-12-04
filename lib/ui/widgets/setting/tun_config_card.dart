@@ -12,6 +12,7 @@ import 'package:stelliberty/clash/manager/manager.dart';
 import 'package:stelliberty/clash/providers/service_provider.dart';
 import 'package:stelliberty/clash/core/service_state.dart';
 import 'package:stelliberty/i18n/i18n.dart';
+import 'package:stelliberty/utils/logger.dart';
 
 // 虚拟网卡网络栈类型枚举
 enum TunStack {
@@ -59,6 +60,9 @@ class _TunConfigCardState extends State<TunConfigCard> {
 
   // 错误状态
   String? _tunMtuError;
+
+  // 保存状态
+  bool _isSaving = false;
 
   bool _isHoveringOnTunStackMenu = false;
 
@@ -128,20 +132,66 @@ class _TunConfigCardState extends State<TunConfigCard> {
     return null;
   }
 
-  // 处理 MTU 提交
-  void _handleMtuSubmit(String value) {
-    final error = _validateMtu(value);
-    if (error != null) {
-      setState(() {
-        _tunMtuError = error;
-        _tunMtuController.text = ClashManager.instance.tunMtu.toString();
-      });
+  // 统一保存文本输入配置
+  Future<void> _saveConfig() async {
+    if (_isSaving) return;
+
+    // 验证 MTU 值
+    final mtuError = _validateMtu(_tunMtuController.text);
+    if (mtuError != null) {
+      setState(() => _tunMtuError = mtuError);
       return;
     }
-
     setState(() => _tunMtuError = null);
-    final mtu = int.parse(value);
-    ClashManager.instance.setTunMtu(mtu);
+
+    setState(() => _isSaving = true);
+
+    try {
+      // 保存设备名称
+      final deviceName = _tunDeviceController.text.trim();
+      if (deviceName.isNotEmpty) {
+        ClashManager.instance.setTunDevice(deviceName);
+      }
+
+      // 保存 MTU
+      final mtu = int.parse(_tunMtuController.text);
+      ClashManager.instance.setTunMtu(mtu);
+
+      // 保存 DNS 劫持列表
+      final hijackList = _tunDnsHijackController.text
+          .split('，')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      ClashManager.instance.setTunDnsHijack(hijackList);
+
+      // 保存排除路由地址列表
+      final addressList = _tunRouteExcludeAddressController.text
+          .split('，')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      ClashManager.instance.setTunRouteExcludeAddress(addressList);
+
+      if (mounted) {
+        ModernToast.success(context, context.translate.tunConfig.saveSuccess);
+      }
+    } catch (e) {
+      Logger.error('保存 TUN 配置失败: $e');
+      if (mounted) {
+        ModernToast.error(
+          context,
+          context.translate.tunConfig.saveFailed.replaceAll(
+            '{error}',
+            e.toString(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   // 骨架屏占位 UI
@@ -392,11 +442,6 @@ class _TunConfigCardState extends State<TunConfigCard> {
               controller: _tunDeviceController,
               hintText: 'Mihomo',
               height: 36,
-              onChanged: (value) {
-                if (value.isNotEmpty) {
-                  ClashManager.instance.setTunDevice(value);
-                }
-              },
             ),
           ),
         ],
@@ -420,7 +465,6 @@ class _TunConfigCardState extends State<TunConfigCard> {
               hintText: '1500',
               height: 36,
               errorText: _tunMtuError,
-              onSubmitted: _handleMtuSubmit,
             ),
           ),
         ],
@@ -502,14 +546,6 @@ class _TunConfigCardState extends State<TunConfigCard> {
               controller: _tunDnsHijackController,
               hintText: 'any:53, tcp://any:53',
               height: 36,
-              onChanged: (value) {
-                final hijackList = value
-                    .split('，')
-                    .map((s) => s.trim())
-                    .where((s) => s.isNotEmpty)
-                    .toList();
-                ClashManager.instance.setTunDnsHijack(hijackList);
-              },
             ),
           ),
         ],
@@ -585,14 +621,6 @@ class _TunConfigCardState extends State<TunConfigCard> {
               controller: _tunRouteExcludeAddressController,
               hintText: '172.20.0.0/16',
               height: 36,
-              onChanged: (value) {
-                final addressList = value
-                    .split('，')
-                    .map((s) => s.trim())
-                    .where((s) => s.isNotEmpty)
-                    .toList();
-                ClashManager.instance.setTunRouteExcludeAddress(addressList);
-              },
             ),
           ),
         ],
@@ -631,6 +659,30 @@ class _TunConfigCardState extends State<TunConfigCard> {
               setState(() => _tunDisableIcmpForwarding = !value);
               ClashManager.instance.setTunDisableIcmpForwarding(!value);
             },
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 16),
+
+      // 保存按钮
+      Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FilledButton.icon(
+            onPressed: _isSaving ? null : _saveConfig,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save, size: 18),
+            label: Text(
+              _isSaving
+                  ? context.translate.tunConfig.saving
+                  : context.translate.common.save,
+            ),
           ),
         ],
       ),

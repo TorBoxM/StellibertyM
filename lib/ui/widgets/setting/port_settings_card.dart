@@ -6,6 +6,8 @@ import 'package:stelliberty/clash/storage/preferences.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/ui/common/modern_feature_card.dart';
 import 'package:stelliberty/ui/common/modern_text_field.dart';
+import 'package:stelliberty/ui/widgets/modern_toast.dart';
+import 'package:stelliberty/utils/logger.dart';
 
 // 端口设置配置卡片
 class PortSettingsCard extends StatefulWidget {
@@ -25,6 +27,9 @@ class _PortSettingsCardState extends State<PortSettingsCard> {
   String? _mixedPortError;
   String? _socksPortError;
   String? _httpPortError;
+
+  // 保存状态
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -69,71 +74,108 @@ class _PortSettingsCardState extends State<PortSettingsCard> {
     return null;
   }
 
-  // 处理混合端口提交
-  void _handleMixedPortSubmit(String value) {
+  // 处理混合端口验证
+  bool _validateMixedPort() {
+    final value = _mixedPortController.text;
     final error = _validatePort(value);
     if (error != null) {
-      setState(() {
-        _mixedPortError = error;
-        // 恢复有效值
-        _mixedPortController.text = ClashPreferences.instance
-            .getMixedPort()
-            .toString();
-      });
-      return;
+      setState(() => _mixedPortError = error);
+      return false;
     }
-
     setState(() => _mixedPortError = null);
-    final port = int.parse(value);
-    _clashProvider.configService.setMixedPort(port);
+    return true;
   }
 
-  // 处理 SOCKS 端口提交
-  void _handleSocksPortSubmit(String value) {
+  // 处理 SOCKS 端口验证
+  bool _validateSocksPort() {
+    final value = _socksPortController.text;
     if (value.isEmpty) {
       setState(() => _socksPortError = null);
-      _clashProvider.configService.setSocksPort(null);
-      return;
+      return true;
     }
-
     final error = _validatePort(value, allowEmpty: true);
     if (error != null) {
-      setState(() {
-        _socksPortError = error;
-        // 恢复有效值
-        _socksPortController.text =
-            ClashPreferences.instance.getSocksPort()?.toString() ?? '';
-      });
-      return;
+      setState(() => _socksPortError = error);
+      return false;
     }
-
     setState(() => _socksPortError = null);
-    final port = int.parse(value);
-    _clashProvider.configService.setSocksPort(port);
+    return true;
   }
 
-  // 处理 HTTP 端口提交
-  void _handleHttpPortSubmit(String value) {
+  // 处理 HTTP 端口验证
+  bool _validateHttpPort() {
+    final value = _httpPortController.text;
     if (value.isEmpty) {
       setState(() => _httpPortError = null);
-      _clashProvider.configService.setHttpPort(null);
-      return;
+      return true;
     }
-
     final error = _validatePort(value, allowEmpty: true);
     if (error != null) {
-      setState(() {
-        _httpPortError = error;
-        // 恢复有效值
-        _httpPortController.text =
-            ClashPreferences.instance.getHttpPort()?.toString() ?? '';
-      });
+      setState(() => _httpPortError = error);
+      return false;
+    }
+    setState(() => _httpPortError = null);
+    return true;
+  }
+
+  // 统一保存配置
+  Future<void> _saveConfig() async {
+    if (_isSaving) return;
+
+    // 验证所有端口
+    final mixedValid = _validateMixedPort();
+    final socksValid = _validateSocksPort();
+    final httpValid = _validateHttpPort();
+
+    if (!mixedValid || !socksValid || !httpValid) {
       return;
     }
 
-    setState(() => _httpPortError = null);
-    final port = int.parse(value);
-    _clashProvider.configService.setHttpPort(port);
+    setState(() => _isSaving = true);
+
+    try {
+      // 保存混合端口
+      final mixedPort = int.parse(_mixedPortController.text);
+      _clashProvider.configService.setMixedPort(mixedPort);
+
+      // 保存 SOCKS 端口
+      if (_socksPortController.text.isEmpty) {
+        _clashProvider.configService.setSocksPort(null);
+      } else {
+        final socksPort = int.parse(_socksPortController.text);
+        _clashProvider.configService.setSocksPort(socksPort);
+      }
+
+      // 保存 HTTP 端口
+      if (_httpPortController.text.isEmpty) {
+        _clashProvider.configService.setHttpPort(null);
+      } else {
+        final httpPort = int.parse(_httpPortController.text);
+        _clashProvider.configService.setHttpPort(httpPort);
+      }
+
+      if (mounted) {
+        ModernToast.success(
+          context,
+          context.translate.portSettings.saveSuccess,
+        );
+      }
+    } catch (e) {
+      Logger.error('保存端口配置失败: $e');
+      if (mounted) {
+        ModernToast.error(
+          context,
+          context.translate.portSettings.saveFailed.replaceAll(
+            '{error}',
+            e.toString(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   @override
@@ -176,7 +218,6 @@ class _PortSettingsCardState extends State<PortSettingsCard> {
               labelText: context.translate.clashFeatures.portSettings.mixedPort,
               hintText: ClashDefaults.mixedPort.toString(),
               errorText: _mixedPortError,
-              onSubmitted: _handleMixedPortSubmit,
             ),
             const SizedBox(height: 12),
             ModernTextField(
@@ -186,7 +227,6 @@ class _PortSettingsCardState extends State<PortSettingsCard> {
               hintText:
                   context.translate.clashFeatures.portSettings.emptyToDisable,
               errorText: _socksPortError,
-              onSubmitted: _handleSocksPortSubmit,
             ),
             const SizedBox(height: 12),
             ModernTextField(
@@ -196,7 +236,28 @@ class _PortSettingsCardState extends State<PortSettingsCard> {
               hintText:
                   context.translate.clashFeatures.portSettings.emptyToDisable,
               errorText: _httpPortError,
-              onSubmitted: _handleHttpPortSubmit,
+            ),
+            const SizedBox(height: 16),
+            // 保存按钮
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton.icon(
+                  onPressed: _isSaving ? null : _saveConfig,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save, size: 18),
+                  label: Text(
+                    _isSaving
+                        ? context.translate.portSettings.saving
+                        : context.translate.common.save,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

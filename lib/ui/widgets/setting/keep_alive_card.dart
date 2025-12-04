@@ -6,6 +6,8 @@ import 'package:stelliberty/clash/storage/preferences.dart';
 import 'package:stelliberty/ui/common/modern_feature_card.dart';
 import 'package:stelliberty/ui/common/modern_text_field.dart';
 import 'package:stelliberty/ui/common/modern_switch.dart';
+import 'package:stelliberty/ui/widgets/modern_toast.dart';
+import 'package:stelliberty/utils/logger.dart';
 
 // TCP 保持活动配置卡片
 class KeepAliveCard extends StatefulWidget {
@@ -18,6 +20,7 @@ class KeepAliveCard extends StatefulWidget {
 class _KeepAliveCardState extends State<KeepAliveCard> {
   late bool _keepAliveEnabled;
   late final TextEditingController _keepAliveIntervalController;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -32,6 +35,52 @@ class _KeepAliveCardState extends State<KeepAliveCard> {
   void dispose() {
     _keepAliveIntervalController.dispose();
     super.dispose();
+  }
+
+  // 保存配置
+  Future<void> _saveConfig() async {
+    if (_isSaving) return;
+
+    final interval = int.tryParse(_keepAliveIntervalController.text);
+    if (interval == null || interval <= 0) {
+      if (mounted) {
+        ModernToast.error(
+          context,
+          context.translate.clashFeatures.keepAlive.intervalError,
+        );
+      }
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final clashProvider = Provider.of<ClashProvider>(context, listen: false);
+      await ClashPreferences.instance.setKeepAliveInterval(interval);
+      clashProvider.configService.setKeepAlive(_keepAliveEnabled);
+
+      if (mounted) {
+        ModernToast.success(
+          context,
+          context.translate.clashFeatures.keepAlive.saveSuccess,
+        );
+      }
+    } catch (e) {
+      Logger.error('保存 TCP 保持活动配置失败: $e');
+      if (mounted) {
+        ModernToast.error(
+          context,
+          context.translate.clashFeatures.keepAlive.saveFailed.replaceAll(
+            '{error}',
+            e.toString(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   @override
@@ -108,21 +157,6 @@ class _KeepAliveCardState extends State<KeepAliveCard> {
                         keyboardType: TextInputType.number,
                         hintText: '30',
                         height: 36,
-                        onChanged: (value) {
-                          final interval = int.tryParse(value);
-                          if (interval != null && interval > 0) {
-                            ClashPreferences.instance.setKeepAliveInterval(
-                              interval,
-                            );
-                            final clashProvider = Provider.of<ClashProvider>(
-                              context,
-                              listen: false,
-                            );
-                            clashProvider.configService.setKeepAlive(
-                              _keepAliveEnabled,
-                            );
-                          }
-                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -133,6 +167,28 @@ class _KeepAliveCardState extends State<KeepAliveCard> {
                       ),
                     ),
                   ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 保存按钮
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FilledButton.icon(
+                  onPressed: _isSaving ? null : _saveConfig,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save, size: 18),
+                  label: Text(
+                    _isSaving
+                        ? context.translate.clashFeatures.keepAlive.saving
+                        : context.translate.common.save,
+                  ),
                 ),
               ],
             ),

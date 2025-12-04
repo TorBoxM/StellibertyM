@@ -449,11 +449,14 @@
       "subtitle": "查找发起连接的进程信息"
     },
     "testUrl": {
-      "title": "延迟测试链接",
-      "subtitle": "自定义延迟测试链接",
-      "label": "延迟测速网址",
+      "title": "延迟测试网址",
+      "subtitle": "自定义延迟测试网址",
+      "label": "延迟测试网址",
       "restoreDefault": "恢复默认",
-      "hint": ""
+      "hint": "",
+      "saveSuccess": "延迟测试网址已保存",
+      "saveFailed": "保存延迟测试网址失败: {error}",
+      "saving": "保存中..."
     },
     "externalController": {
       "title": "外部控制器",
@@ -464,7 +467,11 @@
       "subtitle": "定期发送探测包维持长连接",
       "intervalLabel": "发送间隔",
       "intervalUnit": "秒",
-      "hint": "建议值：15-60 秒，过小会增加流量消耗。修改后将自动重启 Clash"
+      "hint": "建议值：15-60 秒，过小会增加流量消耗。修改后将自动重启 Clash",
+      "intervalError": "请输入有效的间隔秒数（大于 0）",
+      "saveSuccess": "TCP 保持活动配置已保存",
+      "saveFailed": "保存 TCP 保持活动配置失败: {error}",
+      "saving": "保存中..."
     },
     "logLevel": {
       "title": "核心日志等级",
@@ -507,7 +514,8 @@
       },
       "systemIntegration": {
         "title": "系统集成",
-        "subtitle": "系统代理配置、TUN 虚拟网卡模式"
+        "subtitle": "系统代理、TUN 虚拟网卡",
+        "subtitleWindows": "系统代理、TUN 虚拟网卡、UWP 回环"
       },
       "dnsConfig": {
         "title": "DNS 配置",
@@ -519,7 +527,7 @@
       },
       "logsDebug": {
         "title": "日志与调试",
-        "subtitle": "日志等级、测速链接、User-Agent"
+        "subtitle": "日志等级、延迟测试网址、User-Agent"
       }
     },
     "networkSettings": {
@@ -797,7 +805,10 @@
     "pacScriptLabel": "PAC 脚本",
     "pacScriptHelper": "PAC 脚本内容，用于自动决定哪些流量走代理\n注意：保存时会自动替换代理地址和端口",
     "pacScriptPlaceholder": "function FindProxyForURL(url, host) {\n  // 在这里编写 PAC 脚本逻辑\n  return \"PROXY 127.0.0.1:7890\";\n}",
-    "restoreDefaultPac": "恢复默认 PAC 脚本"
+    "restoreDefaultPac": "恢复默认 PAC 脚本",
+    "saveSuccess": "系统代理配置已保存",
+    "saveFailed": "保存系统代理配置失败: {error}",
+    "saving": "保存中..."
   },
   "tunConfig": {
     "title": "虚拟网卡配置",
@@ -813,13 +824,19 @@
     "stackSystem": "系统核心网络栈",
     "mtuError": "MTU 不能为空",
     "mtuInvalid": "请输入有效的数字",
-    "mtuRange": "MTU 范围: 1280-9000"
+    "mtuRange": "MTU 范围: 1280-9000",
+    "saveSuccess": "虚拟网卡配置已保存",
+    "saveFailed": "保存虚拟网卡配置失败: {error}",
+    "saving": "保存中..."
   },
   "portSettings": {
     "title": "端口设置",
     "portError": "端口号不能为空",
     "portInvalid": "请输入有效的数字",
-    "portRange": "端口范围: 1-65535"
+    "portRange": "端口范围: 1-65535",
+    "saveSuccess": "端口设置已保存",
+    "saveFailed": "保存端口设置失败: {error}",
+    "saving": "保存中..."
   },
   "logLevel": {
     "silent": "静默",

@@ -165,25 +165,46 @@ class SystemProxyNotifier extends ChangeNotifier {
 
   // ========== 代理主机管理 ==========
 
-  // 保存代理主机
-  Future<void> saveProxyHost(String value) async {
-    await ClashPreferences.instance.setProxyHost(value);
-    _selectedHost = value;
+  // 选择代理主机（仅更新 UI，不立即保存）
+  void selectHost(String host) {
+    proxyHostController.text = host;
+    _selectedHost = host;
     notifyListeners();
+    Logger.info('从下拉菜单选择主机：$host');
+  }
+
+  // ========== 统一保存配置 ==========
+
+  // 保存所有配置
+  Future<void> saveConfig() async {
+    final prefs = ClashPreferences.instance;
+
+    // 保存代理主机
+    await prefs.setProxyHost(proxyHostController.text);
+    _selectedHost = proxyHostController.text;
+
+    // 保存绕过规则开关
+    await prefs.setUseDefaultBypass(_useDefaultBypass);
+
+    // 保存绕过规则内容
+    if (!_useDefaultBypass) {
+      await prefs.setSystemProxyBypass(bypassController.text);
+    }
+
+    // 保存 PAC 模式
+    await prefs.setSystemProxyPacMode(_usePacMode);
+
+    // 保存 PAC 脚本
+    if (_usePacMode) {
+      await prefs.setSystemProxyPacScript(pacScriptController.text);
+    }
 
     // 如果 Clash 正在运行，更新系统代理设置
     if (_clashManager.isRunning) {
       await _clashManager.updateSystemProxySettings();
     }
 
-    Logger.info('保存代理主机：$value');
-  }
-
-  // 选择代理主机
-  void selectHost(String host) {
-    proxyHostController.text = host;
-    saveProxyHost(host);
-    Logger.info('从下拉菜单选择主机：$host');
+    Logger.info('系统代理配置已保存');
   }
 
   // ========== 绕过规则管理 ==========
@@ -211,20 +232,6 @@ class SystemProxyNotifier extends ChangeNotifier {
     Logger.info('默认绕过规则：$value');
   }
 
-  // 保存绕过规则
-  Future<void> saveBypassRules(String value) async {
-    if (_useDefaultBypass) return;
-
-    await ClashPreferences.instance.setSystemProxyBypass(value);
-
-    // 如果 Clash 正在运行，更新系统代理设置
-    if (_clashManager.isRunning) {
-      await _clashManager.updateSystemProxySettings();
-    }
-
-    Logger.info('保存绕过规则');
-  }
-
   // ========== PAC 模式管理 ==========
 
   // 切换 PAC 模式
@@ -241,26 +248,12 @@ class SystemProxyNotifier extends ChangeNotifier {
     Logger.info('PAC 模式：${value ? "启用" : "禁用"}');
   }
 
-  // 保存 PAC 脚本
-  Future<void> savePacScript(String value) async {
-    await ClashPreferences.instance.setSystemProxyPacScript(value);
-
-    // 如果 Clash 正在运行，更新系统代理设置
-    if (_clashManager.isRunning) {
-      await _clashManager.updateSystemProxySettings();
-    }
-
-    Logger.info('保存 PAC 脚本');
-  }
-
-  // 恢复默认 PAC 脚本
-  Future<void> restoreDefaultPacScript() async {
+  // 恢复默认 PAC 脚本（仅更新 UI，不立即保存）
+  void restoreDefaultPacScript() {
     final prefs = ClashPreferences.instance;
     final defaultScript = prefs.getDefaultPacScript();
-
     pacScriptController.text = defaultScript;
-    await savePacScript(defaultScript);
-
+    notifyListeners();
     Logger.info('恢复默认 PAC 脚本');
   }
 

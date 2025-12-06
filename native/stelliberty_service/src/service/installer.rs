@@ -130,12 +130,19 @@ pub fn uninstall_service() -> Result<()> {
     let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
         .context("无法连接到服务管理器。请确保以管理员身份运行。")?;
 
-    let service = manager
-        .open_service(
-            SERVICE_NAME,
-            ServiceAccess::QUERY_STATUS | ServiceAccess::STOP | ServiceAccess::DELETE,
-        )
-        .context("无法打开服务。服务可能未安装。")?;
+    let service = match manager.open_service(
+        SERVICE_NAME,
+        ServiceAccess::QUERY_STATUS | ServiceAccess::STOP | ServiceAccess::DELETE,
+    ) {
+        Ok(s) => s,
+        Err(windows_service::Error::Winapi(ref e)) if e.raw_os_error() == Some(1060) => {
+            println!("服务未安装");
+            return Ok(());
+        }
+        Err(e) => {
+            return Err(e).context("无法打开服务");
+        }
+    };
 
     let status = service.query_status()?;
 
@@ -202,12 +209,19 @@ pub fn start_service() -> Result<()> {
     let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
         .context("无法连接到服务管理器")?;
 
-    let service = manager
-        .open_service(
-            SERVICE_NAME,
-            ServiceAccess::QUERY_STATUS | ServiceAccess::START,
-        )
-        .context("无法打开服务。请先安装服务。")?;
+    let service = match manager.open_service(
+        SERVICE_NAME,
+        ServiceAccess::QUERY_STATUS | ServiceAccess::START,
+    ) {
+        Ok(s) => s,
+        Err(windows_service::Error::Winapi(ref e)) if e.raw_os_error() == Some(1060) => {
+            println!("服务未安装，请先运行 install 命令");
+            return Ok(());
+        }
+        Err(e) => {
+            return Err(e).context("无法打开服务");
+        }
+    };
 
     let status = service.query_status()?;
     if status.current_state == ServiceState::Running {
@@ -228,12 +242,19 @@ pub fn stop_service() -> Result<()> {
     let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
         .context("无法连接到服务管理器")?;
 
-    let service = manager
-        .open_service(
-            SERVICE_NAME,
-            ServiceAccess::QUERY_STATUS | ServiceAccess::STOP,
-        )
-        .context("无法打开服务。服务可能未安装。")?;
+    let service = match manager.open_service(
+        SERVICE_NAME,
+        ServiceAccess::QUERY_STATUS | ServiceAccess::STOP,
+    ) {
+        Ok(s) => s,
+        Err(windows_service::Error::Winapi(ref e)) if e.raw_os_error() == Some(1060) => {
+            println!("服务未安装");
+            return Ok(());
+        }
+        Err(e) => {
+            return Err(e).context("无法打开服务");
+        }
+    };
 
     let status = service.query_status()?;
     if status.current_state == ServiceState::Stopped {
@@ -268,6 +289,7 @@ After=network.target
 
 [Service]
 Type=simple
+UMask=0000
 ExecStart={binary_path}
 Restart=on-failure
 RestartSec=5s

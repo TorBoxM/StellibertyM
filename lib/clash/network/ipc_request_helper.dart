@@ -25,7 +25,7 @@ class _IpcRetryConfig {
   // 重试间隔
   static const Duration retryDelay = Duration(seconds: 1);
 
-  // 判断是否应该重试（排除超时和 Named Pipe 未就绪）
+  // 判断是否应该重试（排除超时和 IPC 未就绪）
   static bool shouldRetry(dynamic error) {
     final errorMsg = error.toString();
 
@@ -34,14 +34,27 @@ class _IpcRetryConfig {
       return false;
     }
 
-    // Named Pipe 未就绪不重试（等待 Clash 启动）
-    if (errorMsg.contains('系统找不到指定的文件') || errorMsg.contains('os error 2')) {
+    // IPC 未就绪不重试（等待 Clash 启动）
+    if (_isIpcNotReadyError(errorMsg)) {
       return false;
     }
 
     // 其他错误（如连接断开、网络问题）可以重试
     return true;
   }
+}
+
+// 检查是否为 IPC 尚未就绪的错误（启动时的正常情况）
+bool _isIpcNotReadyError(String errorMsg) {
+  // Windows: os error 2 (系统找不到指定的文件)
+  // Linux: os error 111 (ECONNREFUSED，拒绝连接)
+  // macOS: os error 61 (ECONNREFUSED，拒绝连接)
+  return errorMsg.contains('系统找不到指定的文件') ||
+      errorMsg.contains('os error 2') ||
+      errorMsg.contains('拒绝连接') ||
+      errorMsg.contains('os error 111') ||
+      errorMsg.contains('os error 61') ||
+      errorMsg.contains('Connection refused');
 }
 
 // IPC 请求辅助类
@@ -141,11 +154,10 @@ class IpcRequestHelper {
       } catch (e) {
         _pendingRequests.remove(id);
 
-        // 区分 Named Pipe 未就绪（正常等待）和真正的错误
+        // 区分 IPC 未就绪（正常等待）和真正的错误
         final errorMsg = e.toString();
-        if (errorMsg.contains('系统找不到指定的文件') ||
-            errorMsg.contains('os error 2')) {
-          // Named Pipe 尚未创建，静默处理（不打印日志）
+        if (_isIpcNotReadyError(errorMsg)) {
+          // IPC 尚未就绪，静默处理（不打印日志）
         } else {
           Logger.error('IPC GET 请求失败：$path，error：$e');
         }
@@ -191,9 +203,8 @@ class IpcRequestHelper {
         _pendingRequests.remove(id);
 
         final errorMsg = e.toString();
-        if (errorMsg.contains('系统找不到指定的文件') ||
-            errorMsg.contains('os error 2')) {
-          // Named Pipe 尚未创建，静默处理
+        if (_isIpcNotReadyError(errorMsg)) {
+          // IPC 尚未就绪，静默处理
         } else {
           Logger.error('IPC POST 请求失败：$path，error：$e');
         }
@@ -239,9 +250,8 @@ class IpcRequestHelper {
         _pendingRequests.remove(id);
 
         final errorMsg = e.toString();
-        if (errorMsg.contains('系统找不到指定的文件') ||
-            errorMsg.contains('os error 2')) {
-          // Named Pipe 尚未创建，静默处理
+        if (_isIpcNotReadyError(errorMsg)) {
+          // IPC 尚未就绪，静默处理
         } else {
           Logger.error('IPC PUT 请求失败：$path，error：$e');
         }
@@ -287,9 +297,8 @@ class IpcRequestHelper {
         _pendingRequests.remove(id);
 
         final errorMsg = e.toString();
-        if (errorMsg.contains('系统找不到指定的文件') ||
-            errorMsg.contains('os error 2')) {
-          // Named Pipe 尚未创建，静默处理
+        if (_isIpcNotReadyError(errorMsg)) {
+          // IPC 尚未就绪，静默处理
         } else {
           Logger.error('IPC PATCH 请求失败：$path，error：$e');
         }
@@ -327,9 +336,8 @@ class IpcRequestHelper {
         _pendingRequests.remove(id);
 
         final errorMsg = e.toString();
-        if (errorMsg.contains('系统找不到指定的文件') ||
-            errorMsg.contains('os error 2')) {
-          // Named Pipe 尚未创建，静默处理
+        if (_isIpcNotReadyError(errorMsg)) {
+          // IPC 尚未就绪，静默处理
         } else {
           Logger.error('IPC DELETE 请求失败：$path，error：$e');
         }

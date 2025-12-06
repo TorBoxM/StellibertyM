@@ -46,7 +46,8 @@ define_windows_service!(ffi_service_main, service_main_windows);
 
 #[cfg(windows)]
 fn service_main_windows(_arguments: Vec<OsString>) {
-    // 日志已在 main.rs 中初始化
+    // 初始化日志系统
+    crate::logger::init_logger();
     log::info!("Windows Service 主函数启动");
 
     if let Err(e) = run_service_windows() {
@@ -165,7 +166,7 @@ fn run_service_windows() -> Result<(), Box<dyn std::error::Error>> {
                     // 重置心跳时间，避免反复触发
                     *heartbeat_last_heartbeat.write().await = Instant::now();
                 } else {
-                    log::trace!("心跳正常，距离上次心跳: {}s", elapsed.as_secs());
+                    log::debug!("心跳正常，距离上次心跳: {}s", elapsed.as_secs());
                 }
             }
         });
@@ -232,6 +233,8 @@ use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
 pub async fn run_service() -> Result<()> {
+    // 初始化日志系统（与 Windows service_main_windows 保持一致）
+    crate::logger::init_logger();
     log::info!("Stelliberty Service (Linux) 启动中...");
 
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
@@ -315,7 +318,7 @@ pub async fn run_service() -> Result<()> {
                 // 重置心跳时间，避免反复触发
                 *heartbeat_last_heartbeat.write().await = Instant::now();
             } else {
-                log::trace!("心跳正常，距离上次心跳: {}s", elapsed.as_secs());
+                log::debug!("心跳正常，距离上次心跳: {}s", elapsed.as_secs());
             }
         }
     });

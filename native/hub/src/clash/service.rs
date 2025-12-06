@@ -97,30 +97,66 @@ impl ServiceManager {
 
         #[cfg(not(windows))]
         {
-            // 非 Windows 平台，尝试 IPC 连接
-            if !self.ipc_client.is_service_running().await {
-                return ServiceStatus::Unknown;
-            }
+            // Linux/macOS：先检查服务是否已安装（避免不必要的 IPC 连接尝试）
+            #[cfg(target_os = "linux")]
+            {
+                if !Self::is_systemd_service_installed() {
+                    // 服务未安装，直接返回 Unknown（类似 Windows 的 NotInstalled）
+                    log::debug!("服务未安装");
+                    return ServiceStatus::Unknown;
+                }
 
-            match self.ipc_client.send_command(IpcCommand::GetStatus).await {
-                Ok(IpcResponse::Status {
-                    clash_running: _,
-                    clash_pid,
-                    service_uptime,
-                }) => {
-                    if let Some(pid) = clash_pid {
-                        // Clash 核心正在运行
-                        ServiceStatus::Running {
-                            pid,
-                            uptime: service_uptime,
+                // 服务已安装，检查是否运行中
+                if Self::is_systemd_service_active() {
+                    // 服务正在运行，尝试 IPC 获取详细状态
+                    if let Ok(IpcResponse::Status {
+                        clash_running: _,
+                        clash_pid,
+                        service_uptime,
+                    }) = self.ipc_client.send_command(IpcCommand::GetStatus).await
+                    {
+                        if let Some(pid) = clash_pid {
+                            ServiceStatus::Running {
+                                pid,
+                                uptime: service_uptime,
+                            }
+                        } else {
+                            log::debug!("服务进程运行中，但 Clash 核心未启动");
+                            ServiceStatus::Stopped
                         }
                     } else {
-                        // 服务进程运行，但 Clash 核心未运行
-                        log::debug!("服务进程运行中，但 Clash 核心未启动");
+                        // IPC 失败但 systemd 显示 active，可能刚启动
+                        log::debug!("systemd 服务 active，但 IPC 连接失败");
                         ServiceStatus::Stopped
                     }
+                } else {
+                    // 服务已安装但未运行
+                    log::debug!("systemd 服务已安装但未运行");
+                    ServiceStatus::Stopped
                 }
-                _ => ServiceStatus::Unknown,
+            }
+
+            // macOS 或其他平台：使用 IPC 检测
+            #[cfg(not(target_os = "linux"))]
+            {
+                if self.ipc_client.is_service_running().await
+                    && let Ok(IpcResponse::Status {
+                        clash_running: _,
+                        clash_pid,
+                        service_uptime,
+                    }) = self.ipc_client.send_command(IpcCommand::GetStatus).await
+                {
+                    if let Some(pid) = clash_pid {
+                        return ServiceStatus::Running {
+                            pid,
+                            uptime: service_uptime,
+                        };
+                    } else {
+                        log::debug!("服务进程运行中，但 Clash 核心未启动");
+                        return ServiceStatus::Stopped;
+                    }
+                }
+                ServiceStatus::Unknown
             }
         }
     }
@@ -157,8 +193,55 @@ impl ServiceManager {
             }
         }
 
-        #[cfg(not(windows))]
+        #[cfg(target_os = "linux")]
         {
+            // 检查是否已有 root 权限
+            let has_root = nix::unistd::geteuid().is_root();
+
+            if has_root {
+                // 已有 root 权限，直接执行
+                let output = Command::new(&self.service_exe_path)
+                    .arg("install")
+                    .output()
+                    .context("执行安装命令失败")?;
+
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    anyhow::bail!("安装服务失败：{}{}", stderr, stdout);
+                }
+            } else {
+                // 尝试 pkexec 提权
+                let output = Command::new("pkexec")
+                    .arg(&self.service_exe_path)
+                    .arg("install")
+                    .output();
+
+                match output {
+                    Ok(output) if output.status.success() => {
+                        // pkexec 成功
+                    }
+                    Ok(output) => {
+                        // pkexec 执行了但失败
+                        let code = output.status.code().unwrap_or(-1);
+                        if code == 126 || code == 127 {
+                            // 126: 用户取消授权，127: pkexec 未找到
+                            anyhow::bail!("安装失败，请以 sudo 运行应用后重试");
+                        }
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        anyhow::bail!("安装失败：{}", stderr.trim());
+                    }
+                    Err(_) => {
+                        // pkexec 命令不存在
+                        anyhow::bail!("安装失败，请以 sudo 运行应用后重试");
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            // macOS 使用 osascript 进行图形化提权（已在 stelliberty_service 中实现）
             let output = Command::new(&self.service_exe_path)
                 .arg("install")
                 .output()
@@ -185,7 +268,50 @@ impl ServiceManager {
             log::info!("服务已卸载（服务进程已自动停止）");
         }
 
-        #[cfg(not(windows))]
+        #[cfg(target_os = "linux")]
+        {
+            // 检查是否已有 root 权限
+            let has_root = nix::unistd::geteuid().is_root();
+
+            if has_root {
+                // 已有 root 权限，直接执行
+                let output = Command::new(&self.service_exe_path)
+                    .arg("uninstall")
+                    .output()
+                    .context("执行卸载命令失败")?;
+
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    anyhow::bail!("卸载服务失败：{}{}", stderr, stdout);
+                }
+            } else {
+                // 尝试 pkexec 提权
+                let output = Command::new("pkexec")
+                    .arg(&self.service_exe_path)
+                    .arg("uninstall")
+                    .output();
+
+                match output {
+                    Ok(output) if output.status.success() => {
+                        // pkexec 成功
+                    }
+                    Ok(output) => {
+                        let code = output.status.code().unwrap_or(-1);
+                        if code == 126 || code == 127 {
+                            anyhow::bail!("卸载失败，请以 sudo 运行应用后重试");
+                        }
+                        let stderr = String::from_utf8_lossy(&output.stderr);
+                        anyhow::bail!("卸载失败：{}", stderr.trim());
+                    }
+                    Err(_) => {
+                        anyhow::bail!("卸载失败，请以 sudo 运行应用后重试");
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_os = "macos")]
         {
             let output = Command::new(&self.service_exe_path)
                 .arg("uninstall")
@@ -564,12 +690,9 @@ impl ServiceManager {
     fn get_app_data_dir() -> Result<PathBuf> {
         #[cfg(windows)]
         {
-            // Windows: %LOCALAPPDATA%\Stelliberty\service
-            let local_app_data =
-                std::env::var("LOCALAPPDATA").context("无法获取 LOCALAPPDATA 环境变量")?;
-            Ok(PathBuf::from(local_app_data)
-                .join("Stelliberty")
-                .join("service"))
+            // Windows: %APPDATA%\stelliberty\service
+            let app_data = std::env::var("APPDATA").context("无法获取 APPDATA 环境变量")?;
+            Ok(PathBuf::from(app_data).join("stelliberty").join("service"))
         }
 
         #[cfg(target_os = "linux")]
@@ -618,6 +741,24 @@ impl ServiceManager {
         manager
             .open_service(SERVICE_NAME, ServiceAccess::QUERY_STATUS)
             .is_ok()
+    }
+
+    // 检查 systemd 服务是否已安装（仅 Linux）
+    #[cfg(target_os = "linux")]
+    fn is_systemd_service_installed() -> bool {
+        const SERVICE_FILE: &str = "/etc/systemd/system/StellibertyService.service";
+        std::path::Path::new(SERVICE_FILE).exists()
+    }
+
+    // 检查 systemd 服务是否正在运行（仅 Linux）
+    #[cfg(target_os = "linux")]
+    fn is_systemd_service_active() -> bool {
+        const SERVICE_NAME: &str = "StellibertyService";
+        Command::new("systemctl")
+            .args(["is-active", "--quiet", SERVICE_NAME])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
     }
 }
 

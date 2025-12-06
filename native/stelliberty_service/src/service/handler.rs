@@ -83,7 +83,7 @@ pub fn create_handler(
                 }
 
                 IpcCommand::GetLogs { lines } => {
-                    log::debug!("收到获取日志命令 (请求 {} 行)", lines);
+                    log::trace!("收到获取日志命令 (请求 {} 行)", lines);
                     let log_lines = crate::logger::get_recent_logs(lines);
                     IpcResponse::Logs { lines: log_lines }
                 }
@@ -105,7 +105,7 @@ pub fn create_handler(
                 }
 
                 IpcCommand::Heartbeat => {
-                    log::trace!("收到 Heartbeat 请求");
+                    log::debug!("收到主程序心跳");
                     *last_heartbeat.write().await = Instant::now();
                     IpcResponse::HeartbeatAck
                 }

@@ -12,8 +12,62 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, mpsc};
 
+// 命令行入口
+pub fn cli() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+
+    // 无参数时：尝试作为系统服务运行，如果不是服务模式则显示帮助
+    if args.len() <= 1 {
+        // Windows: 尝试作为 Windows Service 运行
+        #[cfg(windows)]
+        if service::run_as_service().is_ok() {
+            return Ok(());
+        }
+
+        // Linux: 作为 systemd 服务运行（systemd 启动时不带参数）
+        #[cfg(target_os = "linux")]
+        {
+            // 检查是否由 systemd 启动（INVOCATION_ID 环境变量）
+            if std::env::var("INVOCATION_ID").is_ok() {
+                // 由 systemd 启动，运行服务（日志初始化在 run_service 内部）
+                let rt = tokio::runtime::Runtime::new()?;
+                return rt.block_on(service::runner::run_service());
+            }
+        }
+
+        // macOS: 作为 launchd 服务运行（launchd 启动时不带参数且无 TTY）
+        #[cfg(target_os = "macos")]
+        {
+            use std::io::IsTerminal;
+            // 检查是否由 launchd 启动（stdin 不是 TTY）
+            if !std::io::stdin().is_terminal() {
+                // 由 launchd 启动，运行服务
+                logger::init_logger();
+                let rt = tokio::runtime::Runtime::new()?;
+                return rt.block_on(run_console_mode());
+            }
+        }
+
+        // 不是服务模式（用户直接运行），显示帮助
+        print_usage();
+        return Ok(());
+    }
+
+    // 这些命令不需要管理员权限
+    let no_admin_required = matches!(args[1].as_str(), "logs" | "version" | "-v" | "--version");
+
+    // 需要权限的命令检查权限
+    if !no_admin_required && !check_privileges() {
+        print_privilege_error();
+        std::process::exit(1);
+    }
+
+    handle_command(&args)?;
+    Ok(())
+}
+
 // 检查是否有足够的权限运行
-pub fn check_privileges() -> bool {
+fn check_privileges() -> bool {
     #[cfg(windows)]
     {
         use windows::Win32::UI::Shell::IsUserAnAdmin;
@@ -28,69 +82,31 @@ pub fn check_privileges() -> bool {
 
 // 打印权限不足的错误信息
 pub fn print_privilege_error() {
-    // 缓存 binary_path 避免重复系统调用
-    let binary_path = std::env::current_exe().ok();
-
-    eprintln!("========================================");
-    #[cfg(windows)]
-    eprintln!("错误: 需要管理员权限才能运行");
-    #[cfg(not(windows))]
-    eprintln!("错误: 需要 root 权限才能运行");
-    eprintln!("========================================");
+    eprintln!("错误: 此操作需要管理员权限");
     eprintln!();
-
-    // 打印程序路径
-    if let Some(ref path) = binary_path {
-        eprintln!("程序路径: {}", path.display());
-        eprintln!();
-    }
-
-    eprintln!("可用命令:");
-    eprintln!("install      - 安装并启动服务");
-    eprintln!("uninstall    - 停止并卸载服务");
-    eprintln!("start        - 启动服务");
-    eprintln!("stop         - 停止服务");
-    eprintln!();
-
+    eprintln!("请以管理员身份运行此命令");
     #[cfg(windows)]
-    {
-        eprintln!("请以管理员身份运行:");
-        if let Some(ref path) = binary_path {
-            eprintln!("{} install", path.display());
-        } else {
-            eprintln!("stelliberty-service.exe install");
-        }
-    }
-
+    eprintln!("提示: 右键点击终端，选择「以管理员身份运行」");
     #[cfg(not(windows))]
-    {
-        eprintln!("请使用 sudo 运行:");
-        if let Some(ref path) = binary_path {
-            eprintln!("sudo {} install", path.display());
-        } else {
-            eprintln!("sudo stelliberty-service install");
-        }
-    }
+    eprintln!("提示: 使用 sudo 运行此命令");
 }
 
 // 打印使用说明
 pub fn print_usage() {
-    println!("Stelliberty Service");
+    println!("Stelliberty Service v{}", env!("CARGO_PKG_VERSION"));
     println!();
-    println!("用法：");
-    println!("stelliberty-service              - 运行服务");
-    println!("stelliberty-service install      - 安装并启动服务");
-    println!("stelliberty-service uninstall    - 停止并卸载服务");
-    println!("stelliberty-service start        - 启动服务");
-    println!("stelliberty-service stop         - 停止服务");
-    println!("stelliberty-service status       - 查看服务状态");
-    println!("stelliberty-service logs [行数]  - 查看指定行数日志");
-    println!("stelliberty-service logs         - 实时监控服务日志（按 q 退出）");
+    println!("可用命令：");
+    println!("  install    - 安装并启动服务");
+    println!("  uninstall  - 停止并卸载服务");
+    println!("  start      - 启动服务");
+    println!("  stop       - 停止服务");
+    println!("  logs       - 实时监控服务日志");
+    println!("  version    - 显示版本号");
     println!();
     #[cfg(windows)]
-    println!("注意：安装和卸载需要管理员权限");
+    println!("注意：install/uninstall/start/stop 需要管理员权限");
     #[cfg(not(windows))]
-    println!("注意：安装和卸载需要 root 权限");
+    println!("注意：install/uninstall/start/stop 需要 root 权限");
 }
 
 // 控制台模式运行（用于调试）
@@ -139,7 +155,7 @@ pub async fn run_console_mode() -> Result<()> {
                 }
                 break;
             } else {
-                log::trace!("心跳正常，距离上次心跳: {}s", elapsed.as_secs());
+                log::debug!("心跳正常，距离上次心跳: {}s", elapsed.as_secs());
             }
         }
     });
@@ -181,7 +197,9 @@ pub async fn run_console_mode() -> Result<()> {
 // 处理命令行参数
 pub fn handle_command(args: &[String]) -> Result<Option<()>> {
     if args.len() <= 1 {
-        return Ok(None); // 无命令，继续运行服务
+        // 无命令，显示帮助信息
+        print_usage();
+        return Ok(Some(()));
     }
 
     match args[1].as_str() {
@@ -201,219 +219,57 @@ pub fn handle_command(args: &[String]) -> Result<Option<()>> {
             service::stop_service()?;
             Ok(Some(()))
         }
-        "status" => {
-            tokio::runtime::Runtime::new()?.block_on(async { show_status().await })?;
+        "logs" => {
+            tokio::runtime::Runtime::new()?.block_on(async { follow_logs().await })?;
             Ok(Some(()))
         }
-        "logs" => {
-            if args.len() > 2 {
-                // 有参数：显示指定行数的日志
-                let lines = match args[2].parse::<usize>() {
-                    Ok(n) => n,
-                    Err(_) => {
-                        eprintln!("警告: 无效的行数参数 '{}', 使用默认值 1000", args[2]);
-                        1000
-                    }
-                };
-                tokio::runtime::Runtime::new()?.block_on(async { show_logs(lines).await })?;
-            } else {
-                // 无参数：实时监控日志
-                tokio::runtime::Runtime::new()?.block_on(async { follow_logs().await })?;
-            }
+        "version" | "-v" | "--version" => {
+            println!("Stelliberty Service v{}", env!("CARGO_PKG_VERSION"));
             Ok(Some(()))
         }
         _ => {
-            println!("未知命令: {}", args[1]);
+            eprintln!("未知命令: {}", args[1]);
+            println!();
             print_usage();
             Ok(Some(()))
         }
     }
 }
 
-// 显示服务状态
-async fn show_status() -> Result<()> {
-    use ipc::IpcClient;
-    use ipc::protocol::{IpcCommand, IpcResponse};
-
-    println!("正在连接服务...");
-
-    let client = IpcClient::default();
-
-    match client.send_command(IpcCommand::GetStatus).await {
-        Ok(IpcResponse::Status {
-            clash_running,
-            clash_pid,
-            service_uptime,
-        }) => {
-            println!("\n========== Stelliberty Service 状态 ==========");
-            println!("服务运行时间: {} 秒", service_uptime);
-            println!(
-                "Clash 状态: {}",
-                if clash_running {
-                    "运行中"
-                } else {
-                    "已停止"
-                }
-            );
-            if let Some(pid) = clash_pid {
-                println!("Clash PID: {}", pid);
-            }
-            println!("===========================================\n");
-            Ok(())
-        }
-        Ok(resp) => {
-            anyhow::bail!("收到意外响应: {:?}", resp);
-        }
-        Err(e) => {
-            eprintln!("错误: 无法连接到服务");
-            eprintln!("详情: {}", e);
-            eprintln!("\n提示: 请确认服务是否正在运行");
-            Err(e.into())
-        }
-    }
-}
-
-// 显示服务日志
-async fn show_logs(lines: usize) -> Result<()> {
-    use ipc::IpcClient;
-    use ipc::protocol::{IpcCommand, IpcResponse};
-
-    println!("正在获取日志...");
-
-    let client = IpcClient::default();
-
-    match client.send_command(IpcCommand::GetLogs { lines }).await {
-        Ok(IpcResponse::Logs { lines: log_lines }) => {
-            println!(
-                "\n========== 服务日志 (共 {} 行) ==========",
-                log_lines.len()
-            );
-            for line in log_lines {
-                println!("{}", line);
-            }
-            println!("===========================================\n");
-            Ok(())
-        }
-        Ok(resp) => {
-            anyhow::bail!("收到意外响应: {:?}", resp);
-        }
-        Err(e) => {
-            eprintln!("错误: 无法连接到服务");
-            eprintln!("详情: {}", e);
-            eprintln!("\n提示: 请确认服务是否正在运行");
-            Err(e.into())
-        }
-    }
-}
-
 // 实时监控服务日志
 async fn follow_logs() -> Result<()> {
-    use crossterm::{
-        ExecutableCommand,
-        event::{self, Event, KeyCode},
-        terminal::{self, ClearType},
-    };
     use ipc::IpcClient;
     use ipc::protocol::{IpcCommand, IpcResponse};
-    use std::io::{Write, stdout};
-    use std::time::Duration;
-
-    println!("正在连接服务...");
 
     let client = IpcClient::default();
 
-    // 先获取历史日志
-    match client.send_command(IpcCommand::GetLogs { lines: 50 }).await {
+    // 先获取历史日志（最近 500 条）
+    match client
+        .send_command(IpcCommand::GetLogs { lines: 500 })
+        .await
+    {
         Ok(IpcResponse::Logs { lines: log_lines }) => {
-            println!("========== 历史日志 (最近 50 行) ==========");
             for line in log_lines {
                 println!("{}", line);
             }
         }
-        Ok(resp) => {
-            anyhow::bail!("收到意外响应: {:?}", resp);
-        }
-        Err(e) => {
-            eprintln!("错误: 无法连接到服务");
-            eprintln!("详情: {}", e);
-            eprintln!("\n提示: 请确认服务是否正在运行");
-            return Err(e.into());
+        Ok(_) => {}
+        Err(_) => {
+            println!("服务未运行，请先启动服务");
+            return Ok(());
         }
     }
 
-    // 启用原始模式以检测按键
-    terminal::enable_raw_mode()?;
+    // 接收实时日志流
+    let _ = client
+        .stream_logs(|line| {
+            println!("{}", line);
+            true
+        })
+        .await;
 
-    let result = async {
-        // 记录最后一次看到的日志数量
-        let mut last_log_count = 0;
-
-        // 获取当前日志总数
-        if let Ok(IpcResponse::Logs {
-            lines: initial_logs,
-        }) = client
-            .send_command(IpcCommand::GetLogs { lines: 1000 })
-            .await
-        {
-            last_log_count = initial_logs.len();
-        }
-
-        // 打印分隔线和提示信息（只在顶部显示一次）
-        println!("===========================================");
-        println!("实时监控中... (按 q 退出)\n");
-        stdout().flush()?;
-
-        // 持续轮询日志
-        loop {
-            // 检查是否按下 q 键
-            if event::poll(Duration::from_millis(100))?
-                && let Event::Key(key_event) = event::read()?
-                && (key_event.code == KeyCode::Char('q') || key_event.code == KeyCode::Char('Q'))
-            {
-                // 清除最后两行（提示信息）
-                stdout().execute(crossterm::cursor::MoveUp(2))?;
-                stdout().execute(terminal::Clear(ClearType::FromCursorDown))?;
-                println!("退出日志监控");
-                break;
-            }
-
-            // 获取所有日志并检查是否有新日志
-            if let Ok(IpcResponse::Logs { lines: all_logs }) = client
-                .send_command(IpcCommand::GetLogs { lines: 1000 })
-                .await
-            {
-                let current_count = all_logs.len();
-
-                // 如果有新日志，打印新增的部分
-                if current_count > last_log_count {
-                    // 清除提示信息
-                    stdout().execute(crossterm::cursor::MoveUp(2))?;
-                    stdout().execute(terminal::Clear(ClearType::FromCursorDown))?;
-
-                    // 打印新日志（不带分隔线）
-                    for line in all_logs.iter().skip(last_log_count) {
-                        println!("{}", line);
-                    }
-
-                    // 重新打印提示信息（不带分隔线）
-                    println!("实时监控中... (按 q 退出)\n");
-                    stdout().flush()?;
-
-                    last_log_count = current_count;
-                }
-            }
-
-            // 避免过于频繁的轮询
-            tokio::time::sleep(Duration::from_millis(200)).await;
-        }
-        Ok(())
-    }
-    .await;
-
-    // 恢复终端状态
-    terminal::disable_raw_mode()?;
-
-    result
+    println!("\n日志流已断开");
+    Ok(())
 }
 
 // 服务主入口

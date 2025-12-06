@@ -7,10 +7,7 @@ pub mod error;
 pub mod protocol;
 pub mod server;
 
-#[allow(unused_imports)]
 pub use client::IpcClient;
-
-#[allow(unused_imports)]
 pub use error::{IpcError, Result};
 pub use protocol::{IpcCommand, IpcResponse};
 pub use server::IpcServer;

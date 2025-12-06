@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast;
 
 // 日志缓冲区容量
-const LOG_BUFFER_CAPACITY: usize = 2000;
+const LOG_BUFFER_CAPACITY: usize = 500;
 
 // 日志广播通道容量
 const LOG_BROADCAST_CAPACITY: usize = 100;
@@ -100,7 +100,7 @@ pub fn init_logger() {
     static LOGGER: MemoryLogger = MemoryLogger;
 
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log::LevelFilter::Info))
+        .map(|()| log::set_max_level(log::LevelFilter::Debug))
         .expect("无法初始化日志系统");
 
     log::info!("日志系统初始化完成 (内存缓冲模式)");

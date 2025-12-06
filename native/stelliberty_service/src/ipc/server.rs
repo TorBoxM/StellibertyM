@@ -91,25 +91,27 @@ impl IpcServer {
             // 为每个连接创建新的 Named Pipe 实例
             let server = if is_first_instance {
                 log::info!("创建第一个 Named Pipe 实例（允许已认证用户访问）");
-                is_first_instance = false;
 
                 // 使用 Windows API 创建带权限的 Named Pipe
-                create_named_pipe_with_security(IPC_PATH, true, &security_descriptor).map_err(
-                    |e| {
+                let pipe = create_named_pipe_with_security(IPC_PATH, true, &security_descriptor)
+                    .map_err(|e| {
                         log::error!("创建第一个 Named Pipe 实例失败: {e}");
                         IpcError::Other(format!("创建 Named Pipe 失败: {e}"))
-                    },
-                )?
-            } else {
-                create_named_pipe_with_security(IPC_PATH, false, &security_descriptor).map_err(
-                    |e| {
-                        log::error!("创建 Named Pipe 实例失败: {e}");
-                        IpcError::Other(format!("创建 Named Pipe 失败: {e}"))
-                    },
-                )?
-            };
+                    })?;
 
-            log::debug!("Named Pipe 实例创建成功");
+                log::debug!("Named Pipe 实例创建成功（初始化）");
+                is_first_instance = false;
+                pipe
+            } else {
+                let pipe = create_named_pipe_with_security(IPC_PATH, false, &security_descriptor)
+                    .map_err(|e| {
+                    log::error!("创建 Named Pipe 实例失败: {e}");
+                    IpcError::Other(format!("创建 Named Pipe 失败: {e}"))
+                })?;
+
+                log::debug!("Named Pipe 实例创建成功（等待新连接）");
+                pipe
+            };
 
             tokio::select! {
                 // 等待客户端连接
@@ -199,11 +201,26 @@ impl IpcServer {
 
         // 反序列化命令
         let command: IpcCommand = serde_json::from_slice(&command_buf)?;
-        log::debug!("收到命令: {command:?}");
+        log::trace!("收到命令: {command:?}");
 
-        // 处理命令（异步）
+        // 处理 StreamLogs 特殊命令（流式推送）
+        if matches!(command, IpcCommand::StreamLogs) {
+            log::info!("启动日志流订阅");
+            return Self::handle_log_stream(stream).await;
+        }
+
+        // 处理普通命令（请求-响应）
         let response = handler(command).await;
-        log::debug!("返回响应: {response:?}");
+
+        // 记录响应（避免日志递归：GetLogs 响应不打印完整内容）
+        match &response {
+            IpcResponse::Logs { lines } => {
+                log::trace!("返回响应: Logs (共 {} 行)", lines.len());
+            }
+            _ => {
+                log::trace!("返回响应: {response:?}");
+            }
+        }
 
         // 序列化响应
         let response_json = serde_json::to_string(&response)?;
@@ -215,6 +232,68 @@ impl IpcServer {
         stream.write_all(response_bytes).await?;
         stream.flush().await?;
 
+        Ok(())
+    }
+
+    // 处理日志流订阅（持续推送）
+    async fn handle_log_stream<S>(mut stream: S) -> Result<()>
+    where
+        S: AsyncReadExt + AsyncWriteExt + Unpin,
+    {
+        use crate::logger;
+
+        // 订阅日志流
+        let mut log_receiver = logger::subscribe_logs();
+
+        // 发送初始成功响应
+        let initial_response = IpcResponse::Success {
+            message: Some("日志流已启用".to_string()),
+        };
+        let response_json = serde_json::to_string(&initial_response)?;
+        let response_bytes = response_json.as_bytes();
+        let len = response_bytes.len() as u32;
+        stream.write_all(&len.to_le_bytes()).await?;
+        stream.write_all(response_bytes).await?;
+        stream.flush().await?;
+
+        log::debug!("日志流订阅已激活，开始推送日志");
+
+        // 持续推送日志
+        loop {
+            match log_receiver.recv().await {
+                Ok(log_line) => {
+                    // 构造日志流响应
+                    let log_response = IpcResponse::LogStream { line: log_line };
+                    let response_json = serde_json::to_string(&log_response)?;
+                    let response_bytes = response_json.as_bytes();
+                    let len = response_bytes.len() as u32;
+
+                    // 发送日志行
+                    if let Err(e) = stream.write_all(&len.to_le_bytes()).await {
+                        log::debug!("日志流客户端断开连接: {}", e);
+                        break;
+                    }
+                    if let Err(e) = stream.write_all(response_bytes).await {
+                        log::debug!("日志流客户端断开连接: {}", e);
+                        break;
+                    }
+                    if let Err(e) = stream.flush().await {
+                        log::debug!("日志流客户端断开连接: {}", e);
+                        break;
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                    log::warn!("日志流客户端处理过慢，跳过了 {} 条日志", skipped);
+                    // 继续处理，不中断连接
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    log::info!("日志广播通道已关闭，停止日志流");
+                    break;
+                }
+            }
+        }
+
+        log::info!("日志流订阅结束");
         Ok(())
     }
 }

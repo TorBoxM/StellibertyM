@@ -151,4 +151,105 @@ impl IpcClient {
             Ok(Ok(IpcResponse::HeartbeatAck))
         )
     }
+
+    // 订阅日志流（持续接收日志，直到连接断开或返回错误）
+    // 参数 callback: 每收到一行日志时调用，返回 false 表示停止接收
+    pub async fn stream_logs<F>(&self, mut callback: F) -> Result<()>
+    where
+        F: FnMut(String) -> bool,
+    {
+        // 序列化 StreamLogs 命令
+        let command = IpcCommand::StreamLogs;
+        let command_json = serde_json::to_string(&command)?;
+        let command_bytes = command_json.as_bytes();
+
+        // 连接到服务
+        let mut stream = timeout(self.timeout, self.connect())
+            .await
+            .map_err(|_| IpcError::Timeout)??;
+
+        // 发送命令长度 + 命令数据
+        let len = command_bytes.len() as u32;
+        stream.write_all(&len.to_le_bytes()).await?;
+        stream.write_all(command_bytes).await?;
+        stream.flush().await?;
+
+        // 读取初始响应（应该是 Success）
+        let mut len_buf = [0u8; 4];
+        timeout(self.timeout, stream.read_exact(&mut len_buf))
+            .await
+            .map_err(|_| IpcError::Timeout)??;
+        let response_len = u32::from_le_bytes(len_buf) as usize;
+
+        if response_len > 10 * 1024 * 1024 {
+            return Err(IpcError::Other("响应数据过大".to_string()));
+        }
+
+        let mut response_buf = vec![0u8; response_len];
+        timeout(self.timeout, stream.read_exact(&mut response_buf))
+            .await
+            .map_err(|_| IpcError::Timeout)??;
+
+        let initial_response: IpcResponse = serde_json::from_slice(&response_buf)?;
+
+        // 确认初始响应是成功
+        match initial_response {
+            IpcResponse::Success { .. } => {
+                // 继续接收日志流
+            }
+            IpcResponse::Error { code, message } => {
+                return Err(IpcError::ServiceError(code, message));
+            }
+            _ => {
+                return Err(IpcError::Other("意外的初始响应类型".to_string()));
+            }
+        }
+
+        // 持续接收日志流
+        loop {
+            // 读取日志响应长度
+            let mut len_buf = [0u8; 4];
+            match stream.read_exact(&mut len_buf).await {
+                Ok(_) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    // 连接关闭，正常退出
+                    break;
+                }
+                Err(e) => {
+                    return Err(e.into());
+                }
+            }
+
+            let log_len = u32::from_le_bytes(len_buf) as usize;
+
+            // 防止恶意响应
+            if log_len > 1024 * 1024 {
+                return Err(IpcError::Other("单条日志数据过大".to_string()));
+            }
+
+            // 读取日志数据
+            let mut log_buf = vec![0u8; log_len];
+            stream.read_exact(&mut log_buf).await?;
+
+            // 反序列化日志响应
+            let log_response: IpcResponse = serde_json::from_slice(&log_buf)?;
+
+            match log_response {
+                IpcResponse::LogStream { line } => {
+                    // 调用回调函数，如果返回 false 则停止接收
+                    if !callback(line) {
+                        break;
+                    }
+                }
+                IpcResponse::Error { code, message } => {
+                    return Err(IpcError::ServiceError(code, message));
+                }
+                _ => {
+                    return Err(IpcError::Other("意外的日志流响应类型".to_string()));
+                }
+            }
+        }
+
+        Ok(())
+    }
 }

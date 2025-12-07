@@ -229,7 +229,7 @@ jobs:
               echo "❌ 错误: build/packages 目录不存在"
               exit 1
             fi
-         elif [ "$RUNNER_OS" = "macOS" ]; then
+          elif [ "$RUNNER_OS" = "macOS" ]; then
            mkdir -p dist
            if [ -d "build/packages" ]; then
              cp -r build/packages/* dist/

@@ -558,11 +558,16 @@ class _ModernDialogState extends State<ModernDialog>
   Widget _buildActionButton(DialogActionButton action, bool isDark) {
     if (action.isPrimary) {
       // 主要按钮 (ElevatedButton)
+      // 根据 isDanger 决定按钮颜色
+      final buttonColor = action.isDanger
+          ? Colors.red
+          : Theme.of(context).colorScheme.primary;
+
       return ElevatedButton(
         onPressed: action.isLoading ? null : action.onPressed,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          backgroundColor: buttonColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(
@@ -570,9 +575,7 @@ class _ModernDialogState extends State<ModernDialog>
             ),
           ),
           elevation: 0,
-          shadowColor: Theme.of(
-            context,
-          ).colorScheme.primary.withValues(alpha: 0.5),
+          shadowColor: buttonColor.withValues(alpha: 0.5),
         ),
         child: action.isLoading
             ? Row(
@@ -583,9 +586,7 @@ class _ModernDialogState extends State<ModernDialog>
                     height: DialogConstants.loadingIndicatorSize,
                     child: CircularProgressIndicator(
                       strokeWidth: DialogConstants.loadingIndicatorStrokeWidth,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).colorScheme.primary,
-                      ),
+                      valueColor: AlwaysStoppedAnimation<Color>(buttonColor),
                     ),
                   ),
                   const SizedBox(
@@ -674,11 +675,15 @@ class DialogActionButton {
   // 图标（仅用于左侧操作按钮）
   final IconData? icon;
 
+  // 是否为危险操作（红色按钮）
+  final bool isDanger;
+
   const DialogActionButton({
     required this.label,
     this.onPressed,
     this.isPrimary = false,
     this.isLoading = false,
     this.icon,
+    this.isDanger = false,
   });
 }

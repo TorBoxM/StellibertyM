@@ -9,6 +9,7 @@ import 'package:stelliberty/ui/widgets/file_editor_dialog.dart';
 import 'package:stelliberty/ui/widgets/override/override_dialog.dart';
 import 'package:stelliberty/ui/widgets/override/override_card.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
+import 'package:stelliberty/ui/widgets/confirm_dialog.dart';
 import 'package:stelliberty/utils/logger.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
 
@@ -288,31 +289,15 @@ class _OverridePageState extends State<OverridePage> {
   }
 
   Future<void> _deleteOverride(OverrideConfig override) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showConfirmDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(translate.kOverride.confirmDelete),
-        content: Text(
-          translate.kOverride.confirmDeleteMessage.replaceAll(
-            '{name}',
-            override.name,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(context.translate.common.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(context.translate.common.delete),
-          ),
-        ],
+      title: translate.kOverride.confirmDelete,
+      message: translate.kOverride.confirmDeleteMessage.replaceAll(
+        '{name}',
+        override.name,
       ),
+      confirmText: context.translate.common.delete,
+      isDanger: true,
     );
 
     if (confirmed != true || !mounted) return;

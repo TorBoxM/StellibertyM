@@ -68,6 +68,7 @@ class ConfirmDialog extends StatelessWidget {
           label: confirmText ?? context.translate.common.confirm,
           onPressed: () => Navigator.of(context).pop(true),
           isPrimary: true,
+          isDanger: isDanger,
         ),
       ],
       onClose: () => Navigator.of(context).pop(false),

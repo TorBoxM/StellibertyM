@@ -411,7 +411,6 @@ class SubscriptionProvider extends ChangeNotifier {
     // 不清除全局错误，单个订阅更新不影响全局状态
     final index = _subscriptions.indexWhere((s) => s.id == subscriptionId);
 
-    // 卫语句：检查订阅是否存在
     if (index == -1) {
       Logger.error('更新失败：订阅不存在 (ID：$subscriptionId)');
       return false;
@@ -420,7 +419,6 @@ class SubscriptionProvider extends ChangeNotifier {
     final subscription = _subscriptions[index];
 
     try {
-      // 卫语句：本地文件不支持更新
       if (subscription.isLocalFile) {
         Logger.info('本地订阅无需更新：${subscription.name}');
         _subscriptions[index] = subscription.copyWith(
@@ -932,7 +930,6 @@ class SubscriptionProvider extends ChangeNotifier {
     // 不清除全局错误，单个操作不影响全局状态
     final index = _subscriptions.indexWhere((s) => s.id == subscriptionId);
 
-    // 卫语句：检查订阅是否存在
     if (index == -1) {
       Logger.error('修改订阅失败：订阅不存在 (ID：$subscriptionId)');
       return false;
@@ -980,7 +977,6 @@ class SubscriptionProvider extends ChangeNotifier {
 
     final index = _subscriptions.indexWhere((s) => s.id == subscriptionId);
 
-    // 卫语句：检查订阅是否存在
     if (index == -1) {
       Logger.error('更新覆写配置失败：订阅不存在 (ID：$subscriptionId)');
       return false;
@@ -1081,7 +1077,6 @@ class SubscriptionProvider extends ChangeNotifier {
 
   // 选择订阅
   Future<void> selectSubscription(String subscriptionId) async {
-    // 卫语句：检查订阅是否存在
     if (!_subscriptions.any((s) => s.id == subscriptionId)) {
       Logger.warning('尝试选择一个不存在的订阅：$subscriptionId');
       return;
@@ -1102,14 +1097,12 @@ class SubscriptionProvider extends ChangeNotifier {
     String reason = '配置重载',
   }) async {
     final configPath = getSubscriptionConfigPath();
-    // 卫语句：检查配置路径
     if (configPath == null) {
       Logger.warning('无法获取配置路径，跳过重载');
       return;
     }
 
     final clashProvider = _clashProvider;
-    // 卫语句：检查 ClashProvider
     if (clashProvider == null) {
       Logger.warning('ClashProvider 未设置，跳过重载');
       return;

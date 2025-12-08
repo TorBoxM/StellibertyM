@@ -111,7 +111,6 @@ class ServiceProvider {
           '安装后检查重启条件：wasRunningBefore=$wasRunningBefore, currentConfigPath=$currentConfigPath',
         );
 
-        // 卫语句：安装前核心未运行，不自动启动
         if (!wasRunningBefore) {
           Logger.info('安装前核心未运行，不自动启动');
           return true;

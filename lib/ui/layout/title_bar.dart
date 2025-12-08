@@ -1,15 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:rinf/rinf.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:stelliberty/providers/window_effect_provider.dart';
 import 'package:stelliberty/utils/window_state.dart';
-import 'package:stelliberty/storage/preferences.dart';
 import 'package:stelliberty/utils/logger.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
-import 'package:stelliberty/tray/tray_manager.dart';
+import 'package:stelliberty/storage/preferences.dart';
 
 // 自定义标题栏组件
 class WindowTitleBar extends StatelessWidget {
@@ -110,77 +106,9 @@ class WindowButtons extends StatelessWidget {
     );
   }
 
-  // 处理关闭按钮点击事件
+  // 处理关闭按钮点击事件（委托给窗口退出处理器）
   static Future<void> _handleCloseButtonPressed() async {
-    // 检查是否启用最小化到托盘
-    final minimizeToTray = AppPreferences.instance.getMinimizeToTray();
-
-    if (minimizeToTray) {
-      // 最小化到托盘：先保存当前窗口状态，再隐藏窗口
-      Logger.info('用户点击关闭按钮，最小化到托盘...');
-
-      // 保存当前窗口状态（包括最大化状态和尺寸位置）
-      try {
-        final isMaximized = await windowManager.isMaximized();
-        await AppPreferences.instance.setIsMaximized(isMaximized);
-
-        // 非最大化时保存尺寸和位置
-        if (!isMaximized) {
-          final size = await windowManager.getSize();
-          final position = await windowManager.getPosition();
-          await Future.wait([
-            AppPreferences.instance.setWindowSize(size),
-            AppPreferences.instance.setWindowPosition(position),
-          ]);
-        }
-
-        WindowStateManager.clearCache();
-        Logger.debug('最小化到托盘前已保存窗口状态: isMaximized=$isMaximized');
-      } catch (e) {
-        Logger.error('保存窗口状态失败：$e');
-      }
-
-      await windowManager.setOpacity(0.99);
-      await windowManager.hide();
-
-      // 窗口隐藏后立即更新托盘菜单，恢复"显示窗口"选项
-      AppTrayManager().updateTrayMenuManually();
-      return;
-    }
-
-    // 完全退出应用
-    Logger.info('用户点击关闭按钮，开始清理流程...');
-
-    // 立即停止托盘图标更新，避免退出时图标闪烁
-    AppTrayManager().beginExit();
-
-    // 1. 先停止 Clash 进程（最重要）
-    try {
-      if (ClashManager.instance.isCoreRunning) {
-        Logger.info('正在停止 Clash 进程...');
-        // 先禁用系统代理，再停止核心
-        await ClashManager.instance.disableSystemProxy();
-        await ClashManager.instance.stopCore();
-        Logger.info('Clash 进程已停止');
-      }
-    } catch (e) {
-      Logger.error('停止 Clash 进程时出错：$e');
-    }
-
-    // 2. 保存窗口状态
-    try {
-      await WindowStateManager.saveStateOnClose();
-      Logger.info('窗口状态已保存');
-    } catch (e) {
-      Logger.error('保存窗口状态失败：$e');
-    }
-
-    // 3. 关闭 Rust 异步运行时
-    finalizeRust();
-
-    // 4. 退出应用
-    Logger.info('应用即将退出');
-    exit(0);
+    await WindowExitHandler.handleWindowClose();
   }
 }
 

@@ -219,6 +219,13 @@ Future<void> initializeWindowServices() async {
       await Window.hideWindowControls();
     }
 
+    // 关键：阻止窗口直接关闭，拦截关闭事件以执行清理操作
+    // 这样在任务栏右键点击"关闭窗口"时不会直接杀死进程
+    await windowManager.setPreventClose(true);
+
+    // 初始化窗口监听器，拦截关闭事件
+    await AppWindowListener().initialize();
+
     await AppTrayManager().initialize();
   }
 }

@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:rinf/rinf.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:stelliberty/utils/logger.dart';
@@ -294,39 +292,8 @@ class TrayEventHandler with TrayListener {
     }
   }
 
-  // 退出应用
+  // 退出应用（委托给窗口退出处理器）
   Future<void> exitApp() async {
-    Logger.info('正在退出应用...');
-
-    // 立即停止托盘图标更新，避免退出时图标闪烁
-    AppTrayManager().beginExit();
-
-    try {
-      // 1. 先停止 Clash 进程(若正在运行)
-      if (_clashProvider != null && _clashProvider!.isCoreRunning) {
-        Logger.info('正在停止 Clash 进程...');
-        // 先禁用系统代理,再停止核心（使用 ClashManager 统一管理，自动检测服务模式）
-        await ClashManager.instance.disableSystemProxy();
-        await ClashManager.instance.stopCore();
-        Logger.info('Clash 进程已停止');
-      }
-
-      // 2. 保存窗口状态
-      try {
-        await WindowStateManager.saveStateOnClose();
-        Logger.info('窗口状态已保存');
-      } catch (e) {
-        Logger.error('保存窗口状态失败：$e');
-      }
-
-      // 3. 关闭 Rust 异步运行时
-      finalizeRust();
-
-      exit(0);
-    } catch (e) {
-      Logger.error('退出应用时发生错误：$e');
-      // 即使出错也要退出
-      exit(1);
-    }
+    await WindowExitHandler.exitApp();
   }
 }

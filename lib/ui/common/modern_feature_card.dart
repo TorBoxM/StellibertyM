@@ -28,49 +28,51 @@ class ModernFeatureCard extends StatelessWidget {
     required this.child,
     required this.isSelected,
     required this.onTap,
-    this.borderRadius = 8.0,
+    this.borderRadius = 12.0,
     this.enableHover = true,
     this.enableTap = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    // 使用 switch expression 简化颜色选择
+    final backgroundColor = switch (isSelected) {
+      true => theme.colorScheme.primary.withAlpha(38),
+      false => theme.colorScheme.surface.withAlpha(153),
+    };
+
+    final borderColor = switch (isSelected) {
+      true => theme.colorScheme.primary.withAlpha(150),
+      false => theme.colorScheme.outline.withAlpha(80),
+    };
+
+    final hoverColor = switch (enableHover) {
+      true => theme.colorScheme.primary.withAlpha(20),
+      false => Colors.transparent,
+    };
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color: isSelected
-            ? Theme.of(context).colorScheme.primary.withAlpha(38)
-            : Theme.of(context).colorScheme.surface.withAlpha(153),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary.withAlpha(150)
-              : Theme.of(context).colorScheme.outline.withAlpha(80),
-          width: 2,
-        ),
-        boxShadow: [
-          if (isSelected)
-            BoxShadow(
-              color: Theme.of(context).colorScheme.primary.withAlpha(51),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-        ],
+        border: Border.all(color: borderColor, width: 2),
       ),
-      child: enableTap
-          ? Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(borderRadius),
-                onTap: onTap,
-                hoverColor: enableHover
-                    ? Theme.of(context).colorScheme.primary.withAlpha(20)
-                    : Colors.transparent,
-                child: child,
-              ),
-            )
-          : child,
+      child: switch (enableTap) {
+        true => Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(borderRadius),
+            onTap: onTap,
+            hoverColor: hoverColor,
+            child: child,
+          ),
+        ),
+        false => child,
+      },
     );
   }
 }

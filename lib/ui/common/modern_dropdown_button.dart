@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 // 统一的下拉按钮组件
 //
 // 提供一致的外观和交互效果，用于所有下拉菜单的触发按钮
+// 采用 Windows 11 风格的透明遮罩设计
 class CustomDropdownButton extends StatelessWidget {
   final String text;
   final bool isHovering;
@@ -19,39 +20,44 @@ class CustomDropdownButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 计算背景颜色，使用渐进式颜色混合以获得更好的视觉效果
-    final originalColor = Theme.of(context).colorScheme.surface.withAlpha(180);
-    final hoverOverlay = Theme.of(context).colorScheme.onSurface.withAlpha(20);
-    final backgroundColor = isHovering
-        ? Color.alphaBlend(hoverOverlay, originalColor)
-        : originalColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // 使用 switch expression 和 record 来简化逻辑
+    final (baseColor, alpha) = switch ((isDark, isHovering)) {
+      (true, true) => (Colors.white, 35), // 暗色主题 + hover
+      (true, false) => (Colors.white, 25), // 暗色主题
+      (false, true) => (Colors.black, 20), // 亮色主题 + hover
+      (false, false) => (Colors.black, 13), // 亮色主题
+    };
+
+    final backgroundColor = baseColor.withAlpha(alpha);
 
     return Container(
       width: width,
       height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withAlpha(100),
-          width: 1.5,
-        ),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+          const SizedBox(width: 4),
+          Transform.translate(
+            offset: const Offset(0, -1),
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
           const SizedBox(width: 8),
           Icon(
             Icons.keyboard_arrow_down,
-            color: Theme.of(context).colorScheme.onSurface,
+            size: 18,
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
           ),
         ],
       ),

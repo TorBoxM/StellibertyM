@@ -965,5 +965,28 @@
     "errorPermissionDenied": "Permission denied, please restart as administrator",
     "errorInvalidParameter": "Invalid parameter, please try again or restart the app",
     "errorSystemRestriction": "System restriction, some apps cannot be modified"
+  },
+  "backup": {
+    "title": "Backup & Restore",
+    "description": "Backup and restore application data",
+    "createBackup": "Create Backup",
+    "restoreBackup": "Restore Backup",
+    "selectBackupFile": "Select Backup File",
+    "backupSuccess": "Backup created successfully",
+    "backupFailed": "Failed to create backup",
+    "restoreSuccess": "Data restored successfully, please restart the app for changes to take effect",
+    "restoreFailed": "Failed to restore data",
+    "restoreConfirm": "Confirm Restore",
+    "restoreConfirmMessage": "Restoring backup will overwrite all current data. Continue?\n\n⚠️ This action cannot be undone. Consider creating a backup of current data first",
+    "creating": "Creating...",
+    "restoring": "Restoring...",
+    "backupFileSelected": "Backup file selected",
+    "errorFileNotFound": "Backup file not found",
+    "errorInvalidFormat": "Invalid backup file format, please select a valid .stelliberty file",
+    "errorVersionMismatch": "Backup version incompatible, cannot restore",
+    "errorDataIncomplete": "Backup file data incomplete, cannot restore",
+    "errorUnknown": "Operation failed, please try again",
+    "securityWarning": "Security Notice",
+    "securityWarningMessage": "Backup file contains all app configurations and subscription information. Please keep it secure and avoid sharing with others"
   }
 }

@@ -6,6 +6,7 @@ import 'package:stelliberty/ui/pages/settings/appearance_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/language_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/settings_overview_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash_features_page.dart';
+import 'package:stelliberty/ui/pages/settings/backup_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/app_update_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash/network_settings_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash/port_control_page.dart';
@@ -115,6 +116,8 @@ class _DynamicContentArea extends StatelessWidget {
         );
       case ContentView.settingsClashLogsDebug:
         return const LogsDebugPage(key: ValueKey('settings_clash_logs'));
+      case ContentView.settingsBackup:
+        return const BackupSettingsPage(key: ValueKey('settings_backup'));
       case ContentView.settingsAppUpdate:
         return const AppUpdateSettingsPage(
           key: ValueKey('settings_app_update'),

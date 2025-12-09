@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:stelliberty/storage/developer_preferences.dart';
+import 'package:stelliberty/storage/dev_preferences.dart';
 import '../config/clash_defaults.dart';
 import '../utils/system_proxy.dart';
 
@@ -665,4 +665,67 @@ class ClashPreferences {
 
   // 保存懒惰模式启用状态
   Future<void> setLazyMode(bool enabled) => _setBool(_kLazyMode, enabled);
+
+  // ==================== 通用存储方法 ====================
+  // 用于备份还原等需要批量操作配置的场景
+
+  // 获取字符串值
+  String? getString(String key) {
+    _ensureInit();
+    return _prefs!.getString(key);
+  }
+
+  // 保存字符串值
+  Future<void> setString(String key, String value) async {
+    _ensureInit();
+    await _prefs!.setString(key, value);
+  }
+
+  // 获取整数值
+  int? getInt(String key) {
+    _ensureInit();
+    return _prefs!.getInt(key);
+  }
+
+  // 保存整数值
+  Future<void> setInt(String key, int value) async {
+    _ensureInit();
+    await _prefs!.setInt(key, value);
+  }
+
+  // 获取双精度浮点数值
+  double? getDouble(String key) {
+    _ensureInit();
+    return _prefs!.getDouble(key);
+  }
+
+  // 保存双精度浮点数值
+  Future<void> setDouble(String key, double value) async {
+    _ensureInit();
+    await _prefs!.setDouble(key, value);
+  }
+
+  // 获取布尔值
+  bool? getBool(String key) {
+    _ensureInit();
+    return _prefs!.getBool(key);
+  }
+
+  // 保存布尔值
+  Future<void> setBool(String key, bool value) async {
+    _ensureInit();
+    await _prefs!.setBool(key, value);
+  }
+
+  // 删除指定键
+  Future<void> remove(String key) async {
+    _ensureInit();
+    await _prefs!.remove(key);
+  }
+
+  // 检查键是否存在
+  bool containsKey(String key) {
+    _ensureInit();
+    return _prefs!.containsKey(key);
+  }
 }

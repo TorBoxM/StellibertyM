@@ -98,6 +98,16 @@ class _SettingsOverviewPageState extends State<SettingsOverviewPage> {
               // 只移除点击时的水波纹扩散效果，保留悬停效果
               splashColor: Colors.transparent,
             ),
+            ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              leading: const Icon(Icons.backup_outlined),
+              title: Text(context.translate.backup.title),
+              subtitle: Text(context.translate.backup.description),
+              onTap: () => provider.switchView(ContentView.settingsBackup),
+              splashColor: Colors.transparent,
+            ),
             // 应用更新选项只在 Windows 平台显示
             if (Platform.isWindows)
               ListTile(

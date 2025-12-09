@@ -956,5 +956,28 @@
     "errorPermissionDenied": "权限不足，需要以管理员权限重新启动应用",
     "errorInvalidParameter": "参数无效，请重试或重启应用",
     "errorSystemRestriction": "系统限制，部分应用无法修改"
+  },
+  "backup": {
+    "title": "备份与还原",
+    "description": "备份和还原应用数据",
+    "createBackup": "创建备份",
+    "restoreBackup": "还原备份",
+    "selectBackupFile": "选择备份文件",
+    "backupSuccess": "备份创建成功",
+    "backupFailed": "备份创建失败",
+    "restoreSuccess": "数据还原成功，请重启应用使更改生效",
+    "restoreFailed": "数据还原失败",
+    "restoreConfirm": "确认还原",
+    "restoreConfirmMessage": "还原备份将覆盖当前所有数据，确定要继续吗？\n\n⚠️ 此操作不可撤销，建议先创建当前数据的备份",
+    "creating": "创建中...",
+    "restoring": "还原中...",
+    "backupFileSelected": "已选择备份文件",
+    "errorFileNotFound": "备份文件不存在",
+    "errorInvalidFormat": "备份文件格式错误，请选择有效的 .stelliberty 文件",
+    "errorVersionMismatch": "备份版本不兼容，无法还原",
+    "errorDataIncomplete": "备份文件数据不完整，无法还原",
+    "errorUnknown": "操作失败，请重试",
+    "securityWarning": "安全提示",
+    "securityWarningMessage": "备份文件包含所有应用配置和订阅信息，请妥善保管，避免泄露给他人"
   }
 }

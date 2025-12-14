@@ -91,7 +91,7 @@ void main(List<String> args) async {
   // 设置托盘管理器
   setupTrayManager(providers.clashProvider, providers.subscriptionProvider);
 
-  // 启动时更新
+  // 启动时更新（不阻塞 UI 启动）
   scheduleStartupUpdate(providers.subscriptionProvider);
 
   // Windows 平台：注入键盘事件修复器（修复 Win+V 剪贴板历史问题）
@@ -382,14 +382,10 @@ void setupTrayManager(
   }
 }
 
-// 调度启动时更新（延迟 3 秒，不阻塞启动流程，支持静默启动）
+// 启动时更新（不阻塞 UI 启动流程）
 void scheduleStartupUpdate(SubscriptionProvider subscriptionProvider) {
-  unawaited(
-    Future.delayed(const Duration(seconds: 3), () async {
-      Logger.info('开始执行启动时更新检查');
-      await subscriptionProvider.performStartupUpdate();
-    }),
-  );
+  Logger.info('触发启动时更新检查');
+  unawaited(subscriptionProvider.performStartupUpdate());
 }
 
 // ============================================================================

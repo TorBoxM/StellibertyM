@@ -21,7 +21,9 @@ class _LanguageSelectorState extends State<LanguageSelector> {
   Widget build(BuildContext context) {
     final trans = context.translate;
     final languageProvider = context.watch<LanguageProvider>();
-    final currentDisplayName = languageProvider.languageMode.displayName(context);
+    final currentDisplayName = languageProvider.languageMode.displayName(
+      context,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 // Clash 默认配置常量
@@ -32,16 +31,8 @@ class ClashDefaults {
   static const int delayTestConcurrency = 5; // 延迟测试并发数
   static const int subscriptionUpdateConcurrency = 3; // 订阅更新并发数
 
-  // 动态延迟测试并发数（CPU 核心数 × 15，上限 300）
-  // 延迟测试是 I/O 密集型任务，可以使用较高并发
-  static int get dynamicDelayTestConcurrency {
-    try {
-      final cpuCores = Platform.numberOfProcessors;
-      return ((cpuCores * 15).clamp(20, 300)).toInt();
-    } catch (e) {
-      return 50; // 异常时使用保守值
-    }
-  }
+  // 延迟测试并发数
+  static const int dynamicDelayTestConcurrency = 20;
 
   // ==================== 其他配置 ====================
   static const String defaultTestUrl = 'https://www.gstatic.com/generate_204';

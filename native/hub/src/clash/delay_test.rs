@@ -184,7 +184,24 @@ async fn batch_test_delays(
 
             async move {
                 // 获取信号量许可（阻塞，直到有空闲槽位）
-                let _permit = semaphore.acquire().await.ok()?;
+                let _permit = match semaphore.acquire().await {
+                    Ok(permit) => permit,
+                    Err(e) => {
+                        log::error!(
+                            "获取信号量许可失败（节点 {}/{}：{}）：{:?}",
+                            index + 1,
+                            total,
+                            node_name,
+                            e
+                        );
+                        // 即使获取许可失败，也要发送失败结果
+                        progress_callback(node_name.clone(), -1);
+                        return Some(BatchTestResult {
+                            node_name,
+                            delay_ms: -1,
+                        });
+                    }
+                };
 
                 log::debug!("开始测试节点 ({}/{}): {}", index + 1, total, node_name);
 
@@ -251,7 +268,7 @@ async fn test_single_node(node_name: &str, test_url: &str, timeout_ms: u32) -> i
             }
         }
         Err(e) => {
-            log::debug!("节点延迟测试失败：{} - {}", node_name, e);
+            log::warn!("节点延迟测试 IPC 请求失败：{} - {}", node_name, e);
             -1
         }
     }

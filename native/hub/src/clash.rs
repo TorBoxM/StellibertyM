@@ -13,13 +13,18 @@ pub mod delay_test;
 pub mod network;
 pub mod overrides;
 pub mod process;
+
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 pub mod service;
-pub mod subscription;
 
 pub use process::{ClashProcessResult, StartClashProcess, StopClashProcess};
+
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 pub use service::{
     GetServiceStatus, InstallService, SendServiceHeartbeat, StartClash, StopClash, UninstallService,
 };
+
+pub mod subscription;
 
 /// 初始化 Clash 模块
 ///
@@ -76,73 +81,74 @@ pub fn init() {
         }
     });
 
-    // 服务模式
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
+    {
+        // 获取服务状态
+        spawn(async {
+            let receiver = GetServiceStatus::get_dart_signal_receiver();
+            while let Some(dart_signal) = receiver.recv().await {
+                let message = dart_signal.message;
+                tokio::spawn(async move {
+                    message.handle().await;
+                });
+            }
+        });
 
-    // 获取服务状态
-    spawn(async {
-        let receiver = GetServiceStatus::get_dart_signal_receiver();
-        while let Some(dart_signal) = receiver.recv().await {
-            let message = dart_signal.message;
-            tokio::spawn(async move {
-                message.handle().await;
-            });
-        }
-    });
+        // 安装服务
+        spawn(async {
+            let receiver = InstallService::get_dart_signal_receiver();
+            while let Some(dart_signal) = receiver.recv().await {
+                let message = dart_signal.message;
+                tokio::spawn(async move {
+                    message.handle().await;
+                });
+            }
+        });
 
-    // 安装服务
-    spawn(async {
-        let receiver = InstallService::get_dart_signal_receiver();
-        while let Some(dart_signal) = receiver.recv().await {
-            let message = dart_signal.message;
-            tokio::spawn(async move {
-                message.handle().await;
-            });
-        }
-    });
+        // 卸载服务
+        spawn(async {
+            let receiver = UninstallService::get_dart_signal_receiver();
+            while let Some(dart_signal) = receiver.recv().await {
+                let message = dart_signal.message;
+                tokio::spawn(async move {
+                    message.handle().await;
+                });
+            }
+        });
 
-    // 卸载服务
-    spawn(async {
-        let receiver = UninstallService::get_dart_signal_receiver();
-        while let Some(dart_signal) = receiver.recv().await {
-            let message = dart_signal.message;
-            tokio::spawn(async move {
-                message.handle().await;
-            });
-        }
-    });
+        // 通过服务启动 Clash
+        spawn(async {
+            let receiver = StartClash::get_dart_signal_receiver();
+            while let Some(dart_signal) = receiver.recv().await {
+                let message = dart_signal.message;
+                tokio::spawn(async move {
+                    message.handle().await;
+                });
+            }
+        });
 
-    // 通过服务启动 Clash
-    spawn(async {
-        let receiver = StartClash::get_dart_signal_receiver();
-        while let Some(dart_signal) = receiver.recv().await {
-            let message = dart_signal.message;
-            tokio::spawn(async move {
-                message.handle().await;
-            });
-        }
-    });
+        // 通过服务停止 Clash
+        spawn(async {
+            let receiver = StopClash::get_dart_signal_receiver();
+            while let Some(dart_signal) = receiver.recv().await {
+                let message = dart_signal.message;
+                tokio::spawn(async move {
+                    message.handle().await;
+                });
+            }
+        });
 
-    // 通过服务停止 Clash
-    spawn(async {
-        let receiver = StopClash::get_dart_signal_receiver();
-        while let Some(dart_signal) = receiver.recv().await {
-            let message = dart_signal.message;
-            tokio::spawn(async move {
-                message.handle().await;
-            });
-        }
-    });
-
-    // 向服务发送心跳
-    spawn(async {
-        let receiver = SendServiceHeartbeat::get_dart_signal_receiver();
-        while let Some(dart_signal) = receiver.recv().await {
-            let message = dart_signal.message;
-            tokio::spawn(async move {
-                message.handle().await;
-            });
-        }
-    });
+        // 向服务发送心跳
+        spawn(async {
+            let receiver = SendServiceHeartbeat::get_dart_signal_receiver();
+            while let Some(dart_signal) = receiver.recv().await {
+                let message = dart_signal.message;
+                tokio::spawn(async move {
+                    message.handle().await;
+                });
+            }
+        });
+    }
 
     // 启动配置覆写监听器
     overrides::init_message_listeners();

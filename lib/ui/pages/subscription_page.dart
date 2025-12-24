@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import 'package:stelliberty/clash/providers/subscription_provider.dart';
 import 'package:stelliberty/clash/data/subscription_model.dart';
+import 'package:stelliberty/clash/services/geo_service.dart';
 import 'package:stelliberty/ui/widgets/subscription/subscription_card.dart';
 import 'package:stelliberty/ui/widgets/subscription/subscription_dialog.dart';
 import 'package:stelliberty/ui/widgets/override/override_selector_dialog.dart';
@@ -657,19 +659,26 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       Logger.debug('打开运行配置查看器');
       Logger.debug('订阅名称：${latestSubscription.name}');
 
-      // 读取订阅文件内容
-      final content = await provider.service.readSubscriptionConfig(
-        latestSubscription,
-      );
+      // 读取运行时配置文件（runtime_config.yaml）
+      final geoDataDir = await GeoService.getGeoDataDir();
+      final runtimeConfigPath = path.join(geoDataDir, 'runtime_config.yaml');
+      final runtimeConfigFile = File(runtimeConfigPath);
+
+      // 检查运行时配置文件是否存在
+      if (!await runtimeConfigFile.exists()) {
+        throw Exception('运行时配置文件不存在，请先启动 Clash 核心');
+      }
+
+      final content = await runtimeConfigFile.readAsString();
       if (!context.mounted) return;
 
       await FileEditorDialog.show(
         context,
-        fileName: '${latestSubscription.name}.yaml',
+        fileName: 'runtime_config.yaml',
         initialContent: content,
         readOnly: true, // 只读模式
         customTitle: '运行时配置', // 自定义标题
-        hideSubtitle: true, // 隐藏副标题（文件名）
+        hideSubtitle: false, // 显示文件名
         onSave: null, // 只读模式无需保存回调
       );
     } catch (error) {

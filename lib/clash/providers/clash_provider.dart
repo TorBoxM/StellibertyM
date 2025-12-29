@@ -356,7 +356,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
       );
 
       if (success) {
-        Logger.info('Clash 已重启，从 API 重新加载代理列表');
+        Logger.info('Clash 已重启');
         await loadProxies();
 
         // 获取实际使用的配置路径
@@ -626,10 +626,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         _selectedGroupName = proxyGroups.first.name;
       }
 
-      Logger.info(
-        '加载完成: ${_allProxyGroups.length} 个代理组（${proxyGroups.length} 可见），${_proxyNodes.length} 个节点',
-      );
-
       // 【性能监控】同步选择耗时
       final syncStopwatch = Stopwatch()..start();
       await _syncProxyGroupSelections();
@@ -640,7 +636,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
       Logger.error(_errorMessage!);
     } finally {
       totalStopwatch.stop();
-      Logger.info('加载代理列表完成（总耗时：${totalStopwatch.elapsedMilliseconds}ms）');
+      Logger.info(
+        '加载完成: ${_allProxyGroups.length} 个代理组（${proxyGroups.length} 可见），${_proxyNodes.length} 个节点（耗时：${totalStopwatch.elapsedMilliseconds}ms）',
+      );
     }
   }
 

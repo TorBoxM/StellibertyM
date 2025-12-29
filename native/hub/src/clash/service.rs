@@ -804,6 +804,8 @@ impl InstallService {
         match service_manager.install_service().await {
             Ok(()) => {
                 log::info!("服务安装成功");
+                // install_service 已调用 stop_clash 清理网络资源
+
                 ServiceOperationResult {
                     is_successful: true,
                     error_message: None,
@@ -840,6 +842,17 @@ impl UninstallService {
         match service_manager.uninstall_service().await {
             Ok(()) => {
                 log::info!("服务卸载成功");
+
+                // 清理网络资源（连接已失效）
+                tokio::spawn(async {
+                    log::info!("开始清理网络资源（服务卸载）");
+                    super::network::handlers::cleanup_all_network_resources().await;
+                    log::info!("网络资源清理完成（服务卸载）");
+                });
+
+                // 清理进程管理器状态
+                super::process::cleanup_process_manager().await;
+
                 ServiceOperationResult {
                     is_successful: true,
                     error_message: None,

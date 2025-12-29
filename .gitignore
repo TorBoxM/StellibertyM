@@ -27,6 +27,10 @@ migrate_working_dir/
 .vscode/
 *.code-workspace
 
+# Claude Code
+.claude/
+CLAUDE.md
+
 # Swift Package Manager
 .swiftpm/
 

@@ -108,6 +108,11 @@ class ProcessService {
     Logger.info('Clash 进程已停止');
   }
 
+  // 强制重置进程状态（服务安装/卸载时调用）
+  void forceResetState() {
+    _isCoreRunning = false;
+  }
+
   // 获取 Clash 可执行文件路径
   // 直接返回 flutter_assets 中的可执行文件路径
   static Future<String> getExecutablePath() async {

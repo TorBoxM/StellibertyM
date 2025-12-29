@@ -368,3 +368,17 @@ pub fn cleanup() {
         }
     }
 }
+
+// 清理进程管理器状态（服务卸载时调用）
+pub async fn cleanup_process_manager() {
+    log::info!("清理进程管理器状态（服务卸载）");
+
+    let mut manager = PROCESS_MANAGER.lock().unwrap_or_else(|e| {
+        log::error!("获取进程管理器锁失败：{}", e);
+        e.into_inner()
+    });
+
+    if manager.take().is_some() {
+        log::info!("进程管理器已清空");
+    }
+}

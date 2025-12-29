@@ -246,6 +246,11 @@ class ClashManager extends ChangeNotifier {
     return await _lifecycleManager.stopCore();
   }
 
+  // 强制重置进程状态（服务安装/卸载时调用）
+  void forceResetProcessState() {
+    _processService.forceResetState();
+  }
+
   // 启动服务心跳定时器（仅服务模式使用，代理方法）
   void startServiceHeartbeat() {
     _lifecycleManager.startServiceHeartbeat();

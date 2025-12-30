@@ -110,7 +110,7 @@ async fn handle_batch_delay_test_request(request: BatchDelayTestRequest) {
     let concurrency = request.concurrency as usize;
 
     // 进度回调：每个节点测试完成后发送进度信号
-    let progress_callback = Arc::new(move |node_name: String, delay_ms: i32| {
+    let on_progress = Arc::new(move |node_name: String, delay_ms: i32| {
         DelayTestProgress {
             node_name,
             delay_ms,
@@ -119,14 +119,8 @@ async fn handle_batch_delay_test_request(request: BatchDelayTestRequest) {
     });
 
     // 执行批量测试
-    let results = batch_test_delays(
-        node_names,
-        test_url,
-        timeout_ms,
-        concurrency,
-        progress_callback,
-    )
-    .await;
+    let results =
+        batch_test_delays(node_names, test_url, timeout_ms, concurrency, on_progress).await;
 
     // 统计成功数量
     let success_count = results.iter().filter(|r| r.delay_ms > 0).count() as u32;
@@ -149,7 +143,7 @@ async fn handle_batch_delay_test_request(request: BatchDelayTestRequest) {
 // [test_url] 测试 URL
 // [timeout_ms] 超时时间（毫秒）
 // [concurrency] 并发数（滑动窗口大小）
-// [progress_callback] 进度回调（每个节点测试完成后调用）
+// [on_progress] 进度回调（每个节点测试完成后调用）
 //
 // 返回：所有节点的测试结果 Vec
 async fn batch_test_delays(
@@ -157,7 +151,7 @@ async fn batch_test_delays(
     test_url: String,
     timeout_ms: u32,
     concurrency: usize,
-    progress_callback: Arc<dyn Fn(String, i32) + Send + Sync>,
+    on_progress: Arc<dyn Fn(String, i32) + Send + Sync>,
 ) -> Vec<BatchTestResult> {
     if node_names.is_empty() {
         log::warn!("批量延迟测试：节点列表为空");
@@ -180,7 +174,7 @@ async fn batch_test_delays(
         .map(|(index, node_name)| {
             let semaphore = Arc::clone(&semaphore);
             let test_url = Arc::clone(&test_url);
-            let progress_callback = Arc::clone(&progress_callback);
+            let on_progress = Arc::clone(&on_progress);
 
             async move {
                 // 获取信号量许可（阻塞，直到有空闲槽位）
@@ -195,7 +189,7 @@ async fn batch_test_delays(
                             e
                         );
                         // 即使获取许可失败，也要发送失败结果
-                        progress_callback(node_name.clone(), -1);
+                        on_progress(node_name.clone(), -1);
                         return Some(BatchTestResult {
                             node_name,
                             delay_ms: -1,
@@ -209,7 +203,7 @@ async fn batch_test_delays(
                 let delay_ms = test_single_node(&node_name, &test_url, timeout_ms).await;
 
                 // 触发进度回调
-                progress_callback(node_name.clone(), delay_ms);
+                on_progress(node_name.clone(), delay_ms);
 
                 Some(BatchTestResult {
                     node_name,

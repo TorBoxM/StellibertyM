@@ -430,7 +430,7 @@ class ConfigManager {
   }
 
   // 设置 TCP 保持活动
-  Future<bool> setKeepAlive(bool enabled, Function() restartCallback) async {
+  Future<bool> setKeepAlive(bool enabled, Function() onRestart) async {
     try {
       await ClashPreferences.instance.setKeepAliveEnabled(enabled);
       _notifyListeners();
@@ -439,7 +439,7 @@ class ConfigManager {
 
       if (_isCoreRunning()) {
         Logger.warning('TCP 保持活动配置需要重启核心才能生效，正在安排重启...');
-        restartCallback();
+        onRestart();
       }
 
       return true;
@@ -471,10 +471,7 @@ class ConfigManager {
   }
 
   // 设置混合端口
-  Future<bool> setMixedPort(
-    int port,
-    Function() updateSystemProxyCallback,
-  ) async {
+  Future<bool> setMixedPort(int port, Function() onUpdateSystemProxy) async {
     try {
       if (port < ClashDefaults.minPort || port > ClashDefaults.maxPort) {
         Logger.error('无效的端口号：$port');
@@ -493,7 +490,7 @@ class ConfigManager {
         _mixedPort = port;
         await ClashPreferences.instance.setMixedPort(port);
 
-        updateSystemProxyCallback();
+        onUpdateSystemProxy();
 
         _notifyListeners();
         Logger.info('混合端口（支持重载）：$port');

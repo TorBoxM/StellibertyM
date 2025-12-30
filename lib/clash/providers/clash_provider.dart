@@ -110,10 +110,10 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   // 延迟值保留时长（5 分钟）
   static const Duration _delayRetentionDuration = Duration(minutes: 5);
 
-  // selectedMap 内存缓存：记录每个代理组当前选中的节点
-  final Map<String, String> _selectedMap = {};
+  // selections 内存缓存：记录每个代理组当前选中的节点
+  final Map<String, String> _selections = {};
 
-  Map<String, String> get selectedMap => _selectedMap;
+  Map<String, String> get selections => _selections;
 
   String? _selectedGroupName;
   String? get selectedGroupName => _selectedGroupName;
@@ -814,7 +814,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     int savedCount = 0;
-    _selectedMap.clear();
+    _selections.clear();
 
     for (final group in _allProxyGroups) {
       if (!_isSelectableGroupType(group.type)) {
@@ -828,7 +828,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
           group.name,
           group.now!,
         );
-        _selectedMap[group.name] = group.now!;
+        _selections[group.name] = group.now!;
         savedCount++;
         Logger.debug('保存节点选择: ${group.name} -> ${group.now}');
       }
@@ -860,7 +860,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     Logger.debug('本地状态已更新：$groupName -> $proxyName');
 
     // 更新 selectedMap 缓存
-    _selectedMap[groupName] = proxyName;
+    _selections[groupName] = proxyName;
 
     // 保存节点选择到持久化存储
     final currentSubscriptionId = ClashPreferences.instance
@@ -911,7 +911,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     int restoredCount = 0;
     int defaultCount = 0;
 
-    _selectedMap.clear();
+    _selections.clear();
 
     for (int i = 0; i < _allProxyGroups.length; i++) {
       final group = _allProxyGroups[i];
@@ -955,7 +955,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       // 同时更新 selectedMap
       if (selected != null) {
-        _selectedMap[group.name] = selected;
+        _selections[group.name] = selected;
       }
     }
 
@@ -1050,7 +1050,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
       proxyName,
       _proxyNodes,
       _allProxyGroups,
-      _selectedMap,
+      _selections,
       testUrl: testUrl,
     );
 
@@ -1103,7 +1103,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         groupName,
         _proxyNodes,
         _allProxyGroups,
-        _selectedMap,
+        _selections,
         testUrl: testUrl,
         onNodeStart: (nodeName) {
           // 节点开始测试时保持在 testingNodes 中
@@ -1183,16 +1183,14 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       // 使用 Rust 层批量测试
-      final proxyNamesList = allProxyNames.toList();
+      final proxyNames = allProxyNames.toList();
 
       // 使用动态并发数
       final concurrency = ClashDefaults.dynamicDelayTestConcurrency;
       final timeoutMs = ClashDefaults.proxyDelayTestTimeout;
       final url = testUrl ?? ClashDefaults.defaultTestUrl;
 
-      Logger.info(
-        '开始批量测试所有节点延迟，共 ${proxyNamesList.length} 个节点，并发数：$concurrency',
-      );
+      Logger.info('开始批量测试所有节点延迟，共 ${proxyNames.length} 个节点，并发数：$concurrency');
 
       // 订阅 Rust 层进度信号
       StreamSubscription? progressSubscription;
@@ -1276,7 +1274,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
         // 发送批量测试请求到 Rust 层
         signals.BatchDelayTestRequest(
-          nodeNames: proxyNamesList,
+          nodeNames: proxyNames,
           testUrl: url,
           timeoutMs: timeoutMs,
           concurrency: concurrency,
@@ -1284,7 +1282,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
         // 等待测试完成（最多等待：节点数 × 单个超时 + 10秒缓冲）
         final maxWaitTime = Duration(
-          milliseconds: (proxyNamesList.length * timeoutMs) + 10000,
+          milliseconds: (proxyNames.length * timeoutMs) + 10000,
         );
         await completer.future.timeout(
           maxWaitTime,

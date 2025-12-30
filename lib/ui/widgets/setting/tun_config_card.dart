@@ -266,20 +266,20 @@ class _TunConfigCardState extends State<TunConfigCard> {
       ClashManager.instance.setTunMtu(mtu);
 
       // 保存 DNS 劫持列表
-      final hijackList = _tunDnsHijackController.text
+      final hijacks = _tunDnsHijackController.text
           .split('，')
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
           .toList();
-      ClashManager.instance.setTunDnsHijack(hijackList);
+      ClashManager.instance.setTunDnsHijack(hijacks);
 
       // 保存排除路由地址列表
-      final addressList = _tunRouteExcludeAddressController.text
+      final addresses = _tunRouteExcludeAddressController.text
           .split('，')
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
           .toList();
-      ClashManager.instance.setTunRouteExcludeAddress(addressList);
+      ClashManager.instance.setTunRouteExcludeAddress(addresses);
 
       if (mounted) {
         ModernToast.success(context, trans.tunConfig.saveSuccess);

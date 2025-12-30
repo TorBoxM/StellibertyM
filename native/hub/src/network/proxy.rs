@@ -179,8 +179,8 @@ mod windows_impl {
                 .chain(std::iter::once(0))
                 .collect();
 
-            let bypass_list = bypass_domains.join(";");
-            let mut bypass_list_wide: Vec<u16> = OsStr::new(&bypass_list)
+            let bypasses = bypass_domains.join(";");
+            let mut bypasses_wide: Vec<u16> = OsStr::new(&bypasses)
                 .encode_wide()
                 .chain(std::iter::once(0))
                 .collect();
@@ -202,7 +202,7 @@ mod windows_impl {
                 dwOption: INTERNET_PER_CONN_PROXY_BYPASS,
                 Value: std::mem::zeroed(),
             };
-            *(&mut option3.Value as *mut _ as *mut PWSTR) = PWSTR(bypass_list_wide.as_mut_ptr());
+            *(&mut option3.Value as *mut _ as *mut PWSTR) = PWSTR(bypasses_wide.as_mut_ptr());
 
             let mut options = [option1, option2, option3];
 
@@ -802,7 +802,7 @@ mod linux_impl {
             .status();
 
         // 设置绕过域名
-        let bypass_list = bypass_domains.join(",");
+        let bypasses = bypass_domains.join(",");
         let _ = Command::new("kwriteconfig5")
             .args([
                 "--file",
@@ -811,7 +811,7 @@ mod linux_impl {
                 "Proxy Settings",
                 "--key",
                 "NoProxyFor",
-                &bypass_list,
+                &bypasses,
             ])
             .status();
 

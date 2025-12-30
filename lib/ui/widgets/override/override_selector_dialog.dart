@@ -54,7 +54,7 @@ class _OverrideSelectorDialogState extends State<OverrideSelectorDialog> {
   }
 
   void _initializeOrder(List<OverrideConfig> allOverrides) {
-    final overrideMap = {for (final o in allOverrides) o.id: o};
+    final overridesById = {for (final o in allOverrides) o.id: o};
 
     final List<String> sourceIds;
     final bool shouldUseSavedOrder;
@@ -66,12 +66,12 @@ class _OverrideSelectorDialogState extends State<OverrideSelectorDialog> {
       shouldUseSavedOrder = false;
     }
 
-    final sourceIdSet = sourceIds.toSet();
+    final existingIds = sourceIds.toSet();
     _orderedOverrides = [
       for (final id in sourceIds)
-        if (overrideMap.containsKey(id)) overrideMap[id]!,
+        if (overridesById.containsKey(id)) overridesById[id]!,
       for (final override in allOverrides)
-        if (!sourceIdSet.contains(override.id)) override,
+        if (!existingIds.contains(override.id)) override,
     ];
 
     Logger.debug(

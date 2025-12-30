@@ -176,7 +176,7 @@ class DnsConfig {
   // 从 Map 创建 DnsConfig
   factory DnsConfig.fromMap(Map<String, dynamic> map) {
     final dnsMap = map['dns'] as Map<String, dynamic>? ?? {};
-    final hostsMap = map['hosts'] as Map<String, dynamic>? ?? {};
+    final hosts = map['hosts'] as Map<String, dynamic>? ?? {};
     final fallbackFilter =
         dnsMap['fallback-filter'] as Map<String, dynamic>? ?? {};
 
@@ -216,7 +216,7 @@ class DnsConfig {
       // 核心功能
       nameserverPolicy:
           dnsMap['nameserver-policy'] as Map<String, dynamic>? ?? {},
-      hosts: hostsMap,
+      hosts: hosts,
     );
   }
 
@@ -250,14 +250,14 @@ class DnsConfig {
     // 当 respect-rules 为 true 时，proxy-server-nameserver 是必需的
     // 即使用户清空了这个字段，也应该写入默认值以避免 Mihomo 报错
     if (respectRules || proxyServerNameserver.isNotEmpty) {
-      final serverList = proxyServerNameserver.isNotEmpty
+      final servers = proxyServerNameserver.isNotEmpty
           ? proxyServerNameserver
           : [
               'https://doh.pub/dns-query',
               'https://dns.alidns.com/dns-query',
               'tls://223.5.5.5',
             ];
-      dnsConfig['proxy-server-nameserver'] = serverList;
+      dnsConfig['proxy-server-nameserver'] = servers;
     }
 
     if (directNameserver.isNotEmpty) {

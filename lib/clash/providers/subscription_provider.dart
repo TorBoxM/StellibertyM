@@ -164,9 +164,9 @@ class SubscriptionProvider extends ChangeNotifier {
 
     // 一次性查询所有覆写
     final allExistingOverrides = await getOverrides(allOverrideIds.toList());
-    final validIdsSet = allExistingOverrides.map((o) => o.id).toSet();
+    final validIds = allExistingOverrides.map((o) => o.id).toSet();
 
-    Logger.debug('查询到 ${validIdsSet.length}/${allOverrideIds.length} 个有效覆写');
+    Logger.debug('查询到 ${validIds.length}/${allOverrideIds.length} 个有效覆写');
 
     // 遍历订阅并更新
     bool hasChanges = false;
@@ -175,20 +175,20 @@ class SubscriptionProvider extends ChangeNotifier {
       if (subscription.overrideIds.isEmpty) continue;
 
       // 过滤出有效的 ID
-      final validIds = subscription.overrideIds
-          .where((id) => validIdsSet.contains(id))
+      final filteredIds = subscription.overrideIds
+          .where((id) => validIds.contains(id))
           .toList();
 
       // 找出无效的ID
       final invalidIds = subscription.overrideIds
-          .where((id) => !validIdsSet.contains(id))
+          .where((id) => !validIds.contains(id))
           .toList();
 
       if (invalidIds.isNotEmpty) {
         Logger.info(
           '订阅 ${subscription.name} 包含 ${invalidIds.length} 个无效覆写引用: $invalidIds',
         );
-        _subscriptions[i] = subscription.copyWith(overrideIds: validIds);
+        _subscriptions[i] = subscription.copyWith(overrideIds: filteredIds);
         hasChanges = true;
       }
     }

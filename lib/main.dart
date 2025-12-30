@@ -354,7 +354,7 @@ Future<void> setupProviderDependencies(
   final currentSub = providers.subscriptionProvider.currentSubscription;
   if (currentSub != null && currentSub.overrideIds.isNotEmpty) {
     Logger.debug('检测到当前订阅有覆写，设置覆写失败回调');
-    ClashManager.instance.setOverridesFailedCallback(() async {
+    ClashManager.instance.setOnOverridesFailed(() async {
       Logger.warning('检测到覆写失败，开始回退处理');
       await providers.subscriptionProvider.handleOverridesFailed();
     });
@@ -363,7 +363,7 @@ Future<void> setupProviderDependencies(
   }
 
   // 设置默认配置启动成功回调（清除 currentSubscription，避免应用重启后再次失败）
-  ClashManager.instance.setThirdLevelFallbackCallback(() async {
+  ClashManager.instance.setOnThirdLevelFallback(() async {
     Logger.warning('使用默认配置启动成功，清除失败的订阅选择');
     await providers.subscriptionProvider.clearCurrentSubscription();
   });

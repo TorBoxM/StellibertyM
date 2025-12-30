@@ -35,7 +35,7 @@ class SystemProxyManager {
       final proxyHost = prefs.getProxyHost();
       final usePacMode = prefs.getSystemProxyPacMode();
       final bypassRules = prefs.getCurrentBypassRules();
-      final bypassList = SystemProxy.parseBypassRules(bypassRules);
+      final bypasses = SystemProxy.parseBypassRules(bypassRules);
       final pacScript = prefs.getSystemProxyPacScript();
 
       await SystemProxy.disable();
@@ -43,7 +43,7 @@ class SystemProxyManager {
       await SystemProxy.enable(
         host: proxyHost,
         port: _getHttpPort(),
-        bypassDomains: bypassList,
+        bypassDomains: bypasses,
         usePacMode: usePacMode,
         pacScript: pacScript,
       );
@@ -71,13 +71,13 @@ class SystemProxyManager {
       final proxyHost = prefs.getProxyHost();
       final usePacMode = prefs.getSystemProxyPacMode();
       final bypassRules = prefs.getCurrentBypassRules();
-      final bypassList = SystemProxy.parseBypassRules(bypassRules);
+      final bypasses = SystemProxy.parseBypassRules(bypassRules);
       final pacScript = prefs.getSystemProxyPacScript();
 
       await SystemProxy.enable(
         host: proxyHost,
         port: _getHttpPort(),
-        bypassDomains: bypassList,
+        bypassDomains: bypasses,
         usePacMode: usePacMode,
         pacScript: pacScript,
       );

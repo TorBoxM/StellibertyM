@@ -12,7 +12,7 @@ class DelayTestService {
     String proxyName,
     Map<String, ProxyNode> proxyNodes,
     List<ProxyGroup> allProxyGroups,
-    Map<String, String> selectedMap, {
+    Map<String, String> selections, {
     String? testUrl,
   }) async {
     final node = proxyNodes[proxyName];
@@ -66,7 +66,7 @@ class DelayTestService {
     String groupName,
     Map<String, ProxyNode> proxyNodes,
     List<ProxyGroup> allProxyGroups,
-    Map<String, String> selectedMap, {
+    Map<String, String> selections, {
     String? testUrl,
     Function(String nodeName)? onNodeStart,
     Function(String nodeName, int delay)? onNodeComplete,

@@ -100,30 +100,30 @@ class ClashManager extends ChangeNotifier {
   bool get isSystemProxyEnabled => _systemProxyManager.isSystemProxyEnabled;
 
   // 覆写获取回调（从 SubscriptionProvider 注入）
-  List<OverrideConfig> Function()? _getOverridesCallback;
+  List<OverrideConfig> Function()? _getOverrides;
 
   // 覆写失败回调（启动失败时禁用当前订阅的所有覆写）
-  Future<void> Function()? _onOverridesFailedCallback;
+  Future<void> Function()? _onOverridesFailed;
 
   // 默认配置启动成功回调（清除 currentSubscription，避免应用重启后再次尝试失败的配置）
-  Future<void> Function()? _onThirdLevelFallbackCallback;
+  Future<void> Function()? _onThirdLevelFallback;
 
   // 防重复调用标记
   bool _isHandlingOverridesFailed = false;
 
   // 获取覆写配置（公开接口，供 ServiceProvider 使用）
   List<OverrideConfig> getOverrides() {
-    return _getOverridesCallback?.call() ?? [];
+    return _getOverrides?.call() ?? [];
   }
 
   // 覆写失败处理（公开接口，供 LifecycleManager 调用）
-  Future<void> onOverridesFailed() async {
+  Future<void> handleOverridesFailed() async {
     if (_isHandlingOverridesFailed) {
       Logger.warning('覆写失败回调正在处理中，跳过重复调用');
       return;
     }
 
-    if (_onOverridesFailedCallback == null) {
+    if (_onOverridesFailed == null) {
       Logger.debug('覆写失败回调未设置，跳过处理');
       return;
     }
@@ -131,7 +131,7 @@ class ClashManager extends ChangeNotifier {
     _isHandlingOverridesFailed = true;
     try {
       Logger.info('开始执行覆写失败回调');
-      await _onOverridesFailedCallback!();
+      await _onOverridesFailed!();
       Logger.info('覆写失败回调执行完成');
     } catch (e) {
       Logger.error('覆写失败回调执行异常：$e');
@@ -178,19 +178,19 @@ class ClashManager extends ChangeNotifier {
 
   // 设置覆写获取回调（由 SubscriptionProvider 注入）
   void setOverridesGetter(List<OverrideConfig> Function() callback) {
-    _getOverridesCallback = callback;
+    _getOverrides = callback;
     Logger.debug('已设置覆写获取回调到 ClashManager');
   }
 
   // 设置覆写失败回调（由 SubscriptionProvider 注入）
-  void setOverridesFailedCallback(Future<void> Function() callback) {
-    _onOverridesFailedCallback = callback;
+  void setOnOverridesFailed(Future<void> Function() callback) {
+    _onOverridesFailed = callback;
     Logger.debug('已设置覆写失败回调到 ClashManager');
   }
 
   // 设置默认配置启动成功回调（由 SubscriptionProvider 注入）
-  void setThirdLevelFallbackCallback(Future<void> Function() callback) {
-    _onThirdLevelFallbackCallback = callback;
+  void setOnThirdLevelFallback(Future<void> Function() callback) {
+    _onThirdLevelFallback = callback;
     Logger.debug('已设置默认配置启动成功回调到 ClashManager');
   }
 
@@ -201,8 +201,8 @@ class ClashManager extends ChangeNotifier {
     final success = await _lifecycleManager.startCore(
       configPath: configPath,
       overrides: overrides,
-      onOverridesFailed: onOverridesFailed,
-      onThirdLevelFallback: _onThirdLevelFallbackCallback,
+      onOverridesFailed: handleOverridesFailed,
+      onThirdLevelFallback: _onThirdLevelFallback,
       mixedPort: _configManager.mixedPort, // 传递混合端口
       isIpv6Enabled: _configManager.isIpv6Enabled,
       isTunEnabled: _configManager.isTunEnabled,

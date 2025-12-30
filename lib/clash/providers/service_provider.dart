@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:stelliberty/clash/core/service_state.dart';
-import 'package:stelliberty/clash/core/core_state.dart';
 import 'package:stelliberty/clash/manager/manager.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'package:stelliberty/utils/logger.dart';
@@ -124,9 +123,8 @@ class ServiceProvider {
               : '使用默认配置';
           Logger.info('以服务模式重启核心（$configDesc）...');
 
-          // 重置状态（服务安装时核心已被停止）
-          CoreStateManager.instance.setStopped(reason: '服务安装时核心已被停止');
-          ClashManager.instance.forceResetProcessState();
+          // 确保核心进程完全停止后再以服务模式启动
+          await ClashManager.instance.stopCore();
 
           final overrides = ClashManager.instance.getOverrides();
           await ClashManager.instance.startCore(
@@ -221,9 +219,8 @@ class ServiceProvider {
         if (wasRunningBefore && currentConfigPath != null) {
           Logger.info('以普通模式重启核心...');
           try {
-            // 重置状态（服务卸载时核心已被终止）
-            CoreStateManager.instance.setStopped(reason: '服务卸载后核心已被终止');
-            ClashManager.instance.forceResetProcessState();
+            // 重置 Dart 端状态后再以普通模式启动
+            await ClashManager.instance.stopCore();
 
             final overrides = ClashManager.instance.getOverrides();
             await ClashManager.instance.startCore(

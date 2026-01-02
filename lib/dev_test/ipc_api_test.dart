@@ -128,7 +128,7 @@ class IpcApiTest {
       Logger.info('测试 6: WebSocket 流量监控');
       await _testTrafficStream();
 
-      // 8. 测试 WebSocket 日��监控
+      // 8. 测试 WebSocket 日志监控
       Logger.info('');
       Logger.info('测试 7: WebSocket 日志监控');
       await _testLogStream();

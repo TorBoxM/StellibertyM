@@ -1,9 +1,11 @@
-// Windows 电源事件监听：休眠/唤醒自动重载 TUN
+// Windows 电源事件监听：监听休眠与唤醒事件并上报到 Flutter
 
 #[cfg(target_os = "windows")]
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 #[cfg(target_os = "windows")]
-use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{
+    GetLastError, HANDLE, HWND, LPARAM, LRESULT, WIN32_ERROR, WPARAM,
+};
 #[cfg(target_os = "windows")]
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 #[cfg(target_os = "windows")]
@@ -11,10 +13,12 @@ use windows::Win32::System::Power::{
     POWERBROADCAST_SETTING, RegisterPowerSettingNotification, UnregisterPowerSettingNotification,
 };
 #[cfg(target_os = "windows")]
+use windows::Win32::System::Threading::GetCurrentThreadId;
+#[cfg(target_os = "windows")]
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW, PostQuitMessage,
-    REGISTER_NOTIFICATION_FLAGS, RegisterClassW, TranslateMessage, WINDOW_EX_STYLE,
-    WM_POWERBROADCAST, WNDCLASSW, WS_OVERLAPPEDWINDOW,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW,
+    PostThreadMessageW, REGISTER_NOTIFICATION_FLAGS, RegisterClassW, TranslateMessage,
+    WINDOW_EX_STYLE, WM_POWERBROADCAST, WM_QUIT, WNDCLASSW, WS_OVERLAPPEDWINDOW,
 };
 #[cfg(target_os = "windows")]
 use windows::core::GUID;
@@ -54,6 +58,9 @@ const GUID_CONSOLE_DISPLAY_STATE: GUID = GUID {
 };
 
 #[cfg(target_os = "windows")]
+const ERROR_CLASS_ALREADY_EXISTS_CODE: u32 = 1410;
+
+#[cfg(target_os = "windows")]
 const PBT_APMSUSPEND: u32 = 0x0004;
 #[cfg(target_os = "windows")]
 const PBT_APMRESUMEAUTOMATIC: u32 = 0x0012;
@@ -64,6 +71,9 @@ const PBT_POWERSETTINGCHANGE: u32 = 0x8013;
 
 #[cfg(target_os = "windows")]
 static RUNNING: AtomicBool = AtomicBool::new(false);
+
+#[cfg(target_os = "windows")]
+static LISTENER_THREAD_ID: AtomicU32 = AtomicU32::new(0);
 
 #[cfg(target_os = "windows")]
 unsafe extern "system" fn window_proc(
@@ -103,29 +113,27 @@ unsafe extern "system" fn window_proc(
 
                 PBT_POWERSETTINGCHANGE => {
                     let setting = lparam.0 as *const POWERBROADCAST_SETTING;
-                    if !setting.is_null() {
-                        unsafe {
-                            let setting_ref = &*setting;
+                    if setting.is_null() {
+                        return LRESULT(0);
+                    }
 
-                            if setting_ref.PowerSetting == GUID_CONSOLE_DISPLAY_STATE {
-                                let display_state = if setting_ref.DataLength >= 4 {
-                                    u32::from_le_bytes([
-                                        setting_ref.Data.first().copied().unwrap_or(0),
-                                        setting_ref.Data.get(1).copied().unwrap_or(0),
-                                        setting_ref.Data.get(2).copied().unwrap_or(0),
-                                        setting_ref.Data.get(3).copied().unwrap_or(0),
-                                    ])
-                                } else {
-                                    0
-                                };
+                    let setting_ref = unsafe { &*setting };
+                    if setting_ref.PowerSetting == GUID_CONSOLE_DISPLAY_STATE {
+                        let data_len = setting_ref.DataLength as usize;
+                        if data_len >= 4 {
+                            let bytes =
+                                unsafe { std::slice::from_raw_parts(setting_ref.Data.as_ptr(), 4) };
+                            let display_state =
+                                u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
 
-                                match display_state {
-                                    0 => log::debug!("显示器关闭"),
-                                    1 => log::debug!("显示器开启"),
-                                    2 => log::debug!("显示器变暗"),
-                                    _ => log::debug!("显示器状态未知: {}", display_state),
-                                }
+                            match display_state {
+                                0 => log::debug!("显示器关闭"),
+                                1 => log::debug!("显示器开启"),
+                                2 => log::debug!("显示器变暗"),
+                                _ => log::debug!("显示器状态未知: {}", display_state),
                             }
+                        } else {
+                            log::debug!("显示器状态数据长度不足: {}", data_len);
                         }
                     }
                 }
@@ -154,6 +162,7 @@ pub fn start_power_event_listener() {
         if let Err(e) = run_event_loop() {
             log::error!("电源事件循环失败: {}", e);
             RUNNING.store(false, Ordering::SeqCst);
+            LISTENER_THREAD_ID.store(0, Ordering::SeqCst);
         }
     });
 }
@@ -161,6 +170,8 @@ pub fn start_power_event_listener() {
 #[cfg(target_os = "windows")]
 fn run_event_loop() -> Result<(), String> {
     unsafe {
+        LISTENER_THREAD_ID.store(GetCurrentThreadId(), Ordering::SeqCst);
+
         let instance = GetModuleHandleW(None).map_err(|e| format!("获取模块句柄失败: {}", e))?;
 
         let class_name = windows::core::w!("StellibertyPowerEventClass");
@@ -174,7 +185,10 @@ fn run_event_loop() -> Result<(), String> {
 
         let atom = RegisterClassW(&wc);
         if atom == 0 {
-            return Err("注册窗口类失败".to_string());
+            let last_error = GetLastError();
+            if last_error != WIN32_ERROR(ERROR_CLASS_ALREADY_EXISTS_CODE) {
+                return Err(format!("注册窗口类失败: {}", last_error.0));
+            }
         }
 
         let hwnd = CreateWindowExW(
@@ -193,7 +207,7 @@ fn run_event_loop() -> Result<(), String> {
         )
         .map_err(|e| format!("创建窗口失败: {}", e))?;
 
-        let _notify_handle = RegisterPowerSettingNotification(
+        let notify_handle = RegisterPowerSettingNotification(
             HANDLE(hwnd.0),
             &GUID_CONSOLE_DISPLAY_STATE,
             REGISTER_NOTIFICATION_FLAGS(0x00000000),
@@ -210,11 +224,14 @@ fn run_event_loop() -> Result<(), String> {
 
         log::info!("清理电源监听器");
 
-        if let Err(e) = UnregisterPowerSettingNotification(_notify_handle) {
+        if let Err(e) = UnregisterPowerSettingNotification(notify_handle) {
             log::warn!("注销电源通知失败: {}", e);
         }
+
         let _ = DestroyWindow(hwnd);
+
         RUNNING.store(false, Ordering::SeqCst);
+        LISTENER_THREAD_ID.store(0, Ordering::SeqCst);
 
         Ok(())
     }
@@ -227,10 +244,19 @@ pub fn stop_power_event_listener() {
         return;
     }
 
+    let thread_id = LISTENER_THREAD_ID.load(Ordering::SeqCst);
+    if thread_id == 0 {
+        log::warn!("电源监听器线程未就绪，无法停止");
+        return;
+    }
+
     log::info!("停止电源监听器");
 
     unsafe {
-        PostQuitMessage(0);
+        if let Err(e) = PostThreadMessageW(thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) {
+            log::warn!("发送退出消息失败: {}", e);
+            return;
+        }
     }
 
     RUNNING.store(false, Ordering::SeqCst);

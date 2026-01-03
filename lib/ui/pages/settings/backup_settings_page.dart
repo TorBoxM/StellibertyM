@@ -3,6 +3,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:stelliberty/services/backup_service.dart';
 import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/providers/subscription_provider.dart';
+import 'package:stelliberty/clash/providers/override_provider.dart';
+import 'package:stelliberty/storage/preferences.dart';
+import 'package:stelliberty/clash/storage/preferences.dart';
 import 'package:stelliberty/ui/common/modern_feature_card.dart';
 import 'package:stelliberty/ui/constants/spacing.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
@@ -188,9 +192,31 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
 
       if (!mounted) return;
 
+      // 重新加载订阅和覆写数据
+      Logger.info('备份还原成功，重新加载所有数据');
+
+      // 重新初始化 AppPreferences 和 ClashPreferences
+      await AppPreferences.instance.init();
+      await ClashPreferences.instance.init();
+
+      if (!mounted) return;
+
+      final subscriptionProvider = Provider.of<SubscriptionProvider>(
+        context,
+        listen: false,
+      );
+      final overrideProvider = Provider.of<OverrideProvider>(
+        context,
+        listen: false,
+      );
+
+      // 重新初始化 Provider 以加载还原的数据
+      await subscriptionProvider.initialize('');
+      await overrideProvider.initialize();
+
       // 如果核心正在运行，重启核心以应用新配置
       if (ClashManager.instance.isCoreRunning) {
-        Logger.info('备份还原成功，重启核心以应用新配置');
+        Logger.info('重启核心以应用新配置');
         await ClashManager.instance.restartCore();
       }
 

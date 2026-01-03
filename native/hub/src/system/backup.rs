@@ -146,12 +146,12 @@ pub async fn create_backup(
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     log::info!("开始创建备份到：{}", target_path);
 
-    // 1. 收集应用配置
-    let app_prefs = collect_preferences(&format!("{}/app_preferences.json", app_data_path)).await?;
+    // 1. 收集应用配置（Dev 模式使用 shared_preferences_dev.json，Release 模式需要从系统读取）
+    let app_prefs =
+        collect_preferences(&format!("{}/shared_preferences_dev.json", app_data_path)).await?;
 
-    // 2. 收集 Clash 配置
-    let clash_prefs =
-        collect_preferences(&format!("{}/clash_preferences.json", app_data_path)).await?;
+    // 2. Clash 配置与应用配置共享同一个文件
+    let clash_prefs = HashMap::new(); // Clash 配置已包含在 app_prefs 中
 
     // 3. 收集订阅数据
     let subscriptions = collect_subscriptions(app_data_path).await?;
@@ -227,19 +227,14 @@ pub async fn restore_backup(
         backup_data.timestamp
     );
 
-    // 3. 还原应用配置
+    // 3. 还原应用配置（包含 Clash 配置）
     restore_preferences(
         &backup_data.data.app_preferences,
-        &format!("{}/app_preferences.json", app_data_path),
+        &format!("{}/shared_preferences_dev.json", app_data_path),
     )
     .await?;
 
-    // 4. 还原 Clash 配置
-    restore_preferences(
-        &backup_data.data.clash_preferences,
-        &format!("{}/clash_preferences.json", app_data_path),
-    )
-    .await?;
+    // 4. Clash 配置已包含在 app_preferences 中，无需单独还原
 
     // 5. 还原订阅数据
     restore_subscriptions(&backup_data.data.subscriptions, app_data_path).await?;

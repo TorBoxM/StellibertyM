@@ -263,7 +263,10 @@ class ClashManager extends ChangeNotifier {
 
   // 重启核心（停止后重新启动）
   // 用于应用配置更改（如端口、外部控制器等需要重启才能生效的配置）
-  Future<bool> restartCore({String? configPath}) async {
+  Future<bool> restartCore({
+    String? configPath,
+    List<OverrideConfig>? overrides,
+  }) async {
     Logger.info('开始重启核心');
 
     // 停止核心
@@ -276,9 +279,10 @@ class ClashManager extends ChangeNotifier {
     // 等待一小段时间确保端口完全释放
     await Future.delayed(const Duration(milliseconds: 50));
 
-    // 启动核心（使用显式传递的 configPath，或当前的配置路径）
+    // 启动核心
     final startSuccess = await startCore(
       configPath: configPath ?? currentConfigPath,
+      overrides: overrides ?? getOverrides(),
     );
     if (!startSuccess) {
       Logger.error('启动核心失败');
@@ -486,36 +490,79 @@ class ClashManager extends ChangeNotifier {
     return success;
   }
 
+  // 通用的 TUN 子配置修改方法（自动触发配置重载）
+  Future<bool> _setTunSubConfig(
+    Future<bool> Function() setter,
+    String configName,
+  ) async {
+    final success = await setter();
+
+    // 如果核心正在运行且 TUN 已启用，重新生成配置并重载
+    if (success && isCoreRunning && isTunEnabled) {
+      Logger.debug('TUN 子配置已更新（$configName），重新生成配置文件并重载…');
+      await reloadConfig(
+        configPath: currentConfigPath,
+        overrides: getOverrides(),
+      );
+    }
+
+    return success;
+  }
+
   Future<bool> setTunStack(String stack) async {
-    return await _configManager.setTunStack(stack);
+    return await _setTunSubConfig(
+      () => _configManager.setTunStack(stack),
+      'stack',
+    );
   }
 
   Future<bool> setTunDevice(String device) async {
-    return await _configManager.setTunDevice(device);
+    return await _setTunSubConfig(
+      () => _configManager.setTunDevice(device),
+      'device',
+    );
   }
 
   Future<bool> setTunAutoRoute(bool enabled) async {
-    return await _configManager.setTunAutoRoute(enabled);
+    return await _setTunSubConfig(
+      () => _configManager.setTunAutoRoute(enabled),
+      'auto-route',
+    );
   }
 
   Future<bool> setTunAutoDetectInterface(bool enabled) async {
-    return await _configManager.setTunAutoDetectInterface(enabled);
+    return await _setTunSubConfig(
+      () => _configManager.setTunAutoDetectInterface(enabled),
+      'auto-detect-interface',
+    );
   }
 
   Future<bool> setTunDnsHijack(List<String> dnsHijack) async {
-    return await _configManager.setTunDnsHijack(dnsHijack);
+    return await _setTunSubConfig(
+      () => _configManager.setTunDnsHijack(dnsHijack),
+      'dns-hijack',
+    );
   }
 
   Future<bool> setTunStrictRoute(bool enabled) async {
-    return await _configManager.setTunStrictRoute(enabled);
+    return await _setTunSubConfig(
+      () => _configManager.setTunStrictRoute(enabled),
+      'strict-route',
+    );
   }
 
   Future<bool> setTunAutoRedirect(bool enabled) async {
-    return await _configManager.setTunAutoRedirect(enabled);
+    return await _setTunSubConfig(
+      () => _configManager.setTunAutoRedirect(enabled),
+      'auto-redirect',
+    );
   }
 
   Future<bool> setTunRouteExcludeAddress(List<String> addresses) async {
-    return await _configManager.setTunRouteExcludeAddress(addresses);
+    return await _setTunSubConfig(
+      () => _configManager.setTunRouteExcludeAddress(addresses),
+      'route-exclude-address',
+    );
   }
 
   Future<bool> setTunDisableIcmpForwarding(bool disabled) async {
@@ -523,7 +570,10 @@ class ClashManager extends ChangeNotifier {
   }
 
   Future<bool> setTunMtu(int mtu) async {
-    return await _configManager.setTunMtu(mtu);
+    return await _setTunSubConfig(
+      () => _configManager.setTunMtu(mtu),
+      'mtu',
+    );
   }
 
   Future<List<ConnectionInfo>> getConnections() async {

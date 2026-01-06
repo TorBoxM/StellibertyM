@@ -570,10 +570,7 @@ class ClashManager extends ChangeNotifier {
   }
 
   Future<bool> setTunMtu(int mtu) async {
-    return await _setTunSubConfig(
-      () => _configManager.setTunMtu(mtu),
-      'mtu',
-    );
+    return await _setTunSubConfig(() => _configManager.setTunMtu(mtu), 'mtu');
   }
 
   Future<List<ConnectionInfo>> getConnections() async {

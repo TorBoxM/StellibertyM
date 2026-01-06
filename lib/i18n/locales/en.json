@@ -124,11 +124,13 @@
       "config_edit": "Config Edit",
       "file_edit": "File Edit",
       "open_external_editor": "Open in External Editor",
+      "open_in_file_manager": "Show in File Manager",
       "config_view": "View Runtime Config",
       "override_manage": "Override Rules",
       "provider_view": "Providers",
       "copy_link": "Copy Link",
-      "delete": "Delete"
+      "delete": "Delete",
+      "more_options": "More Options"
     }
   },
   "provider": {

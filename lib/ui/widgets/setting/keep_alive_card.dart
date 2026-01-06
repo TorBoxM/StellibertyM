@@ -48,9 +48,7 @@ class _KeepAliveCardState extends State<KeepAliveCard> {
     final interval = int.tryParse(_keepAliveIntervalController.text);
     if (interval == null || interval <= 0) {
       if (mounted) {
-        ModernToast.error(
-          trans.clash_features.keep_alive.interval_error,
-        );
+        ModernToast.error(trans.clash_features.keep_alive.interval_error);
       }
       return;
     }
@@ -63,9 +61,7 @@ class _KeepAliveCardState extends State<KeepAliveCard> {
       clashProvider.configService.setKeepAlive(_keepAliveEnabled);
 
       if (mounted) {
-        ModernToast.success(
-          trans.clash_features.keep_alive.save_success,
-        );
+        ModernToast.success(trans.clash_features.keep_alive.save_success);
       }
     } catch (e) {
       Logger.error('保存 TCP 保持活动配置失败: $e');

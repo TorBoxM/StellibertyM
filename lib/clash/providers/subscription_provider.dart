@@ -1361,9 +1361,7 @@ class SubscriptionProvider extends ChangeNotifier {
           Logger.info('默认配置重载成功');
           _showToast((context) {
             final trans = context.translate;
-            ModernToast.success(
-              trans.subscription.fallback_to_default_config,
-            );
+            ModernToast.success(trans.subscription.fallback_to_default_config);
           });
         } else {
           Logger.error('默认配置重载失败，尝试使用默认配置重启核心');
@@ -1384,9 +1382,7 @@ class SubscriptionProvider extends ChangeNotifier {
             Logger.error('默认配置重启失败');
             _showToast((context) {
               final trans = context.translate;
-              ModernToast.error(
-                trans.subscription.core_restart_failed,
-              );
+              ModernToast.error(trans.subscription.core_restart_failed);
             });
           }
         }

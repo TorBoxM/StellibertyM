@@ -123,11 +123,13 @@
       "config_edit": "設定編輯",
       "file_edit": "檔案編輯",
       "open_external_editor": "用外部程式開啟",
+      "open_in_file_manager": "在檔案管理員中顯示",
       "config_view": "檢視執行設定",
       "override_manage": "規則覆寫",
       "provider_view": "提供者",
       "copy_link": "複製連結",
-      "delete": "刪除"
+      "delete": "刪除",
+      "more_options": "更多選項"
     }
   },
   "provider": {

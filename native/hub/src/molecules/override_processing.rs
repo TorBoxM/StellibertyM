@@ -7,8 +7,8 @@ pub mod yaml_merger;
 
 pub use downloader::{DownloadOverrideRequest, DownloadOverrideResponse};
 pub use processor::{
-    ApplyOverridesRequest, ApplyOverridesResponse, OverrideProcessor,
-    ParseSubscriptionRequest, ParseSubscriptionResponse,
+    ApplyOverridesRequest, ApplyOverridesResponse, OverrideProcessor, ParseSubscriptionRequest,
+    ParseSubscriptionResponse,
 };
 pub use yaml_merger::YamlMerger;
 

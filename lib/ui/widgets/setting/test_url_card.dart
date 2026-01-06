@@ -48,9 +48,7 @@ class _TestUrlCardState extends State<TestUrlCard> {
       clashProvider.configService.setTestUrl(_testUrlController.text);
 
       if (mounted) {
-        ModernToast.success(
-          trans.clash_features.test_url.save_success,
-        );
+        ModernToast.success(trans.clash_features.test_url.save_success);
       }
     } catch (e) {
       Logger.error('保存延迟测试网址失败: $e');

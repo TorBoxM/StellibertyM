@@ -9,6 +9,7 @@ import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
 import 'package:stelliberty/ui/common/modern_popup_menu.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
+import 'package:stelliberty/utils/logger.dart';
 
 // 订阅卡片组件
 // 显示订阅的详细信息：
@@ -301,8 +302,10 @@ class SubscriptionCard extends StatelessWidget {
   // 构建现代化弹出菜单
   // 使用 ModernPopupMenu 替代标准 PopupMenuButton，
   // 提供 Windows 11 风格的交互体验
+  // ModernPopupMenu 会自动处理分页逻辑（超过 6 项时）
   Widget _buildModernPopupMenu(BuildContext context, bool isDisabled) {
     final trans = context.translate;
+    final allMenuItems = _buildAllMenuItems(context, trans);
 
     return ModernPopupBox(
       targetBuilder: (open) => IconButton(
@@ -315,53 +318,95 @@ class SubscriptionCard extends StatelessWidget {
         ),
       ),
       popup: ModernPopupMenu(
-        items: [
-          PopupMenuItemData(
-            icon: Icons.edit,
-            label: trans.subscription.menu.config_edit,
-            onPressed: onEdit,
-          ),
-          PopupMenuItemData(
-            icon: Icons.code,
-            label: trans.subscription.menu.file_edit,
-            onPressed: onEditFile,
-          ),
-          PopupMenuItemData(
-            icon: Icons.open_in_new,
-            label: trans.subscription.menu.open_external_editor,
-            onPressed: () => _handleOpenInExternalEditor(context),
-          ),
-          // 只有当前选中的订阅才显示运行配置查看
-          if (isSelected)
-            PopupMenuItemData(
-              icon: Icons.visibility,
-              label: trans.subscription.menu.config_view,
-              onPressed: onViewConfig,
-            ),
-          PopupMenuItemData(
-            icon: Icons.rule,
-            label: trans.subscription.menu.override_manage,
-            onPressed: onManageOverride,
-          ),
-          PopupMenuItemData(
-            icon: Icons.extension,
-            label: trans.subscription.menu.provider_view,
-            onPressed: onViewProvider,
-          ),
-          // 本地文件订阅不显示复制链接选项
-          if (!subscription.isLocalFile)
-            PopupMenuItemData(
-              icon: Icons.copy,
-              label: trans.subscription.menu.copy_link,
-              onPressed: () => _copyUrl(context),
-            ),
-          PopupMenuItemData(
-            icon: Icons.delete,
-            label: trans.subscription.menu.delete,
-            onPressed: onDelete,
-            isDangerous: true,
-          ),
-        ],
+        items: allMenuItems,
+        moreOptionsLabel: trans.subscription.menu.more_options,
+      ),
+    );
+  }
+
+  // 构建所有菜单项
+  List<PopupMenuItemData> _buildAllMenuItems(
+    BuildContext context,
+    Translations trans,
+  ) {
+    final items = <PopupMenuItemData>[
+      PopupMenuItemData(
+        icon: Icons.edit,
+        label: trans.subscription.menu.config_edit,
+        onPressed: onEdit,
+      ),
+      PopupMenuItemData(
+        icon: Icons.code,
+        label: trans.subscription.menu.file_edit,
+        onPressed: onEditFile,
+      ),
+      PopupMenuItemData(
+        icon: Icons.open_in_new,
+        label: trans.subscription.menu.open_external_editor,
+        onPressed: () => _handleOpenInExternalEditor(context),
+      ),
+      PopupMenuItemData(
+        icon: Icons.folder_open,
+        label: trans.subscription.menu.open_in_file_manager,
+        onPressed: () => _handleOpenInFileManager(context),
+      ),
+      // 只有当前选中的订阅才显示运行配置查看
+      if (isSelected)
+        PopupMenuItemData(
+          icon: Icons.visibility,
+          label: trans.subscription.menu.config_view,
+          onPressed: onViewConfig,
+        ),
+      PopupMenuItemData(
+        icon: Icons.rule,
+        label: trans.subscription.menu.override_manage,
+        onPressed: onManageOverride,
+      ),
+      PopupMenuItemData(
+        icon: Icons.extension,
+        label: trans.subscription.menu.provider_view,
+        onPressed: onViewProvider,
+      ),
+      // 本地文件订阅不显示复制链接选项
+      if (!subscription.isLocalFile)
+        PopupMenuItemData(
+          icon: Icons.copy,
+          label: trans.subscription.menu.copy_link,
+          onPressed: () => _copyUrl(context),
+        ),
+      PopupMenuItemData(
+        icon: Icons.delete,
+        label: trans.subscription.menu.delete,
+        onPressed: onDelete,
+        isDangerous: true,
+      ),
+    ];
+
+    return items;
+  }
+
+  // 在文件管理器中显示订阅目录
+  Future<void> _handleOpenInFileManager(BuildContext context) async {
+    final trans = context.translate;
+    final subscriptionsDir = PathService.instance.subscriptionsDir;
+
+    Logger.info('尝试在文件管理器中打开订阅目录: $subscriptionsDir');
+
+    final result = await ExternalOpenService.openDirectory(subscriptionsDir);
+
+    if (!context.mounted) return;
+
+    if (result.isSuccessful) {
+      Logger.info('成功在文件管理器中打开订阅目录');
+      ModernToast.success(trans.subscription.external_open.open_success);
+      return;
+    }
+
+    Logger.error('在文件管理器中打开订阅目录失败: ${result.errorType}');
+    ModernToast.error(
+      trans.subscription.external_open.open_failed.replaceAll(
+        '{error}',
+        _formatExternalOpenError(trans, result),
       ),
     );
   }
@@ -433,9 +478,7 @@ class SubscriptionCard extends StatelessWidget {
     if (!context.mounted) return;
 
     if (result.isSuccessful) {
-      ModernToast.success(
-        trans.subscription.external_open.open_success,
-      );
+      ModernToast.success(trans.subscription.external_open.open_success);
       return;
     }
 

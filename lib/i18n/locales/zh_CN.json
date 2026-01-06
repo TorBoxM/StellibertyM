@@ -124,11 +124,13 @@
       "config_edit": "配置编辑",
       "file_edit": "文件编辑",
       "open_external_editor": "用外部程序打开",
+      "open_in_file_manager": "在文件管理器中显示",
       "config_view": "查看运行配置",
       "override_manage": "规则覆写",
       "provider_view": "提供者",
       "copy_link": "复制链接",
-      "delete": "删除"
+      "delete": "删除",
+      "more_options": "更多选项"
     }
   },
   "provider": {

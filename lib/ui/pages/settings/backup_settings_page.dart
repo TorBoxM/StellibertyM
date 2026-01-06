@@ -129,10 +129,7 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
       if (!mounted) return;
       setState(() => _isCreating = false);
 
-      ModernToast.show(
-        trans.backup.backup_success,
-        type: ToastType.success,
-      );
+      ModernToast.show(trans.backup.backup_success, type: ToastType.success);
 
       // 显示安全提示
       if (!mounted) return;
@@ -222,10 +219,7 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
       if (!mounted) return;
       setState(() => _isRestoring = false);
 
-      ModernToast.show(
-        trans.backup.restore_success,
-        type: ToastType.success,
-      );
+      ModernToast.show(trans.backup.restore_success, type: ToastType.success);
     } catch (e) {
       Logger.error('还原备份失败：$e');
       if (!mounted) return;

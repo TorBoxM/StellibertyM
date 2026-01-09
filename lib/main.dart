@@ -343,7 +343,7 @@ class ProviderSetup {
     final subscriptionProvider = SubscriptionProvider(overrideService);
     final overrideProvider = OverrideProvider(overrideService);
     final clashProvider = ClashProvider();
-    final logProvider = LogProvider();
+    final logProvider = LogProvider(clashProvider);
     final trafficProvider = TrafficProvider();
     final serviceProvider = ServiceProvider();
     final appUpdateProvider = AppUpdateProvider();
@@ -402,6 +402,9 @@ class ProviderSetup {
       Logger.warning('降级模式：OverrideService 初始化失败，但继续运行：$e');
     }
 
+    // 创建共享的 ClashProvider 实例
+    final clashProvider = ClashProvider();
+
     // 创建最基本的 Providers
     return ProviderBundle(
       themeProvider: ThemeProvider(),
@@ -409,8 +412,8 @@ class ProviderSetup {
       languageProvider: LanguageProvider(),
       subscriptionProvider: SubscriptionProvider(overrideService),
       overrideProvider: OverrideProvider(overrideService),
-      clashProvider: ClashProvider(),
-      logProvider: LogProvider(),
+      clashProvider: clashProvider,
+      logProvider: LogProvider(clashProvider),
       trafficProvider: TrafficProvider(),
       serviceProvider: ServiceProvider(),
       appUpdateProvider: AppUpdateProvider(),

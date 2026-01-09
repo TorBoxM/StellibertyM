@@ -2,11 +2,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:stelliberty/clash/model/log_message_model.dart';
 import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
 // 日志状态管理
 // 统一管理所有日志相关的状态，确保切换页面时数据不丢失
 class LogProvider extends ChangeNotifier {
+  final ClashProvider _clashProvider;
   final List<ClashLogMessage> _logs = [];
   final List<ClashLogMessage> _pendingLogs = [];
 
@@ -33,6 +35,26 @@ class LogProvider extends ChangeNotifier {
 
   // 上次刷新时间（用于动态批量更新）
   DateTime _lastFlushedAt = DateTime.now();
+
+  LogProvider(this._clashProvider) {
+    // 监听 Clash 运行状态
+    _clashProvider.removeListener(_onClashStateChanged);
+    _clashProvider.addListener(_onClashStateChanged);
+  }
+
+  // 当 Clash 状态改变时
+  void _onClashStateChanged() {
+    if (!_clashProvider.isCoreRunning) {
+      // Clash 停止，清空日志并重置过滤条件
+      _logs.clear();
+      _pendingLogs.clear();
+      _filterLevel = null;
+      _searchKeyword = '';
+      _invalidateCache();
+      notifyListeners();
+      Logger.info('LogProvider: Clash 已停止，日志已清空，过滤条件已重置');
+    }
+  }
 
   // Getters
   List<ClashLogMessage> get logs => List.unmodifiable(_logs);
@@ -212,6 +234,7 @@ class LogProvider extends ChangeNotifier {
     _batchUpdateTimer?.cancel();
     _logSubscription?.cancel();
     _searchDebounceTimer?.cancel(); // 取消搜索防抖定时器
+    _clashProvider.removeListener(_onClashStateChanged);
     super.dispose();
   }
 }

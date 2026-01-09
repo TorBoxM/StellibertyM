@@ -75,6 +75,9 @@ class ConnectionProvider extends ChangeNotifier {
       stopAutoRefresh();
       _connections = [];
       _cachedFilteredConnections = null; // 清除缓存
+      // 重置过滤条件，避免重启后使用旧的过滤条件
+      _filterLevel = ConnectionFilterLevel.all;
+      _searchKeyword = '';
       notifyListeners();
     }
   }
@@ -202,7 +205,10 @@ class ConnectionProvider extends ChangeNotifier {
       if (hasChanged) {
         _cachedFilteredConnections = null; // 清除缓存
         notifyListeners();
-        Logger.debug('连接列表已更新：${connections.length} 个连接');
+        final filteredCount = _getFilteredConnections().length;
+        Logger.debug(
+          '连接列表已更新：原始 ${connections.length} 个，过滤后 $filteredCount 个（过滤级别：${_filterLevel.name}，搜索关键字：${_searchKeyword.isEmpty ? "无" : _searchKeyword}）',
+        );
       }
       // 数据未变化时不触发 notifyListeners，减少无意义的 UI 重建
     } catch (e) {

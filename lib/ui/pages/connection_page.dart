@@ -298,6 +298,9 @@ class _ConnectionPageContentState extends State<ConnectionPageContent> {
     }
 
     if (connections.isEmpty) {
+      Logger.debug(
+        '连接页显示空状态（过滤级别：${provider.filterLevel.name}，搜索关键字：${provider.searchKeyword.isEmpty ? "无" : provider.searchKeyword}）',
+      );
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -8,7 +8,7 @@ import 'package:stelliberty/ui/layout/main_layout.dart';
 import 'package:stelliberty/ui/layout/title_bar.dart';
 import 'package:stelliberty/ui/widgets/app_update_dialog.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
 // 应用根组件

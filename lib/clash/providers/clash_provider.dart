@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/state/core_states.dart';
 import 'package:stelliberty/clash/state/config_states.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';

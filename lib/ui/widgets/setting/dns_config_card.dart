@@ -4,7 +4,7 @@ import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/clash/model/dns_config_model.dart';
 import 'package:stelliberty/clash/services/dns_service.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/ui/common/modern_feature_card.dart';

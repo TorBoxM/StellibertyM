@@ -1,33 +1,30 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:stelliberty/clash/model/log_message_model.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/state/core_log_states.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// 日志状态管理
+// 核心日志状态管理
 // 统一管理所有日志相关的状态，确保切换页面时数据不丢失
 class LogProvider extends ChangeNotifier {
   final ClashProvider _clashProvider;
-  final List<ClashLogMessage> _logs = [];
+
+  // 状态
+  CoreLogState _state = CoreLogState.initial();
+
+  // 待处理日志缓冲区
   final List<ClashLogMessage> _pendingLogs = [];
 
   StreamSubscription<ClashLogMessage>? _logSubscription;
   Timer? _batchUpdateTimer;
-  Timer? _searchDebounceTimer; // 搜索防抖定时器
+  Timer? _searchDebounceTimer;
 
   static const _batchUpdateInterval = Duration(milliseconds: 200);
-  static const _maxBatchInterval = Duration(milliseconds: 500); // 最大间隔 500ms
+  static const _maxBatchInterval = Duration(milliseconds: 500);
   static const _batchThreshold = 1;
-  static const _maxLogsCount = 2000; // 最多保留 2000 条日志
-
-  // 过滤和控制状态
-  bool _isMonitoringPaused = false;
-  ClashLogLevel? _filterLevel;
-  String _searchKeyword = '';
-
-  // 加载状态（用于异步加载历史日志）
-  bool _isLoading = false;
+  static const _maxLogsCount = 2000;
 
   // 过滤结果缓存
   List<ClashLogMessage>? _cachedFilteredLogs;
@@ -45,11 +42,9 @@ class LogProvider extends ChangeNotifier {
   // 当 Clash 状态改变时
   void _onClashStateChanged() {
     if (!_clashProvider.isCoreRunning) {
-      // Clash 停止，清空日志并重置过滤条件
-      _logs.clear();
+      // Clash 停止，重置状态
       _pendingLogs.clear();
-      _filterLevel = null;
-      _searchKeyword = '';
+      _state = CoreLogState.initial();
       _invalidateCache();
       notifyListeners();
       Logger.info('LogProvider: Clash 已停止，日志已清空，过滤条件已重置');
@@ -57,16 +52,17 @@ class LogProvider extends ChangeNotifier {
   }
 
   // Getters
-  List<ClashLogMessage> get logs => List.unmodifiable(_logs);
-  bool get isMonitoringPaused => _isMonitoringPaused;
-  ClashLogLevel? get filterLevel => _filterLevel;
-  String get searchKeyword => _searchKeyword;
-  bool get isLoading => _isLoading;
+  List<ClashLogMessage> get logs => List.unmodifiable(_state.logs);
+  bool get isMonitoringPaused => _state.isMonitoringPaused;
+  ClashLogLevel? get filterLevel => _state.filterLevel;
+  String get searchKeyword => _state.searchKeyword;
+  bool get isLoading => _state.isLoading;
 
   // 获取过滤后的日志列表（带缓存优化）
   List<ClashLogMessage> get filteredLogs {
     // 生成缓存键（基于过滤条件和日志数量）
-    final cacheKey = '${_filterLevel}_${_searchKeyword}_${_logs.length}';
+    final cacheKey =
+        '${_state.filterLevel}_${_state.searchKeyword}_${_state.logs.length}';
 
     // 如果缓存有效，直接返回
     if (_cachedFilteredLogs != null && _cacheKey == cacheKey) {
@@ -74,14 +70,14 @@ class LogProvider extends ChangeNotifier {
     }
 
     // 重新计算过滤结果
-    _cachedFilteredLogs = _logs.where((log) {
+    _cachedFilteredLogs = _state.logs.where((log) {
       // 级别过滤
-      if (_filterLevel != null && log.level != _filterLevel) {
+      if (_state.filterLevel != null && log.level != _state.filterLevel) {
         return false;
       }
       // 搜索关键词过滤
-      if (_searchKeyword.isNotEmpty) {
-        final keyword = _searchKeyword.toLowerCase();
+      if (_state.searchKeyword.isNotEmpty) {
+        final keyword = _state.searchKeyword.toLowerCase();
         return log.payload.toLowerCase().contains(keyword) ||
             log.type.toLowerCase().contains(keyword);
       }
@@ -116,8 +112,8 @@ class LogProvider extends ChangeNotifier {
 
   // 异步加载历史日志（不阻塞 UI）
   Future<void> _loadHistoryLogsAsync() async {
-    _isLoading = true;
-    notifyListeners(); // 立即通知 UI 进入加载状态
+    _state = _state.copyWith(isLoading: true);
+    notifyListeners();
 
     // 使用 microtask 确保 UI 先渲染
     await Future.microtask(() {});
@@ -126,15 +122,15 @@ class LogProvider extends ChangeNotifier {
     // 日志将在用户打开页面后实时接收
     Logger.info('LogProvider: 初始化完成，等待实时日志');
 
-    _isLoading = false;
-    notifyListeners(); // 通知 UI 加载完成
+    _state = _state.copyWith(isLoading: false);
+    notifyListeners();
   }
 
   // 订阅日志流
   void _subscribeToLogStream() {
     _logSubscription = ClashManager.instance.logStream.listen(
       (log) {
-        if (!_isMonitoringPaused) {
+        if (!_state.isMonitoringPaused) {
           _pendingLogs.add(log);
         }
       },
@@ -160,15 +156,17 @@ class LogProvider extends ChangeNotifier {
           (_pendingLogs.isNotEmpty && _shouldFlushPending());
 
       if (shouldFlush) {
-        _logs.addAll(_pendingLogs);
+        final newLogs = List<ClashLogMessage>.from(_state.logs)
+          ..addAll(_pendingLogs);
 
         // 限制日志数量
-        while (_logs.length > _maxLogsCount) {
-          _logs.removeAt(0);
+        while (newLogs.length > _maxLogsCount) {
+          newLogs.removeAt(0);
         }
 
+        _state = _state.copyWith(logs: newLogs);
         _pendingLogs.clear();
-        _invalidateCache(); // 清除缓存
+        _invalidateCache();
         _lastFlushedAt = DateTime.now();
         notifyListeners();
       }
@@ -186,24 +184,24 @@ class LogProvider extends ChangeNotifier {
 
   // 清空日志
   void clearLogs() {
-    _logs.clear();
     _pendingLogs.clear();
-    _invalidateCache(); // 清除缓存
+    _state = _state.copyWith(logs: []);
+    _invalidateCache();
     notifyListeners();
     Logger.info('LogProvider: 日志已清空');
   }
 
   // 切换暂停状态（监控）
   void togglePause() {
-    _isMonitoringPaused = !_isMonitoringPaused;
+    _state = _state.copyWith(isMonitoringPaused: !_state.isMonitoringPaused);
     notifyListeners();
-    Logger.info('LogProvider: 日志监控暂停状态 = $_isMonitoringPaused');
+    Logger.info('LogProvider: 日志监控暂停状态 = ${_state.isMonitoringPaused}');
   }
 
   // 设置过滤级别
   void setFilterLevel(ClashLogLevel? level) {
-    _filterLevel = level;
-    _invalidateCache(); // 清除缓存
+    _state = _state.copyWith(filterLevel: level);
+    _invalidateCache();
     notifyListeners();
     Logger.debug('LogProvider: 过滤级别已设置为 $level');
   }
@@ -215,15 +213,15 @@ class LogProvider extends ChangeNotifier {
 
     // 设置防抖定时器（300ms 后触发过滤）
     _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-      _searchKeyword = keyword;
-      _invalidateCache(); // 清除缓存
+      _state = _state.copyWith(searchKeyword: keyword);
+      _invalidateCache();
       notifyListeners();
     });
   }
 
   // 复制所有日志
   String copyAllLogs() {
-    return _logs
+    return _state.logs
         .map((log) => '[${log.formattedTime}] [${log.type}] ${log.payload}')
         .join('\n');
   }

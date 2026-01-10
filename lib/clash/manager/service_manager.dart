@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:stelliberty/clash/state/service_states.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'package:stelliberty/services/log_print_service.dart';

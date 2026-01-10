@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:stelliberty/clash/model/traffic_data_model.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
+import 'package:stelliberty/clash/state/traffic_states.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
 // 流量统计状态管理
@@ -11,24 +12,16 @@ class TrafficProvider extends ChangeNotifier {
   final ClashManager _clashManager = ClashManager.instance;
   StreamSubscription<TrafficData>? _trafficSubscription;
 
-  // 累计流量统计
-  int _totalUpload = 0;
-  int _totalDownload = 0;
+  TrafficState _state = TrafficState.initial();
   DateTime? _lastTimestamp;
 
-  // 缓存最后一次的流量数据
-  TrafficData? _lastTrafficData;
-
-  // 波形图历史数据
-  final List<double> _uploadHistory = List.generate(30, (_) => 0.0);
-  final List<double> _downloadHistory = List.generate(30, (_) => 0.0);
-
   // Getters
-  int get totalUpload => _totalUpload;
-  int get totalDownload => _totalDownload;
-  TrafficData? get lastTrafficData => _lastTrafficData;
-  List<double> get uploadHistory => UnmodifiableListView(_uploadHistory);
-  List<double> get downloadHistory => UnmodifiableListView(_downloadHistory);
+  int get totalUpload => _state.totalUpload;
+  int get totalDownload => _state.totalDownload;
+  TrafficData? get lastTrafficData => _state.lastTrafficData;
+  List<double> get uploadHistory => UnmodifiableListView(_state.uploadHistory);
+  List<double> get downloadHistory =>
+      UnmodifiableListView(_state.downloadHistory);
 
   TrafficProvider() {
     _subscribeToTrafficStream();
@@ -48,28 +41,39 @@ class TrafficProvider extends ChangeNotifier {
 
   // 处理流量数据
   void _handleTrafficData(TrafficData data) {
-    // 累计流量统计（基于时间间隔估算）
     final now = data.timestamp;
+    int newTotalUpload = _state.totalUpload;
+    int newTotalDownload = _state.totalDownload;
+
     if (_lastTimestamp != null) {
       final interval = now.difference(_lastTimestamp!).inMilliseconds / 1000.0;
-      // 使用当前速度和时间间隔估算流量增量
       if (interval > 0 && interval < 10) {
-        _totalUpload += (data.upload * interval).round();
-        _totalDownload += (data.download * interval).round();
+        newTotalUpload += (data.upload * interval).round();
+        newTotalDownload += (data.download * interval).round();
       }
     }
     _lastTimestamp = now;
 
-    // 更新波形图历史数据
-    _uploadHistory.removeAt(0);
-    _uploadHistory.add(data.upload / 1024.0); // KB/s
-    _downloadHistory.removeAt(0);
-    _downloadHistory.add(data.download / 1024.0); // KB/s
+    final newUploadHistory = List<double>.from(_state.uploadHistory);
+    newUploadHistory.removeAt(0);
+    newUploadHistory.add(data.upload / 1024.0);
 
-    // 缓存最后的数据（带累计流量）
-    _lastTrafficData = data.copyWithTotal(
-      totalUpload: _totalUpload,
-      totalDownload: _totalDownload,
+    final newDownloadHistory = List<double>.from(_state.downloadHistory);
+    newDownloadHistory.removeAt(0);
+    newDownloadHistory.add(data.download / 1024.0);
+
+    final newTrafficData = data.copyWithTotal(
+      totalUpload: newTotalUpload,
+      totalDownload: newTotalDownload,
+    );
+
+    _state = _state.copyWith(
+      totalUpload: newTotalUpload,
+      totalDownload: newTotalDownload,
+      lastTimestamp: now,
+      lastTrafficData: newTrafficData,
+      uploadHistory: newUploadHistory,
+      downloadHistory: newDownloadHistory,
     );
 
     notifyListeners();
@@ -77,12 +81,8 @@ class TrafficProvider extends ChangeNotifier {
 
   // 重置累计流量
   void resetTotalTraffic() {
-    _totalUpload = 0;
-    _totalDownload = 0;
+    _state = TrafficState.initial();
     _lastTimestamp = null;
-    _lastTrafficData = null;
-    _uploadHistory.fillRange(0, _uploadHistory.length, 0);
-    _downloadHistory.fillRange(0, _downloadHistory.length, 0);
     Logger.info('累计流量已重置');
     notifyListeners();
   }

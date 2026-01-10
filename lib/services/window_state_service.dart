@@ -5,7 +5,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:stelliberty/storage/preferences.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:stelliberty/i18n/i18n.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/tray/tray_manager.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 

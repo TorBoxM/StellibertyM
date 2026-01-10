@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/model/log_message_model.dart';
 import 'package:stelliberty/clash/providers/core_log_provider.dart';
 import 'package:stelliberty/i18n/i18n.dart';

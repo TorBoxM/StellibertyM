@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:stelliberty/clash/model/connection_model.dart';
-import 'package:stelliberty/clash/state/connection_states.dart';
+import 'package:stelliberty/clash/state/connection_states.dart' as state;
 import 'package:stelliberty/clash/providers/clash_provider.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
 // 连接管理 Provider
@@ -14,44 +14,30 @@ class ConnectionProvider extends ChangeNotifier {
   // 直连标识（常量）
   static const String _directProxy = 'DIRECT';
 
-  // 连接列表（原始数据）
-  List<ConnectionInfo> _connections = [];
+  // 状态
+  state.ConnectionState _state = state.ConnectionState.initial();
 
   // 过滤后的连接列表缓存
   List<ConnectionInfo>? _cachedFilteredConnections;
 
   // 过滤后的连接列表
   List<ConnectionInfo> get connections {
-    // 如果缓存无效，重新计算
     _cachedFilteredConnections ??= _getFilteredConnections();
     return _cachedFilteredConnections!;
   }
 
-  // 是否正在加载
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
-
-  // 错误信息
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
+  // Getters
+  bool get isLoading => _state.isLoading;
+  String? get errorMessage => _state.errorMessage;
+  bool get isMonitoringPaused => _state.isMonitoringPaused;
+  state.ConnectionFilterLevel get filterLevel => _state.filterLevel;
+  String get searchKeyword => _state.searchKeyword;
 
   // 定时器（用于自动刷新）
   Timer? _refreshTimer;
 
   // 刷新间隔（秒）
   static const int _refreshIntervalSeconds = 1;
-
-  // 是否暂停自动刷新（监控）
-  bool _isMonitoringPaused = false;
-  bool get isMonitoringPaused => _isMonitoringPaused;
-
-  // 过滤级别
-  ConnectionFilterLevel _filterLevel = ConnectionFilterLevel.all;
-  ConnectionFilterLevel get filterLevel => _filterLevel;
-
-  // 关键字筛选
-  String _searchKeyword = '';
-  String get searchKeyword => _searchKeyword;
 
   ConnectionProvider(this._clashProvider) {
     // 监听 Clash 运行状态
@@ -71,13 +57,10 @@ class ConnectionProvider extends ChangeNotifier {
       // Clash 启动，开始自动刷新
       startAutoRefresh();
     } else {
-      // Clash 停止，停止刷新并清空连接列表
+      // Clash 停止，重置状态
       stopAutoRefresh();
-      _connections = [];
-      _cachedFilteredConnections = null; // 清除缓存
-      // 重置过滤条件，避免重启后使用旧的过滤条件
-      _filterLevel = ConnectionFilterLevel.all;
-      _searchKeyword = '';
+      _state = state.ConnectionState.initial();
+      _cachedFilteredConnections = null;
       notifyListeners();
     }
   }
@@ -100,7 +83,7 @@ class ConnectionProvider extends ChangeNotifier {
       const Duration(seconds: _refreshIntervalSeconds),
       (_) {
         // 只有在未暂停时才刷新
-        if (!_isMonitoringPaused) {
+        if (!_state.isMonitoringPaused) {
           refreshConnections();
         }
       },
@@ -122,51 +105,51 @@ class ConnectionProvider extends ChangeNotifier {
 
   // 暂停/恢复自动刷新（监控）
   void togglePause() {
-    _isMonitoringPaused = !_isMonitoringPaused;
-    Logger.info('连接列表自动刷新已${_isMonitoringPaused ? "暂停" : "恢复"}');
+    _state = _state.copyWith(isMonitoringPaused: !_state.isMonitoringPaused);
+    Logger.info('连接列表自动刷新已${_state.isMonitoringPaused ? "暂停" : "恢复"}');
     notifyListeners();
   }
 
   // 设置过滤级别
-  void setFilterLevel(ConnectionFilterLevel level) {
-    _filterLevel = level;
-    _cachedFilteredConnections = null; // 清除缓存
+  void setFilterLevel(state.ConnectionFilterLevel level) {
+    _state = _state.copyWith(filterLevel: level);
+    _cachedFilteredConnections = null;
     Logger.info('连接过滤级别已设置为：${level.name}');
     notifyListeners();
   }
 
   // 设置搜索关键字
   void setSearchKeyword(String keyword) {
-    _searchKeyword = keyword;
-    _cachedFilteredConnections = null; // 清除缓存
+    _state = _state.copyWith(searchKeyword: keyword);
+    _cachedFilteredConnections = null;
     Logger.debug('连接搜索关键字已设置为: $keyword');
     notifyListeners();
   }
 
   // 获取过滤后的连接列表
   List<ConnectionInfo> _getFilteredConnections() {
-    List<ConnectionInfo> filtered = _connections;
+    List<ConnectionInfo> filtered = _state.connections;
 
     // 1. 按过滤级别筛选
-    switch (_filterLevel) {
-      case ConnectionFilterLevel.direct:
+    switch (_state.filterLevel) {
+      case state.ConnectionFilterLevel.direct:
         filtered = filtered
             .where((conn) => conn.proxyNode == _directProxy)
             .toList();
         break;
-      case ConnectionFilterLevel.proxy:
+      case state.ConnectionFilterLevel.proxy:
         filtered = filtered
             .where((conn) => conn.proxyNode != _directProxy)
             .toList();
         break;
-      case ConnectionFilterLevel.all:
+      case state.ConnectionFilterLevel.all:
         // 不过滤
         break;
     }
 
     // 2. 按关键字筛选（优化：避免每个连接都重复调用 toLowerCase）
-    if (_searchKeyword.isNotEmpty) {
-      final keyword = _searchKeyword.toLowerCase();
+    if (_state.searchKeyword.isNotEmpty) {
+      final keyword = _state.searchKeyword.toLowerCase();
       filtered = filtered.where((conn) {
         // 缓存 toLowerCase 结果，避免重复计算
         final descLower = conn.metadata.description.toLowerCase();
@@ -191,30 +174,32 @@ class ConnectionProvider extends ChangeNotifier {
     }
 
     try {
-      _errorMessage = null; // 清除错误信息
-
       final connections = await ClashManager.instance.getConnections();
 
       // 检查数据是否真正发生了变化
-      final hasChanged = _hasConnectionsChanged(_connections, connections);
+      final hasChanged = _hasConnectionsChanged(
+        _state.connections,
+        connections,
+      );
 
-      _connections = connections;
-      _isLoading = false;
+      _state = _state.copyWith(
+        connections: connections,
+        isLoading: false,
+        errorMessage: null,
+      );
 
       // 只在数据真正变化时才通知
       if (hasChanged) {
-        _cachedFilteredConnections = null; // 清除缓存
+        _cachedFilteredConnections = null;
         notifyListeners();
         final filteredCount = _getFilteredConnections().length;
         Logger.debug(
-          '连接列表已更新：原始 ${connections.length} 个，过滤后 $filteredCount 个（过滤级别：${_filterLevel.name}，搜索关键字：${_searchKeyword.isEmpty ? "无" : _searchKeyword}）',
+          '连接列表已更新：原始 ${connections.length} 个，过滤后 $filteredCount 个（过滤级别：${_state.filterLevel.name}，搜索关键字：${_state.searchKeyword.isEmpty ? "无" : _state.searchKeyword}）',
         );
       }
-      // 数据未变化时不触发 notifyListeners，减少无意义的 UI 重建
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = '刷新连接列表失败: $e';
-      Logger.error(_errorMessage!);
+      _state = _state.copyWith(isLoading: false, errorMessage: '刷新连接列表失败: $e');
+      Logger.error(_state.errorMessage!);
       notifyListeners();
     }
   }

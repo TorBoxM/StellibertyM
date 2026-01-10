@@ -8,7 +8,7 @@ import 'package:stelliberty/clash/services/subscription_service.dart';
 import 'package:stelliberty/clash/services/override_service.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/providers/override_provider.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/manager/subscription_manager.dart';
 import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/services/log_print_service.dart';

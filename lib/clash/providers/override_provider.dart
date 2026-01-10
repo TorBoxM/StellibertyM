@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:stelliberty/clash/state/override_states.dart';
 import 'package:stelliberty/clash/model/override_model.dart';
 import 'package:stelliberty/clash/services/override_service.dart'; // 仍需要，用于构造函数参数类型
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/manager/override_manager.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/services/path_service.dart';

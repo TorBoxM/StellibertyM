@@ -24,7 +24,7 @@ import 'package:stelliberty/providers/language_provider.dart';
 import 'package:stelliberty/providers/window_effect_provider.dart';
 import 'package:stelliberty/providers/content_provider.dart';
 import 'package:stelliberty/providers/app_update_provider.dart';
-import 'package:stelliberty/clash/manager/manager.dart';
+import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/services/override_service.dart';
 import 'package:stelliberty/clash/services/dns_service.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';

@@ -45,7 +45,10 @@ class TrafficProvider extends ChangeNotifier {
       _retryTimer = null;
     } else {
       _retryTimer?.cancel();
-      _retryTimer = Timer(const Duration(seconds: 1), _subscribeToTrafficStream);
+      _retryTimer = Timer(
+        const Duration(seconds: 1),
+        _subscribeToTrafficStream,
+      );
     }
   }
 

@@ -870,7 +870,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         );
         _selections[group.name] = group.now!;
         savedCount++;
-        Logger.debug('保存节点选择: ${group.name} -> ${group.now}');
       }
     }
 
@@ -985,7 +984,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         defaultCount++;
       } else if (selected != null) {
         restoredCount++;
-        Logger.debug('恢复节点选择: ${group.name} -> $selected');
       }
 
       // 更新代理组的 now 字段

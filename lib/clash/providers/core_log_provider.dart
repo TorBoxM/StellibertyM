@@ -14,6 +14,9 @@ class LogProvider extends ChangeNotifier {
   // 状态
   CoreLogState _state = CoreLogState.initial();
 
+  // 上一次的核心运行状态（用于检测状态变化）
+  bool _lastCoreRunning = false;
+
   // 待处理日志缓冲区
   final List<ClashLogMessage> _pendingLogs = [];
 
@@ -41,14 +44,18 @@ class LogProvider extends ChangeNotifier {
 
   // 当 Clash 状态改变时
   void _onClashStateChanged() {
-    if (!_clashProvider.isCoreRunning) {
-      // Clash 停止，重置状态
+    final currentRunning = _clashProvider.isCoreRunning;
+
+    // 只在从运行状态变为停止状态时清空日志
+    if (_lastCoreRunning && !currentRunning) {
       _pendingLogs.clear();
       _state = CoreLogState.initial();
       _invalidateCache();
       notifyListeners();
       Logger.info('LogProvider: Clash 已停止，日志已清空，过滤条件已重置');
     }
+
+    _lastCoreRunning = currentRunning;
   }
 
   // Getters

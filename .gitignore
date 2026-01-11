@@ -139,6 +139,10 @@ id_ed25519*
 *.asc
 *.gpg
 
+# 签名密钥（排除整个密钥目录）
+/keys/
+/assets/keys/
+
 # API 密钥和令牌
 *api_key*
 *api-key*

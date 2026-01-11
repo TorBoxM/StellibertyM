@@ -2,6 +2,7 @@
 //
 // 通过 Windows Service/systemd 以管理员权限运行 Clash 核心
 
+use crate::molecules::clash_network::handlers::cleanup_all_network_resources;
 use crate::molecules::clash_process::process_manager::ClashProcessResult;
 use anyhow::{Context, Result};
 use rinf::{DartSignal, RustSignal};
@@ -362,6 +363,10 @@ impl ServiceManager {
     // 卸载服务
     pub async fn uninstall_service(&self) -> Result<()> {
         log::info!("卸载 Stelliberty Service…");
+
+        // 卸载前先清理网络资源（避免 WebSocket 异常断开）
+        log::info!("卸载前清理网络资源...");
+        cleanup_all_network_resources().await;
 
         // 执行卸载命令（会弹 UAC，用户可能取消）
         // uninstall 命令会自动停止服务进程（包括 Clash 核心）

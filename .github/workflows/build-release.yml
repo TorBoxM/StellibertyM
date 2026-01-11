@@ -178,10 +178,22 @@ jobs:
             # 遍历每个提交
             for hash in $commit_hashes; do
               total_count=$((total_count + 1))
-              
+
+              # 获取提交信息（标题和正文）
+              subject=$(git log -1 --pretty=format:"%s" "$hash")
+              body=$(git log -1 --pretty=format:"%b" "$hash")
+
+              # 检查提交信息是否包含"无作用"相关关键词（中英文）
+              # 中文关键词：无作用、无影响、无效果、不影响、无关紧要、无意义、仅调整、仅格式、格式调整、样式调整、空白调整、注释调整
+              # 英文关键词：no effect、no impact、no change、no functional change、cosmetic、formatting only、style only、whitespace、comment only、trivial
+              if echo "$subject $body" | grep -qiE '无作用|无影响|无效果|无实际作用|不影响|无关紧要|无意义|仅调整|仅格式|格式调整|样式调整|空白调整|注释调整|no effect|no impact|no change|no functional change|cosmetic|formatting only|style only|whitespace|comment only|trivial'; then
+                filtered_count=$((filtered_count + 1))
+                continue
+              fi
+
               # 获取提交涉及的文件列表
               changed_files=$(git diff-tree --no-commit-id --name-only -r "$hash")
-              
+
               # 检查是否所有文件都匹配忽略模式
               should_ignore=true
               for file in $changed_files; do
@@ -190,18 +202,15 @@ jobs:
                   break
                 fi
               done
-              
+
               # 如果所有文件都是要忽略的类型，跳过这个提交
               if [ "$should_ignore" = true ]; then
                 filtered_count=$((filtered_count + 1))
                 continue
               fi
-              
+
               included_count=$((included_count + 1))
-              
-              # 获取提交信息（标题和正文）
-              subject=$(git log -1 --pretty=format:"%s" "$hash")
-              body=$(git log -1 --pretty=format:"%b" "$hash")
+
               author=$(git log -1 --pretty=format:"%an" "$hash")
               
               # 输出格式化的提交信息

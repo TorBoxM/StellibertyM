@@ -789,6 +789,13 @@
     "rule_mode": "規則模式",
     "global_mode": "全域代理",
     "direct_mode": "直接連線模式",
+    "copy_terminal_proxy": "複製終端代理命令",
+    "terminal_powershell": "PowerShell",
+    "terminal_powershell_pwsh": "PowerShell (pwsh)",
+    "terminal_cmd": "CMD",
+    "terminal_bash_zsh": "Bash/Zsh",
+    "terminal_bash_git": "Bash (Git Bash/MSYS2)",
+    "terminal_bash": "Bash",
     "exit": "結束"
   },
   "logs": {

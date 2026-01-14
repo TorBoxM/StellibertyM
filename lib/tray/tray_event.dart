@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:stelliberty/services/log_print_service.dart';
@@ -127,6 +128,21 @@ class TrayEventHandler with TrayListener {
       case 'outbound_mode_direct':
         switchOutboundMode('direct').catchError((e) {
           Logger.error('从托盘切换出站模式异常：$e');
+        });
+        break;
+      case 'copy_terminal_proxy_powershell':
+        copyTerminalProxyCommand('powershell').catchError((e) {
+          Logger.error('复制终端代理命令异常：$e');
+        });
+        break;
+      case 'copy_terminal_proxy_cmd':
+        copyTerminalProxyCommand('cmd').catchError((e) {
+          Logger.error('复制终端代理命令异常：$e');
+        });
+        break;
+      case 'copy_terminal_proxy_bash':
+        copyTerminalProxyCommand('bash').catchError((e) {
+          Logger.error('复制终端代理命令异常：$e');
         });
         break;
       case 'exit':
@@ -294,6 +310,40 @@ class TrayEventHandler with TrayListener {
       Logger.error('从托盘切换出站模式失败：$e');
     } finally {
       _isSwitching = false;
+    }
+  }
+
+  // 复制终端代理命令到剪贴板
+  Future<void> copyTerminalProxyCommand(String terminalType) async {
+    if (_clashProvider == null) {
+      Logger.warning('ClashProvider 未设置，无法获取代理端口');
+      return;
+    }
+
+    final port = _clashProvider!.mixedPort;
+    final proxyUrl = 'http://127.0.0.1:$port';
+
+    String command;
+    switch (terminalType) {
+      case 'powershell':
+        command = '\$env:http_proxy="$proxyUrl"; \$env:https_proxy="$proxyUrl"';
+        break;
+      case 'cmd':
+        command = 'set http_proxy=$proxyUrl && set https_proxy=$proxyUrl';
+        break;
+      case 'bash':
+        command = 'export http_proxy=$proxyUrl && export https_proxy=$proxyUrl';
+        break;
+      default:
+        Logger.error('未知的终端类型：$terminalType');
+        return;
+    }
+
+    try {
+      await Clipboard.setData(ClipboardData(text: command));
+      Logger.info('终端代理命令已复制到剪贴板 ($terminalType)：$command');
+    } catch (e) {
+      Logger.error('复制终端代理命令失败：$e');
     }
   }
 

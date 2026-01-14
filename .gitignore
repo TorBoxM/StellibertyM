@@ -32,6 +32,9 @@ migrate_working_dir/
 .claude/
 CLAUDE.md
 
+# Agent contributor guide (local only)
+AGENTS.md
+
 # Swift Package Manager
 .swiftpm/
 
@@ -257,5 +260,4 @@ tmp/
 *.aac
 *.ogg
 *.m4a
-
 

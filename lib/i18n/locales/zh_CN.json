@@ -790,6 +790,13 @@
     "rule_mode": "规则模式",
     "global_mode": "全局代理",
     "direct_mode": "直连模式",
+    "copy_terminal_proxy": "复制终端代理命令",
+    "terminal_powershell": "PowerShell",
+    "terminal_powershell_pwsh": "PowerShell (pwsh)",
+    "terminal_cmd": "CMD",
+    "terminal_bash_zsh": "Bash/Zsh",
+    "terminal_bash_git": "Bash (Git Bash/MSYS2)",
+    "terminal_bash": "Bash",
     "exit": "退出"
   },
   "logs": {

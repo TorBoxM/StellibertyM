@@ -6,9 +6,7 @@ import 'package:stelliberty/clash/model/traffic_data_model.dart';
 import 'package:stelliberty/ui/widgets/home/base_card.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 
-// 流量统计卡片
-//
-// 显示累计上传/下载流量和实时速度波形图
+// 流量统计卡片：展示累计上传/下载与实时速度波形。
 class TrafficStatsCard extends StatefulWidget {
   const TrafficStatsCard({super.key});
 
@@ -278,7 +276,7 @@ class _TrafficStatsCardState extends State<TrafficStatsCard> {
   }
 }
 
-/// 重置按钮组件
+// 重置按钮组件。
 class _ResetButton extends StatefulWidget {
   final VoidCallback onPressed;
 
@@ -345,7 +343,7 @@ class _ResetButtonState extends State<_ResetButton> {
   }
 }
 
-/// 流量波形图绘制器
+// 流量波形图绘制器。
 class _TrafficWavePainter extends CustomPainter {
   final List<double> uploadHistory;
   final List<double> downloadHistory;

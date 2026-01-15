@@ -30,9 +30,8 @@ class _LogListSpacing {
   );
 }
 
-// 日志页面 - 显示 Clash 核心的实时日志
-// 使用 Material Design 3 风格，与连接页面保持一致
-// 使用 Provider 管理状态，避免切换页面时丢失日志
+// 日志页面：展示核心实时日志流。
+// 使用 Provider 管理状态，避免切换页面时丢失日志。
 class LogPage extends StatefulWidget {
   const LogPage({super.key});
 

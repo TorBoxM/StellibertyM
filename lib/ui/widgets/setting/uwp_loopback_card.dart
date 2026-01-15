@@ -5,8 +5,7 @@ import 'package:stelliberty/ui/common/modern_feature_card.dart';
 import 'package:stelliberty/ui/widgets/setting/uwp_loopback_dialog.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
 
-/// UWP 回环管理卡片
-/// 仅在 Windows 平台显示
+// UWP 回环管理卡片（仅 Windows 平台显示）。
 class UwpLoopbackCard extends StatelessWidget {
   const UwpLoopbackCard({super.key});
 

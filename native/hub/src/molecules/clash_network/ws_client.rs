@@ -48,14 +48,8 @@ impl WebSocketClient {
         base64::engine::general_purpose::STANDARD.encode(key_bytes)
     }
 
-    // 连接到 WebSocket 端点
-    //
-    // # 参数
-    // - `endpoint`: WebSocket 端点路径，如 "/traffic", "/logs?level=info"
-    // - `on_message`: 消息回调函数
-    //
-    // # 返回
-    // 连接 ID，用于后续管理和断开连接
+    // 连接到 WebSocket 端点并开始接收消息。
+    // 返回连接 ID，用于后续管理与断开连接。
     pub async fn connect<F>(&self, endpoint: &str, on_message: F) -> Result<ConnectionId, String>
     where
         F: Fn(serde_json::Value) + Send + 'static,

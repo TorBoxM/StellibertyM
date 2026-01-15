@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
-// 通用基础卡片组件
-//
-// 提供统一的卡片视觉样式，包括：
-// - 圆角、背景色、边框、阴影
-// - 标题栏（图标 + 标题文字 + 可选操作）
-// - 内容区域
+// 通用基础卡片组件：统一圆角、边框、阴影与标题栏布局。
+// 支持可选操作区与自定义内容区域。
 class BaseCard extends StatelessWidget {
   // 卡片标题图标
   final IconData icon;

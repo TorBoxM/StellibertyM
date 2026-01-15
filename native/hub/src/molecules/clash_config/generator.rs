@@ -1,6 +1,5 @@
-// Clash 配置生成器
-//
-// 目的：生成运行时配置（应用覆写 + 注入运行时参数）
+// Clash 配置生成器：生成运行时配置（应用覆写并注入运行时参数）。
+// 输出内容用于驱动核心运行时状态。
 
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};

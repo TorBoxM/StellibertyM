@@ -4,24 +4,13 @@ import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 
-// 系统代理设置工具类
-//
-// 架构：所有平台的实现都在 Rust 端（native/hub/src/network/proxy.rs）
-// Dart 端只负责调用 Rust 信号和等待响应
-//
-// 支持平台：
-// - Windows: 使用 WinInet API
-// - macOS: 使用 networksetup 命令
-// - Linux: 使用 gsettings (GNOME) 或 kwriteconfig5 (KDE)
+// 系统代理服务：Dart 端仅负责发送信号与等待响应。
+// 平台相关实现由 Rust 端完成。
 class SystemProxy {
   // ==================== 绕过规则配置 ====================
 
-  // 获取默认绕过规则（根据操作系统）
-  //
-  // 不同平台使用不同的分隔符和格式：
-  // - Windows: 分号分隔，支持通配符
-  // - Linux: 逗号分隔，支持 CIDR
-  // - macOS: 逗号分隔，支持通配符和 CIDR
+  // 获取默认绕过规则字符串（按平台生成）。
+  // Windows 使用分号分隔，其他平台使用逗号分隔。
   static String getDefaultBypassRules() {
     if (Platform.isWindows) {
       return 'localhost;127.*;192.168.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;<local>';
@@ -37,7 +26,7 @@ class SystemProxy {
     }
   }
 
-  // 将绕过规则字符串转换为列表
+  // 解析绕过规则字符串为列表。
   static List<String> parseBypassRules(String bypassString) {
     // 根据平台使用不同的分隔符
     final separator = Platform.isWindows ? ';' : ',';
@@ -50,9 +39,7 @@ class SystemProxy {
 
   // ==================== 系统代理设置 ====================
 
-  /// 设置系统代理
-  ///
-  /// 所有平台统一接口，由 Rust 端根据平台执行相应操作
+  // 启用系统代理（平台逻辑由 Rust 端处理）。
   static Future<bool> enable({
     required String host,
     required int port,
@@ -81,9 +68,7 @@ class SystemProxy {
     );
   }
 
-  /// 禁用系统代理
-  ///
-  /// 所有平台统一接口
+  // 禁用系统代理（平台逻辑由 Rust 端处理）。
   static Future<bool> disable() async {
     return _executeRustSignal(
       sendSignal: () {
@@ -95,9 +80,7 @@ class SystemProxy {
     );
   }
 
-  /// 获取当前系统代理状态
-  ///
-  /// 所有平台统一接口
+  // 获取系统代理状态（平台逻辑由 Rust 端处理）。
   static Future<Map<String, dynamic>> getStatus() async {
     try {
       Logger.info('正在获取系统代理状态');
@@ -140,9 +123,7 @@ class SystemProxy {
 
   // ==================== 内部辅助方法 ====================
 
-  /// 执行 Rust 信号并等待响应的通用方法
-  ///
-  /// 封装了 Completer、Stream 订阅、超时处理等通用逻辑
+  // 执行 Rust 信号并等待响应（统一封装订阅与超时逻辑）。
   static Future<bool> _executeRustSignal({
     required void Function() sendSignal,
     required String operationName,

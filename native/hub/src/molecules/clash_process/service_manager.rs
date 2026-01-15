@@ -1,6 +1,5 @@
-// Clash 服务模式管理
-//
-// 通过 Windows Service/systemd 以管理员权限运行 Clash 核心
+// Clash 服务模式管理：通过 Windows Service/systemd 运行核心进程。
+// 需要提升权限以完成安装、启停与状态查询。
 
 use crate::molecules::clash_process::process_manager::ClashProcessResult;
 use anyhow::{Context, Result};
@@ -60,7 +59,7 @@ impl ServiceManager {
             return None;
         }
 
-        // 执行 stelliberty-service version 命令
+        // 执行服务程序的 version 子命令
         // Windows 平台使用 CREATE_NO_WINDOW 避免终端窗口闪屏
         let mut cmd = Command::new(&service_binary_path);
         cmd.arg("version");
@@ -85,7 +84,7 @@ impl ServiceManager {
             return None;
         }
 
-        // 解析输出：Stelliberty Service v1.5.0
+        // 解析输出：Service v1.5.0
         let stdout = String::from_utf8_lossy(&output.stdout);
         let version = stdout
             .trim()
@@ -109,7 +108,7 @@ impl ServiceManager {
             return None;
         }
 
-        // 执行 stelliberty-service version 命令
+        // 执行服务程序的 version 子命令
         // Windows 平台使用 CREATE_NO_WINDOW 避免终端窗口闪屏
         let mut cmd = Command::new(&source_service_binary);
         cmd.arg("version");
@@ -134,7 +133,7 @@ impl ServiceManager {
             return None;
         }
 
-        // 解析输出：Stelliberty Service v1.5.0
+        // 解析输出：Service v1.5.0
         let stdout = String::from_utf8_lossy(&output.stdout);
         let version = stdout
             .trim()
@@ -271,9 +270,8 @@ impl ServiceManager {
             log::info!("检测到 Clash 核心正在运行，将在权限确认后停止");
         }
 
-        // 注意：不在此处复制服务二进制文件
-        // 由 stelliberty-service 的 install 命令自行处理更新检测和文件复制
-        // 这样才能正确判断是首次安装还是更新
+        // 注意：不在此处复制服务二进制文件。
+        // 由服务程序的 install 子命令处理更新检测与复制逻辑。
 
         #[cfg(windows)]
         {
@@ -344,7 +342,7 @@ impl ServiceManager {
 
         #[cfg(target_os = "macos")]
         {
-            // macOS 使用 osascript 进行图形化提权（已在 stelliberty_service 中实现）
+            // macOS 使用 osascript 进行图形化提权（由服务程序内部实现）
             let output = Command::new(&self.service_binary_path)
                 .arg("install")
                 .output()

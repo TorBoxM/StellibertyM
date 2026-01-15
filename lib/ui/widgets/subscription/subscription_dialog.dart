@@ -303,9 +303,8 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
               },
             ),
 
-            // 根据导入方式显示不同的输入控件
-            // 添加模式：根据 _importMethod 显示
-            // 编辑模式：本地文件订阅不显示 URL 字段
+            // 根据导入方式选择输入控件。
+            // 编辑本地文件订阅时隐藏 URL 字段。
             if (widget.isAddMode &&
                     _importMethod == SubscriptionImportMethod.link ||
                 !widget.isAddMode && !widget.isLocalFile) ...[
@@ -367,9 +366,8 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
               _buildFileSelector(),
             ],
 
-            // 只有链接导入才显示自动更新选项
-            // 添加模式：只有选择链接导入时显示
-            // 编辑模式：只有非本地文件才显示
+            // 自动更新仅在链接导入场景显示。
+            // 编辑模式下，本地文件订阅不显示该区域。
             if ((widget.isAddMode &&
                     _importMethod == SubscriptionImportMethod.link) ||
                 (!widget.isAddMode && !widget.isLocalFile)) ...[

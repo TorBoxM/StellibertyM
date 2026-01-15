@@ -4,9 +4,8 @@ import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/clash/model/connection_model.dart';
 import 'package:stelliberty/clash/network/ipc_request_helper.dart';
 
-// Clash RESTful API 客户端
-//
-// 使用 IPC 模式通信
+// Clash API 客户端：通过 IPC 转发请求并解析响应。
+// 提供基础缓存以降低并发请求开销。
 class ClashApiClient {
   ClashApiClient();
 
@@ -232,9 +231,7 @@ class ClashApiClient {
     }
   }
 
-  // 重载配置文件（不重启进程）
-  // [configPath] 配置文件路径
-  // [force] 是否强制重载
+  // 重载配置文件（不重启进程），可选指定配置路径与强制标志。
   Future<bool> reloadConfig({String? configPath, bool force = true}) async {
     try {
       final path = force ? '/configs?force=true' : '/configs';

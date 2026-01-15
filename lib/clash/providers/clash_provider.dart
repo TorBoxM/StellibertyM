@@ -11,17 +11,15 @@ import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/clash/services/config_watcher.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart' as signals;
 
-// Clash 状态管理
-// 使用 ClashManager 单例，确保全局唯一进程
+// Clash 状态管理：通过 ClashManager 单例维护全局核心状态。
+// 向 UI 暴露可观察状态与常用操作。
 class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   ClashManager get _clashManager => ClashManager.instance;
 
   // ClashManager 实例
   ClashManager get clashManager => _clashManager;
 
-  // ============================================
   // 核心状态
-  // ============================================
   CoreState _coreState = CoreState.stopped;
   CoreState get coreState => _coreState;
 
@@ -129,9 +127,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  // ============================================
   // 其他状态
-  // ============================================
 
   // 流量数据流（转发自 ClashManager）
   Stream<TrafficData>? get trafficStream => _clashManager.trafficStream;
@@ -250,12 +246,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         lowerType == 'fallback';
   }
 
-  // 检查是否为 IPC 未就绪错误
-  // 这类错误在 Clash 启动期间或系统唤醒后是正常的临时状态
+  // 判断 IPC 未就绪错误（启动期间或系统唤醒后的短暂状态）。
   static bool _isIpcNotReadyError(String errorMessage) {
-    // Windows: os error 2 (系统找不到指定的文件)
-    // Linux: os error 111 (ECONNREFUSED)
-    // macOS: os error 61 (ECONNREFUSED)
+    // Windows：os error 2；Linux：os error 111；macOS：os error 61。
     return errorMessage.contains('os error 2') ||
         errorMessage.contains('os error 111') ||
         errorMessage.contains('os error 61') ||

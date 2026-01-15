@@ -3,9 +3,8 @@ import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'package:stelliberty/storage/preferences.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// 开机自启动服务，跨平台单例实现
-// 支持 Windows、macOS 和 Linux
-// 特性：状态缓存、持久化存储、Flutter-Rust 双向同步
+// 开机自启动服务：跨平台单例实现（Windows/macOS/Linux）。
+// 提供状态缓存、持久化与 Flutter↔Rust 同步。
 class AutoStartService {
   // 私有构造函数，防止外部实例化
   AutoStartService._();

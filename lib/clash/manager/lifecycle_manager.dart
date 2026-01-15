@@ -112,14 +112,8 @@ class LifecycleManager {
     _processManager = ProcessManager(service: _processService);
   }
 
-  // 启动 Clash 核心（不触碰系统代理）
-  //
-  // 参数：
-  // - configPath: 配置文件路径（可选，为空时使用保存的原始路径）
-  // - overrides: 覆写配置列表（由 ClashManager 通过回调获取）
-  // - enableFallback: 是否启用自动回退（默认 true）
-  // - onOverridesFailed: 覆写失败时的回调（用于禁用覆写）
-  // - onThirdLevelFallback: 使用默认配置启动成功时的回调（用于清除 currentSubscription）
+  // 启动核心进程（不修改系统代理）。
+  // 支持传入配置路径、覆写回调与 TUN 相关参数。
   Future<bool> startCore({
     String? configPath,
     List<OverrideConfig> overrides = const [],
@@ -655,10 +649,8 @@ class LifecycleManager {
         return false;
       }
 
-      // 仅验证核心配置，不验证代理列表
-      // 代理数据由 ClashProvider 异步加载
-      // 配置验证的职责是确保核心能正常工作
-      // 代理列表的验证由 ClashProvider 负责
+      // 仅验证核心配置，不校验代理列表。
+      // 代理数据由 ClashProvider 异步加载并负责校验。
 
       Logger.info('配置验证成功（核心功能验证）');
       return true;
@@ -668,9 +660,8 @@ class LifecycleManager {
     }
   }
 
-  // 等待 IPC(Named Pipe) 就绪
-  // Clash 核心启动后，Named Pipe 的创建需要 1-2 秒
-  // 返回获取到的版本号（如果成功）
+  // 等待 IPC 就绪并返回版本号（如成功）。
+  // 核心启动后 IPC 创建可能有短暂延迟。
   Future<String?> _waitForIpcReady() async {
     for (int i = 0; i < ClashDefaults.ipcReadyMaxRetries; i++) {
       try {

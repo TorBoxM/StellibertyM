@@ -10,13 +10,8 @@ import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
 import 'package:stelliberty/ui/common/modern_dialog.dart';
 
-// 订阅文件编辑器对话框
-//
-// 支持编辑订阅配置文件（YAML 格式），提供：
-// - 代码高亮和行号显示
-// - 异步加载优化（大文件友好）
-// - 修改状态跟踪和警告
-// - 文件保存和验证
+// 文件编辑对话框：用于编辑 YAML 文本并支持高亮与保存。
+// 提供大文件加载优化与修改状态提示。
 class FileEditorDialog extends StatefulWidget {
   // 文件名称
   final String fileName;

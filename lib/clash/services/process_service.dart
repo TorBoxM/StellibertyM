@@ -7,8 +7,8 @@ import 'package:stelliberty/src/bindings/bindings.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// Clash 进程服务
-// 纯技术实现：Rust FFI 调用、端口检查工具
+// Clash 进程服务：封装 Rust 信号调用与端口检查工具。
+// 仅包含技术实现，不承载业务决策。
 class ProcessService {
   // netstat 输出缓存（优化性能，避免频繁调用）
   String? _cachedNetstat;
@@ -36,10 +36,8 @@ class ProcessService {
     // 指定数据目录（Geodata 文件位置）
     args.addAll(['-d', geoDataDir]);
 
-    // IPC 端点从配置文件读取：
-    // Windows: external-controller-pipe
-    // Unix: external-controller-unix
-    // HTTP API: external-controller (如果启用)
+    // IPC 端点从配置读取：Windows 使用 pipe，Unix 使用 socket。
+    // HTTP API 端点为 external-controller（如启用）。
 
     // 调用 Rust 端启动进程（详细信息由 Rust 端日志输出）
     StartClashProcess(

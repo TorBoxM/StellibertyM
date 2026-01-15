@@ -81,16 +81,8 @@ impl DownloadSubscriptionRequest {
     }
 }
 
-// 下载订阅配置
-//
-// 参数：
-// - url: 订阅链接
-// - proxy_mode: 代理模式
-// - user_agent: User-Agent 头
-// - timeout_seconds: 超时时间（秒）
-// - mixed_port: Clash 混合端口
-//
-// 返回：(配置内容, 订阅信息)
+// 下载订阅配置并返回内容与订阅信息。
+// 支持代理模式、超时与自定义 User-Agent。
 pub async fn download_subscription(
     url: &str,
     proxy_mode: ProxyMode,
@@ -170,9 +162,8 @@ fn create_http_client(
     Ok(builder.build()?)
 }
 
-// 解析订阅信息头
-//
-// 示例：subscription-userinfo: upload=0; download=123456; total=1073741824; expire=1735689600
+// 解析订阅信息头（subscription-userinfo）。
+// 示例：upload=0; download=123; total=1073741824; expire=1735689600
 fn parse_subscription_info(headers: &reqwest::header::HeaderMap) -> Option<SubscriptionInfoData> {
     let header_value = headers.get("subscription-userinfo")?.to_str().ok()?;
 

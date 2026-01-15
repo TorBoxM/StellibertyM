@@ -313,9 +313,8 @@ class AppTrayManager {
     }
   }
 
-  // 检查虚拟网卡模式是否可用
-  // Windows: 检查管理员权限或服务安装状态
-  // Linux/macOS: 检查是否为 root 用户
+  // 检查虚拟网卡模式是否可用。
+  // Windows 检查权限或服务状态；Unix 检查是否为 root。
   Future<bool> _checkTunAvailable() async {
     // 使用缓存避免重复检查
     if (_tunAvailableCache != null) {

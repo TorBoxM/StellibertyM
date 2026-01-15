@@ -26,9 +26,8 @@ class DialogConstants {
   static const double loadingIndicatorStrokeWidth = 2.0;
 }
 
-// 现代对话框基础组件
-// 提取所有对话框的公共视觉风格和布局结构
-// 采用插槽模式，中间内容区域完全自定义
+// 现代对话框基础组件：提供统一视觉风格与布局结构。
+// 采用插槽模式，中间内容区域完全自定义。
 class ModernDialog extends StatefulWidget {
   // 标题文本
   final String? title;

@@ -11,16 +11,8 @@ import 'package:stelliberty/ui/common/modern_popup_menu.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// 订阅卡片组件
-// 显示订阅的详细信息：
-// - 订阅名称和图标
-// - 订阅 URL（单行省略）
-// - 状态标签（自动更新、更新间隔、距下次更新时间）
-// - 流量统计信息（进度条 + 数值）
-// - 操作菜单（使用 ModernPopupMenu）
-// 性能优化：
-// - 使用 Consumer 精确监听更新状态
-// - 缓存 isDark 和 colorScheme 避免重复调用
+// 订阅卡片组件：展示订阅概览与操作入口。
+// 通过局部监听与缓存减少不必要的重建。
 class SubscriptionCard extends StatelessWidget {
   // 订阅数据
   final Subscription subscription;
@@ -299,10 +291,8 @@ class SubscriptionCard extends StatelessWidget {
     );
   }
 
-  // 构建现代化弹出菜单
-  // 使用 ModernPopupMenu 替代标准 PopupMenuButton，
-  // 提供 Windows 11 风格的交互体验
-  // ModernPopupMenu 会自动处理分页逻辑（超过 6 项时）
+  // 构建弹出菜单入口（使用自定义菜单组件）。
+  // 菜单组件会自动处理分页逻辑。
   Widget _buildModernPopupMenu(BuildContext context, bool isDisabled) {
     final trans = context.translate;
     final allMenuItems = _buildAllMenuItems(context, trans);

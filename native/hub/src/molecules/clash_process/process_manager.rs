@@ -1,6 +1,5 @@
-// Clash 直接进程管理
-//
-// 负责启动、停止和管理 Clash 核心进程
+// Clash 进程管理：负责启动、停止与状态维护。
+// 适用于非服务模式的直接进程控制。
 
 use once_cell::sync::Lazy;
 use rinf::{DartSignal, RustSignal};

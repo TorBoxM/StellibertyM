@@ -1,6 +1,5 @@
-// IPC 连接工具
-//
-// 提供 Named Pipe(Windows)和 Unix Socket(Unix)的统一连接接口
+// IPC 连接工具：统一封装 Named Pipe（Windows）与 Unix Socket（Unix）。
+// 提供带超时与有限重试的连接能力。
 
 #[cfg(unix)]
 use tokio::net::UnixStream;

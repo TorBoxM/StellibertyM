@@ -69,16 +69,8 @@ impl DownloadOverrideRequest {
     }
 }
 
-// 下载覆写文件
-//
-// 参数：
-// - url: 覆写文件链接
-// - proxy_mode: 代理模式
-// - user_agent: User-Agent 头
-// - timeout_seconds: 超时时间（秒）
-// - mixed_port: Clash 混合端口
-//
-// 返回：文件内容
+// 下载覆写文件并返回内容。
+// 支持代理模式、超时与自定义 User-Agent。
 pub async fn download_override(
     url: &str,
     proxy_mode: ProxyMode,

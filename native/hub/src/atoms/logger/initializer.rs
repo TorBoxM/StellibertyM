@@ -208,14 +208,14 @@ fn check_and_rotate_log(path: &PathBuf) -> std::io::Result<()> {
     Ok(())
 }
 
-/// 设置应用日志启用状态（由 Dart 端通过 rinf 消息调用，线程安全，实时生效）
+// 设置应用日志启用状态（由 Dart 端通过 rinf 消息调用，线程安全，实时生效）
 pub fn set_app_log_enabled(enabled: bool) {
     if let Ok(mut guard) = APP_LOG_ENABLED.lock() {
         *guard = enabled;
     }
 }
 
-/// 设置日志文件路径（必须在 setup_logger 之前调用）
+// 设置日志文件路径（必须在 setup_logger 之前调用）
 pub fn set_log_file_path(log_path: PathBuf) {
     if let Ok(mut path_guard) = LOG_FILE_PATH.lock() {
         *path_guard = Some(log_path.clone());
@@ -223,12 +223,12 @@ pub fn set_log_file_path(log_path: PathBuf) {
     }
 }
 
-/// 初始化日志系统（幂等、懒加载、线程安全）
+// 初始化日志系统（幂等、懒加载、线程安全）
 pub fn setup_logger() {
     Lazy::force(&LOGGER);
 }
 
-/// 初始化消息监听器
+// 初始化消息监听器
 pub fn init_message_listener() {
     spawn(async {
         let receiver = SetAppLogEnabled::get_dart_signal_receiver();
@@ -240,7 +240,7 @@ pub fn init_message_listener() {
     });
 }
 
-/// 统一初始化函数：设置日志路径、初始化日志系统和消息监听器
+// 统一初始化函数：设置日志路径、初始化日志系统和消息监听器
 pub fn init(log_file_path: PathBuf) {
     set_log_file_path(log_file_path);
     setup_logger();

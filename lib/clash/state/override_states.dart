@@ -1,8 +1,7 @@
 // 覆写状态定义
 
-// ============================================
-// 覆写操作状态
-// ============================================
+// 覆写操作状态：描述覆写加载、更新与下载阶段。
+// 用于驱动 UI 展示与交互控制。
 
 enum OverrideOperationState {
   // 空闲状态
@@ -66,9 +65,8 @@ extension OverrideOperationStateExtension on OverrideOperationState {
   bool get isBusy => !isIdle;
 }
 
-// ============================================
-// 覆写状态数据类
-// ============================================
+// 覆写状态数据：聚合操作状态、错误状态与进度信息。
+// 用于 Provider 层的状态管理与 UI 展示。
 
 class OverrideState {
   final OverrideOperationState operationState;

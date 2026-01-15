@@ -1,6 +1,5 @@
-// 网络接口信息查询
-//
-// 目的：提供跨平台的系统网络信息获取能力
+// 网络接口信息查询：提供跨平台的网络信息获取能力。
+// 输出可用地址列表与主机名。
 
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};
@@ -19,9 +18,7 @@ pub struct NetworkInterfacesInfo {
 }
 
 impl GetNetworkInterfaces {
-    // 收集系统网络接口信息
-    //
-    // 目的：为前端提供可用的网络地址列表，用于显示本机访问地址
+    // 收集系统网络接口信息并输出可用地址列表。
     pub fn handle(&self) {
         log::info!("收到获取网络接口请求");
 
@@ -70,9 +67,7 @@ impl GetNetworkInterfaces {
     }
 }
 
-// 获取系统主机名
-//
-// 目的：为网络地址列表提供友好的主机标识
+// 获取系统主机名，用于补充友好的主机标识。
 pub fn get_hostname() -> Option<String> {
     use std::process::Command;
 
@@ -109,17 +104,13 @@ pub fn get_hostname() -> Option<String> {
     }
 }
 
-// 检查是否为 APIPA 地址
-//
-// 目的：过滤无效的自动分配地址(169.254.x.x)，这些地址表示网络接口未正常连接
+// 判断是否为 APIPA 地址（169.254.x.x），用于过滤无效接口地址。
 fn is_apipa_address(ip: &std::net::Ipv4Addr) -> bool {
     let octets = ip.octets();
     octets[0] == 169 && octets[1] == 254
 }
 
-// 获取所有活动网络接口的 IP 地址
-//
-// 目的：为前端提供可用的本机网络地址列表，过滤无效和内部地址
+// 获取所有活动网络接口的 IP 地址，并过滤无效与内部地址。
 pub fn get_network_addresses() -> Result<Vec<String>, String> {
     #[cfg(not(target_os = "android"))]
     {

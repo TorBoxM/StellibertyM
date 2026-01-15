@@ -1,6 +1,5 @@
-// DNS 配置数据模型
-//
-// 该配置独立于订阅配置文件，在 Clash 启动时合并到运行时配置中
+// DNS 配置数据模型：独立于订阅配置文件维护。
+// 启动时合并到运行时配置中生效。
 class DnsConfig {
   // ==================== 基础配置 ====================
 
@@ -75,24 +74,12 @@ class DnsConfig {
 
   // ==================== 核心功能 ====================
 
-  // 域名特定 DNS 覆写规则
-  //
-  // 格式：域名 -> DNS 服务器列表
-  // 示例：
-  // {
-  //   "*.google.com": ["8.8.8.8", "8.8.4.4"],
-  //   "+.cn": ["223.5.5.5"],
-  //   "rule-set:cn": ["https://doh.pub/dns-query"]
-  // }
+  // 域名 DNS 覆写规则：键为匹配规则，值为 DNS 服务器列表。
+  // 运行时会按规则选择对应的解析器。
   Map<String, dynamic> nameserverPolicy;
 
-  // Hosts 映射（域名 -> IP 地址或域名）
-  //
-  // 示例：
-  // {
-  //   "localhost": "127.0.0.1",
-  //   "*.test.com": ["1.2.3.4", "5.6.7.8"]
-  // }
+  // Hosts 映射：键为域名，值为 IP 或域名（可为列表）。
+  // 用于提供静态解析结果或别名映射。
   Map<String, dynamic> hosts;
 
   DnsConfig({
@@ -300,9 +287,7 @@ class DnsConfig {
     return DnsConfig();
   }
 
-  // 从可视化格式的字符串解析 nameserver-policy
-  //
-  // 输入格式：domain1=dns1;dns2, domain2=dns3
+  // 解析可视化格式的 nameserver-policy：domain=dns1;dns2，多规则用逗号分隔。
   // 示例：*.google.com=8.8.8.8;8.8.4.4, +.cn=223.5.5.5
   static Map<String, dynamic> parseNameserverPolicy(String input) {
     final result = <String, dynamic>{};
@@ -338,9 +323,7 @@ class DnsConfig {
     return result;
   }
 
-  // 将 nameserver-policy 格式化为可视化字符串
-  //
-  // 输出格式：domain1=dns1;dns2, domain2=dns3
+  // 格式化 nameserver-policy 为可视化字符串：domain=dns1;dns2，多规则用逗号分隔。
   static String formatNameserverPolicy(Map<String, dynamic> policy) {
     if (policy.isEmpty) return '';
 
@@ -361,9 +344,7 @@ class DnsConfig {
     return parts.join(', ');
   }
 
-  // 从可视化格式的字符串解析 hosts
-  //
-  // 输入格式：domain1=ip1, domain2=ip2;ip3
+  // 解析可视化格式的 hosts：domain=value1;value2，多规则用逗号分隔。
   // 示例：localhost=127.0.0.1, *.test.com=1.2.3.4;5.6.7.8
   static Map<String, dynamic> parseHosts(String input) {
     final result = <String, dynamic>{};
@@ -399,9 +380,7 @@ class DnsConfig {
     return result;
   }
 
-  // 将 hosts 格式化为可视化字符串
-  //
-  // 输出格式：domain1=ip1, domain2=ip2;ip3
+  // 格式化 hosts 为可视化字符串：domain=value1;value2，多规则用逗号分隔。
   static String formatHosts(Map<String, dynamic> hosts) {
     if (hosts.isEmpty) return '';
 

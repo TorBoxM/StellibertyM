@@ -4,9 +4,8 @@ import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/ui/widgets/home/base_card.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 
-// 系统代理卡片
-//
-// 提供系统代理开关功能
+// 系统代理卡片：提供系统代理开关能力。
+// 同步状态到核心与界面。
 class ProxySwitchCard extends StatelessWidget {
   const ProxySwitchCard({super.key});
 

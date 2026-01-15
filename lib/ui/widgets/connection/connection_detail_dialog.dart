@@ -194,7 +194,7 @@ class ConnectionDetailDialog extends StatelessWidget {
   }
 }
 
-/// 辅助类，用于封装信息项
+// 信息项封装。
 class _InfoItem {
   final String label;
   final String value;

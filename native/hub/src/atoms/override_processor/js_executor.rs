@@ -1,6 +1,5 @@
-// JavaScript 覆写执行器
-//
-// 目的：使用 Boa 引擎执行用户的 JavaScript 覆写脚本
+// JavaScript 覆写执行器：使用 Boa 引擎执行用户脚本。
+// 脚本需提供 `main(config)` 入口函数。
 
 use boa_engine::{Context, Source};
 use serde_json::Value as JsonValue;
@@ -12,21 +11,15 @@ pub struct JsExecutor {
 }
 
 impl JsExecutor {
-    // 创建新的 JavaScript 执行器
-    //
-    // 目的：初始化 Boa 上下文
+    // 创建 JavaScript 执行器并初始化 Boa 上下文。
     pub fn new() -> Result<Self, String> {
         let context = Context::default();
 
         Ok(Self { context })
     }
 
-    // 应用 JavaScript 覆写到基础配置
-    //
-    // 目的：
-    // 1. 将 YAML 配置转换为 JSON
-    // 2. 执行用户的 JavaScript 脚本（必须定义 main(config) 函数）
-    // 3. 将结果转换回 YAML
+    // 应用 JavaScript 覆写：YAML→JSON→执行 main(config)→YAML。
+    // 返回覆写后的配置内容。
     pub fn apply(&mut self, base_content: &str, js_code: &str) -> Result<String, String> {
         log::info!("JavaScript 覆写开始");
         log::info!("基础配置长度：{}字节", base_content.len());

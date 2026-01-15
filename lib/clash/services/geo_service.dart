@@ -4,8 +4,8 @@ import 'package:path/path.dart' as p;
 import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// Geodata 数据文件服务
-// 负责定位 Geodata 数据库文件（GeoIP、GeoSite、ASN、Country）
+// Geodata 数据文件服务：定位 GeoIP/GeoSite/ASN/Country 数据文件。
+// 提供目录解析、缓存与可选完整性校验。
 class GeoService {
   // Geodata 文件名常量（小写命名，与实际文件名一致）
   static const String asnMmdb = 'asn.mmdb';
@@ -27,14 +27,8 @@ class GeoService {
   static String? _cachedGeoDataDir;
   static bool _isValidated = false;
 
-  // 获取 Geodata 数据目录路径
-  //
-  // **性能优化**：
-  // - 首次调用验证文件完整性并打印详细日志
-  // - 后续调用直接返回缓存路径（避免重复 I/O）
-  // - 提供 forceValidate 参数强制重新验证
-  //
-  // 返回 Geodata 数据目录路径
+  // 获取 Geodata 数据目录路径（支持缓存与可选校验）。
+  // 首次或强制校验时会检查文件完整性并输出日志。
   static Future<String> getGeoDataDir({bool forceValidate = false}) async {
     // 如果已缓存且不强制验证，直接返回
     if (_cachedGeoDataDir != null && !forceValidate) {

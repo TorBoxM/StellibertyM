@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
 
-/// 代理节点卡片组件 - 磨砂玻璃风格
-///
-/// 设计特点：
-/// - 采用半透明背景 + 高斯模糊，营造磨砂玻璃效果
-/// - 与日志卡片风格保持一致
-/// - 选中状态使用主题色高亮
+// 代理节点卡片：以磨砂风格展示节点信息。
+// 支持选中态与延迟测试入口。
 class ProxyNodeCard extends StatefulWidget {
   final ProxyNode node;
   final bool isSelected;

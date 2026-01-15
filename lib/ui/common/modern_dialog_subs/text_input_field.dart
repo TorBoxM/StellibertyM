@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 
-// 文本输入框组件
-// 特性：
-// - 毛玻璃背景效果
-// - 支持图标前缀
-// - 支持单行/多行输入
-// - 内置表单验证
-// - 自适应深色/浅色主题
+// 文本输入组件：支持图标前缀、校验与多行输入。
+// 提供半透明背景并适配明暗主题。
 class TextInputField extends StatelessWidget {
   // 文本控制器
   final TextEditingController controller;

@@ -1,8 +1,7 @@
 // 订阅状态定义
 
-// ============================================
-// 订阅操作状态
-// ============================================
+// 订阅操作状态：描述订阅加载、切换与更新阶段。
+// 用于驱动 UI 展示与交互控制。
 
 enum SubscriptionOperationState {
   // 空闲状态
@@ -87,9 +86,8 @@ extension SubscriptionOperationStateExtension on SubscriptionOperationState {
   bool get isBusy => !isIdle;
 }
 
-// ============================================
-// 订阅状态数据类
-// ============================================
+// 订阅状态数据：聚合操作状态、错误状态与进度信息。
+// 用于 Provider 层的状态管理与 UI 展示。
 
 class SubscriptionState {
   final SubscriptionOperationState operationState;

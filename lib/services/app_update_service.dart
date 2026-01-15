@@ -21,9 +21,8 @@ class AppUpdateInfo {
   });
 }
 
-// 应用更新服务 (Rust 后端包装)
-//
-// 核心逻辑已迁移至 Rust，提供更高的性能和可靠性
+// 应用更新服务：Rust 后端能力的 Dart 包装层。
+// 负责信号调用、结果解析与错误转换。
 class AppUpdateService {
   AppUpdateService._();
 

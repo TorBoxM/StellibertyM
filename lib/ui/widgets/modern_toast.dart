@@ -20,9 +20,8 @@ class _ToastQueueItem {
   });
 }
 
-// Modern Toast 工具类
-// 用于在应用中显示简洁的提示消息
-// 支持队列机制：多个 Toast 按顺序显示，后一个等前一个显示完
+// Toast 工具：显示轻量提示消息并支持队列串行展示。
+// 通过全局 navigatorKey 获取 Overlay 上下文。
 class ModernToast {
   // 全局导航键，用于获取稳定的 Overlay context
   static final GlobalKey<NavigatorState> navigatorKey =
@@ -34,11 +33,8 @@ class ModernToast {
   // 当前是否正在显示 Toast
   static bool _isShowing = false;
 
-  // 显示 Toast 提示
-  //
-  // [message] - 提示消息
-  // [type] - Toast 类型，默认为 info
-  // [duration] - 显示时长，默认 3 秒
+  // 显示 Toast 提示消息。
+  // 可指定类型与持续时间。
   static void show(
     String message, {
     ToastType type = ToastType.info,

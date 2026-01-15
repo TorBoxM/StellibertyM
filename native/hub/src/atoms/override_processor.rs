@@ -1,6 +1,5 @@
-// 覆写处理器原子模块
-//
-// 提供 YAML 合并和 JavaScript 执行的纯函数式处理能力
+// 覆写处理器原子模块：提供 YAML 合并与 JavaScript 执行能力。
+// 面向上层提供稳定的覆写处理接口。
 
 mod js_executor;
 mod processor;

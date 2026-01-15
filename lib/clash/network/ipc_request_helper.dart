@@ -44,11 +44,9 @@ class _IpcRetryConfig {
   }
 }
 
-// 检查是否为 IPC 尚未就绪的错误（启动时的正常情况）
+// 判断是否为 IPC 尚未就绪的错误（启动阶段的正常情况）。
 bool _isIpcNotReadyError(String errorMsg) {
-  // Windows: os error 2 (系统找不到指定的文件)
-  // Linux: os error 111 (ECONNREFUSED，拒绝连接)
-  // macOS: os error 61 (ECONNREFUSED，拒绝连接)
+  // Windows：os error 2；Linux：os error 111；macOS：os error 61。
   return errorMsg.contains('系统找不到指定的文件') ||
       errorMsg.contains('os error 2') ||
       errorMsg.contains('拒绝连接') ||
@@ -57,9 +55,8 @@ bool _isIpcNotReadyError(String errorMsg) {
       errorMsg.contains('Connection refused');
 }
 
-// IPC 请求辅助类
-//
-// 简化 Dart → Rust IPC 请求/响应处理
+// IPC 请求辅助类：封装 Dart → Rust 的请求/响应匹配逻辑。
+// 通过请求 ID 映射等待对应响应。
 class IpcRequestHelper {
   static final IpcRequestHelper _instance = IpcRequestHelper._();
   IpcRequestHelper._() {

@@ -3,9 +3,7 @@ import 'package:path/path.dart' as path;
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 
-// 覆写测试
-//
-// 测试 YAML 和 JavaScript 覆写功能
+// 覆写测试：验证 YAML 与 JavaScript 覆写能力。
 class OverrideTest {
   // 运行覆写测试流程
   static Future<void> run() async {

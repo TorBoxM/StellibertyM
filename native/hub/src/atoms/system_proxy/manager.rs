@@ -1,6 +1,5 @@
-// 系统代理配置管理
-//
-// 目的：提供跨平台的系统级代理设置能力
+// 系统代理配置管理：提供跨平台的系统级代理设置能力。
+// 对外暴露启用、禁用与状态查询接口。
 
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};
@@ -54,9 +53,7 @@ pub struct ProxyInfo {
 }
 
 impl EnableSystemProxy {
-    // 执行启用代理操作
-    //
-    // 目的：配置系统级代理设置，使所有网络流量经过指定代理服务器
+    // 启用系统代理并应用相关配置。
     pub async fn handle(self) {
         if self.should_use_pac_mode {
             log::info!("收到启用代理请求 (PAC 模式)");
@@ -93,9 +90,7 @@ impl EnableSystemProxy {
 }
 
 impl DisableSystemProxy {
-    // 执行禁用代理操作
-    //
-    // 目的：移除系统代理配置，恢复直连网络访问
+    // 禁用系统代理并清理相关配置。
     pub async fn handle(&self) {
         log::info!("收到禁用代理请求");
 
@@ -120,9 +115,7 @@ impl DisableSystemProxy {
 }
 
 impl GetSystemProxy {
-    // 查询当前系统代理状态
-    //
-    // 目的：获取系统代理的启用状态和配置信息
+    // 查询当前系统代理状态与配置信息。
     pub async fn handle(&self) {
         log::info!("收到获取系统代理状态请求");
 
@@ -154,9 +147,7 @@ mod windows_impl {
     };
     use windows::core::PWSTR;
 
-    // 配置并启用系统代理
-    //
-    // 目的：将系统网络流量重定向到指定的代理服务器或使用 PAC 脚本
+    // 配置并启用系统代理，可选使用 PAC 脚本。
     pub async fn enable_proxy(
         host: &str,
         port: u16,
@@ -242,9 +233,8 @@ mod windows_impl {
         }
     }
 
-    // 使用 PAC 脚本配置系统代理
-    //
-    // 目的：通过 PAC 脚本自动决定流量走向
+    // 使用 PAC 脚本配置系统代理。
+    // 由 PAC 规则决定请求的代理策略。
     fn enable_proxy_pac(
         host: &str,
         port: u16,
@@ -329,9 +319,7 @@ mod windows_impl {
         }
     }
 
-    // 移除系统代理配置
-    //
-    // 目的：恢复系统直连网络访问
+    // 移除系统代理配置并恢复直连。
     pub async fn disable_proxy() -> ProxyResult {
         log::info!("正在禁用系统代理");
 
@@ -423,9 +411,7 @@ mod windows_impl {
         }
     }
 
-    // 查询当前系统代理配置
-    //
-    // 目的：读取系统代理的启用状态和服务器地址
+    // 查询当前系统代理状态与服务器地址。
     pub async fn get_proxy_info() -> ProxyInfo {
         unsafe {
             // 准备查询选项

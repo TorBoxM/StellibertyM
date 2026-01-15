@@ -73,8 +73,8 @@ class ClashLogService {
     await _logSubscription?.cancel();
     _logSubscription = null;
 
-    // 不关闭 StreamController，保持流活动以便外部持续订阅
-    // StreamController 在整个应用生命周期内保持活动
+    // 不关闭 StreamController，确保外部可持续订阅。
+    // 控制器在应用生命周期内保持活动。
   }
 
   // 更新日志级别（无需重启连接，核心会自动调整输出）
@@ -88,11 +88,8 @@ class ClashLogService {
 
     Logger.info('日志级别已更新：${oldLevel.toApiParam()} -> ${level.toApiParam()}');
 
-    // 注意：
-    // 1. 日志级别通过 API 的 setLogLevel() 已经热更新到核心
-    // 2. WebSocket 连接保持活动，无需重启
-    // 3. 核心会根据日志级别过滤输出
-    // 4. 只有在 silent <-> 其他级别切换时，才需要启停监控
+    // 日志级别通过 API 热更新到核心，连接保持活动。
+    // 仅在 silent 与其他级别切换时启停监控。
 
     if (oldLevel == ClashLogLevel.silent && level != ClashLogLevel.silent) {
       // 从 silent 切换到其他级别：启动监控

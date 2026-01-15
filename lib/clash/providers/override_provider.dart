@@ -306,11 +306,8 @@ class OverrideProvider extends ChangeNotifier {
     }
   }
 
-  // 重新排序覆写
-  //
-  // [autoAdjust] 是否自动调整索引（默认 true）
-  // - true: 用于 ReorderableListView（需要调整插入点）
-  // - false: 用于 GridView DragTarget（目标索引即实际位置）
+  // 重新排序覆写（支持可选的索引自动修正）。
+  // `autoAdjust` 用于兼容不同拖拽组件的插入点语义。
   Future<bool> reorderOverrides(
     int oldIndex,
     int newIndex, {

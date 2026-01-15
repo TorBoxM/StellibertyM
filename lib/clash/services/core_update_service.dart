@@ -41,13 +41,7 @@ class CoreUpdateService {
       }
 
       if (result.exitCode == 0) {
-        // 尝试多种版本号格式匹配
-        // 格式1: "Mihomo version x.x.x"
-        // 格式2: "Meta version x.x.x"
-        // 格式3: "version x.x.x"
-        // 格式4: "v1.2.3" 或 "1.2.3"
-
-        // 先尝试匹配 "version x.x.x" 格式
+        // 解析版本号：优先匹配 `version x.y.z`，再回退到纯版本号。
         final versionPattern = r'version\s+v?(\d+\.\d+\.\d+)';
         var versionMatch = RegExp(
           versionPattern,
@@ -59,7 +53,7 @@ class CoreUpdateService {
           return version;
         }
 
-        // 再尝试匹配纯版本号 "v1.2.3" 或 "1.2.3"
+        // 回退：匹配纯版本号（v1.2.3 或 1.2.3）。
         final pureVersionPattern = r'v?(\d+\.\d+\.\d+)';
         versionMatch = RegExp(pureVersionPattern).firstMatch(stdout);
         if (versionMatch != null) {

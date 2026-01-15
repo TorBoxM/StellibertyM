@@ -3,9 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_single_instance/flutter_single_instance.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// 确保应用单实例运行
-// Debug/Profile 模式跳过单实例检查，允许与 Release 版本共存
-// Release 模式强制单实例
+// 单实例保障：Debug/Profile 跳过检查，Release 强制单实例。
+// 用于避免多实例竞争资源与状态。
 Future<void> ensureSingleInstance() async {
   // Debug 和 Profile 模式允许多实例（与 Release 共存）
   if (kDebugMode || kProfileMode) {

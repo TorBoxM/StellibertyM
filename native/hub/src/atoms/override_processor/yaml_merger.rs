@@ -1,6 +1,5 @@
-// YAML 配置深度合并
-//
-// 目的：实现支持特殊语法的 YAML 配置合并
+// YAML 配置深度合并：支持特殊语法的覆写合并策略。
+// 用于将覆写配置稳定合并到基础配置。
 
 use serde_yaml_ng::Value as YamlValue;
 
@@ -19,9 +18,7 @@ impl YamlMerger {
         Self
     }
 
-    // 应用 YAML 覆写到基础配置
-    //
-    // 目的：解析两个 YAML 字符串，深度合并后返回结果
+    // 应用 YAML 覆写：解析两份 YAML 并深度合并后返回结果。
     pub fn apply(&self, base_content: &str, override_content: &str) -> Result<String, String> {
         // 解析基础配置
         let base_value: YamlValue = serde_yaml_ng::from_str(base_content)
@@ -38,13 +35,8 @@ impl YamlMerger {
         serde_yaml_ng::to_string(&merged).map_err(|e| format!("序列化配置失败：{}", e))
     }
 
-    // 深度合并两个 YAML 值
-    //
-    // 支持特殊键名语法：
-    // - `key!`: 强制替换（不递归合并）
-    // - `+key`: 数组前置（添加到开头）
-    // - `key+`: 数组后置（添加到末尾）
-    // - `<key>`: 包装标记，自动去除（用于避免冲突）
+    // 深度合并两个 YAML 值，支持 `key!`、`+key`、`key+`、`<key>` 特殊语法。
+    // 用于控制替换策略与数组拼接方向。
     fn deep_merge(base: YamlValue, override_val: YamlValue) -> Result<YamlValue, String> {
         match (base, override_val) {
             (YamlValue::Mapping(mut base_map), YamlValue::Mapping(override_map)) => {

@@ -145,9 +145,8 @@ class PathService {
     }
   }
 
-  // 根据平台确定应用数据根目录
-  // 移动端：使用系统应用支持目录/<app_name>
-  // 桌面端：使用可执行文件同级 data 目录（便携模式，需写入权限）
+  // 根据平台确定应用数据根目录。
+  // 移动端使用系统支持目录；桌面端使用可执行文件同级 data 目录。
   Future<String> _determineAppDataPath() async {
     if (Platform.isAndroid || Platform.isIOS) {
       // 移动平台使用应用支持目录

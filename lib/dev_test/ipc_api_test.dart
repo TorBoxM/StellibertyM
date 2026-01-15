@@ -8,9 +8,7 @@ import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'dart:io';
 import 'dart:async';
 
-// IPC API 测试
-//
-// 测试通过 IPC 调用 Clash API
+// IPC API 测试：验证通过 IPC 调用核心 API 的能力。
 class IpcApiTest {
   static Future<void> run() async {
     Logger.info('======================================');

@@ -1,6 +1,5 @@
-// IPC 客户端原子模块
-//
-// 提供基础的 IPC 通信能力（不含连接池）
+// IPC 客户端原子模块：提供基础 IPC 通信能力。
+// 不包含连接池与重试策略。
 
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 

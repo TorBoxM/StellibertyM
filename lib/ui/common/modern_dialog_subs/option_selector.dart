@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-// 横向选项间距常量
-// 2 选项时的单边间距
+// 横向选项间距常量（按选项数量调整）。
 const double _kHorizontalSpacingTwoOptions = 6.0;
-// 3 选项时的单边间距
 const double _kHorizontalSpacingThreeOptions = 4.0;
 
 // 选项数据模型
@@ -21,9 +19,8 @@ class OptionItem<T> {
   });
 }
 
-// 通用选项选择器组件
-// 支持横向和纵向排列的单选选项卡片
-// 用于导入方式选择、自动更新模式选择、代理模式选择等场景
+// 通用选项选择器：支持横向/纵向排列的单选选项卡片。
+// 用于导入方式、更新模式、代理模式等选择场景。
 class OptionSelectorWidget<T> extends StatelessWidget {
   // 标题
   final String title;

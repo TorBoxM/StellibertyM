@@ -17,9 +17,7 @@ pub struct OpenUrlResult {
 }
 
 impl OpenUrl {
-    // 在系统默认浏览器中打开 URL
-    //
-    // 目的：提供跨平台的 URL 打开能力
+    // 在系统默认浏览器中打开 URL。
     pub fn handle(&self) {
         log::info!("收到打开 URL 请求：{}", self.url);
 

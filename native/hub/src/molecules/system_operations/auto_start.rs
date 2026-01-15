@@ -1,8 +1,5 @@
-// 开机自启动管理
-//
-// 目的：提供跨平台的开机自启动配置能力(Windows/macOS/Linux)
-// Windows: 使用任务计划程序（避免 Win11 启动延迟）
-// macOS/Linux: 使用 auto-launch 库
+// 开机自启动管理：提供跨平台自启动配置能力（Windows/macOS/Linux）。
+// Windows 使用任务计划程序；macOS/Linux 使用 auto-launch。
 
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};
@@ -39,9 +36,7 @@ pub struct AutoStartStatusResult {
 }
 
 impl GetAutoStartStatus {
-    // 查询当前自启动配置状态
-    //
-    // 目的：读取系统中的开机自启动设置
+    // 查询当前自启动配置状态。
     pub fn handle(&self) {
         log::info!("收到获取开机自启动状态请求");
 
@@ -63,9 +58,7 @@ impl GetAutoStartStatus {
 }
 
 impl SetAutoStartStatus {
-    // 修改自启动配置
-    //
-    // 目的：启用或禁用应用程序的开机自启动
+    // 修改自启动配置（启用或禁用开机自启）。
     pub fn handle(&self) {
         log::info!("收到设置开机自启动状态请求：enabled={}", self.is_enabled);
 
@@ -402,9 +395,7 @@ fn get_cached_binary_path() -> Result<std::path::PathBuf, String> {
     CACHED_BINARY_PATH.clone()
 }
 
-// 查询当前自启动配置状态
-//
-// 目的：读取系统自启动注册表/配置文件中的设置
+// 查询当前自启动配置状态（读取系统配置）。
 pub fn get_auto_start_status() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
@@ -434,9 +425,7 @@ pub fn get_auto_start_status() -> Result<bool, String> {
     }
 }
 
-// 修改自启动配置
-//
-// 目的：在系统中注册或移除应用的开机自启动
+// 修改自启动配置（在系统中注册或移除开机自启）。
 pub fn set_auto_start_status(enabled: bool) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
@@ -504,9 +493,7 @@ pub fn set_auto_start_status(enabled: bool) -> Result<bool, String> {
     }
 }
 
-// 模块初始化入口
-//
-// 目的：预加载自启动配置，提升首次查询速度
+// 模块初始化入口：预加载自启动配置。
 pub fn init() {
     #[cfg(target_os = "windows")]
     {

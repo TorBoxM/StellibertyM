@@ -11,10 +11,8 @@ import 'package:stelliberty/ui/common/modern_dropdown_button.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// 一个允许用户选择和管理应用主题（模式和颜色）的设置组件。
-//
-// 包含一个用于选择浅色/暗色/系统模式的下拉菜单，
-// 以及一个用于选择应用主色调的颜色网格。
+// 主题选择组件：用于配置主题模式与主色调。
+// 提供模式下拉选择与颜色网格选择。
 class ThemeSelector extends StatefulWidget {
   const ThemeSelector({super.key});
 
@@ -33,9 +31,8 @@ class _ThemeSelectorState extends State<ThemeSelector> {
     _isWin11OrGreater = _checkWindows11OrGreater();
   }
 
-  // 检查当前系统是否为 Windows 11 或更高版本
-  //
-  // Windows 11 的主版本号是 10，构建号 (build number) >= 22000
+  // 检查系统是否为 Windows 11 或更高版本。
+  // Windows 11 构建号（buildNumber）>= 22000。
   Future<bool> _checkWindows11OrGreater() async {
     // 如果不是 Windows 平台，直接返回 false
     if (defaultTargetPlatform != TargetPlatform.windows) {

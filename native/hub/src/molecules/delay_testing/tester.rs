@@ -137,15 +137,8 @@ async fn handle_batch_delay_test_request(request: BatchDelayTestRequest) {
     log::info!("批量延迟测试完成，成功：{}/{}", success_count, total_count);
 }
 
-// 批量测试延迟
-//
-// [node_names] 要测试的节点名称列表
-// [test_url] 测试 URL
-// [timeout_ms] 超时时间（毫秒）
-// [concurrency] 并发数（滑动窗口大小）
-// [on_progress] 进度回调（每个节点测试完成后调用）
-//
-// 返回：所有节点的测试结果 Vec
+// 批量延迟测试（并发受限的滑动窗口）。
+// 返回所有节点的测试结果列表。
 async fn batch_test_delays(
     node_names: Vec<String>,
     test_url: String,
@@ -223,9 +216,8 @@ async fn batch_test_delays(
     results
 }
 
-// 测试单个节点的延迟
-//
-// 通过 IPC 调用 Clash API: GET /proxies/{proxyName}/delay?timeout={timeout}&url={testUrl}
+// 测试单个节点延迟：通过 IPC 调用 Clash API。
+// GET /proxies/{proxyName}/delay?timeout={timeout}&url={testUrl}
 async fn test_single_node(node_name: &str, test_url: &str, timeout_ms: u32) -> i32 {
     // 构建 Clash API 路径
     let encoded_name = urlencoding::encode(node_name);

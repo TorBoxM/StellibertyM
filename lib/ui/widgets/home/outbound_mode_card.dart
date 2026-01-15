@@ -6,9 +6,8 @@ import 'package:stelliberty/ui/widgets/home/base_card.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 
-// 出站模式卡片
-//
-// 提供规则模式、全局模式、直连模式切换
+// 出站模式卡片：提供规则/全局/直连模式切换。
+// 同步状态到核心与托盘菜单。
 class OutboundModeCard extends StatefulWidget {
   const OutboundModeCard({super.key});
 

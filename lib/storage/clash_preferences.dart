@@ -587,17 +587,13 @@ class ClashPreferences {
 
   // ==================== 节点选择持久化 ====================
 
-  // 生成节点选择存储键
-  // [subscriptionId] 订阅 ID
-  // [groupName] 代理组名称
+  // 生成节点选择存储键（subscriptionId + groupName）。
+  // 用于持久化代理组的节点选择。
   String _getProxySelectionKey(String subscriptionId, String groupName) {
     return '$_kProxySelectionPrefix${subscriptionId}_$groupName';
   }
 
-  // 保存节点选择
-  // [subscriptionId] 订阅 ID
-  // [groupName] 代理组名称
-  // [proxyName] 选中的节点名称
+  // 保存节点选择（订阅 + 代理组 -> 节点名称）。
   Future<void> saveProxySelection(
     String subscriptionId,
     String groupName,
@@ -608,10 +604,8 @@ class ClashPreferences {
     await _prefs!.setString(key, proxyName);
   }
 
-  // 获取节点选择
-  // [subscriptionId] 订阅 ID
-  // [groupName] 代理组名称
-  // 返回选中的节点名称，如果没有保存则返回 null
+  // 获取节点选择（订阅 + 代理组 -> 节点名称）。
+  // 未保存时返回 null。
   String? getProxySelection(String subscriptionId, String groupName) {
     _ensureInit();
     final key = _getProxySelectionKey(subscriptionId, groupName);
@@ -657,10 +651,7 @@ class ClashPreferences {
 
   // ==================== 代理节点排序配置 ====================
 
-  // 获取代理节点排序模式
-  // 0: 默认（不排序）
-  // 1: A-Z（按名称字母排序）
-  // 2: 延迟（按延迟从低到高排序）
+  // 获取代理节点排序模式：0 默认，1 A-Z，2 延迟。
   int getProxyNodeSortMode() => _getInt(_kProxyNodeSortMode, 0);
 
   // 保存代理节点排序模式

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:stelliberty/ui/common/modern_switch.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
 
-// 信息行数据模型
-//
-// 用于定义 InfoContainer 中每一行的内容
+// 信息行数据模型：定义 InfoContainer 中每一行的展示内容。
 class InfoRow {
   // 左侧标签文本
   final String label;
@@ -130,10 +128,8 @@ class InfoRow {
   }
 }
 
-// 通用信息容器组件
-//
-// 提供统一的背景样式和行布局
-// 支持普通文本行、开关行和自定义组件行
+// 通用信息容器组件：提供统一的背景样式与行布局。
+// 支持文本行、开关行与自定义组件行。
 class InfoContainer extends StatelessWidget {
   // 行数据列表
   final List<InfoRow> rows;

@@ -1,6 +1,5 @@
-// Windows UWP 回环豁免管理模块
-//
-// 目的：为 Flutter 应用提供 Windows 回环豁免的完整管理能力
+// Windows UWP 回环豁免管理：提供回环豁免的查询与配置能力。
+// 仅在 Windows 平台启用。
 
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};
@@ -76,9 +75,7 @@ pub struct SaveLoopbackConfigurationResult {
 }
 
 impl GetAppContainers {
-    // 处理获取应用容器请求
-    //
-    // 目的：枚举所有 UWP 应用并返回其回环状态
+    // 获取应用容器列表并返回回环状态。
     pub fn handle(&self) {
         log::info!("处理获取应用容器请求");
 
@@ -114,9 +111,7 @@ impl GetAppContainers {
 }
 
 impl SetLoopback {
-    // 处理设置回环豁免请求
-    //
-    // 目的：为单个应用启用或禁用回环豁免
+    // 为单个应用启用或禁用回环豁免。
     pub fn handle(self) {
         log::info!(
             "处理设置回环豁免请求：{} - {}",
@@ -146,9 +141,7 @@ impl SetLoopback {
 }
 
 impl SaveLoopbackConfiguration {
-    // 处理保存配置请求
-    //
-    // 目的：批量设置多个应用的回环豁免状态
+    // 批量保存回环豁免配置。
     pub fn handle(self) {
         log::info!("处理保存配置请求，期望启用{}个容器", self.sid_strings.len());
 
@@ -347,9 +340,7 @@ unsafe fn sid_to_string(sid: *mut SID) -> String {
     sid_string
 }
 
-// 枚举所有 UWP 应用容器
-//
-// 目的：获取系统中所有已安装的 UWP 应用及其回环状态
+// 枚举 UWP 应用容器并返回回环状态。
 #[cfg(windows)]
 pub fn enumerate_app_containers() -> Result<Vec<AppContainer>, String> {
     unsafe {
@@ -420,9 +411,7 @@ pub fn enumerate_app_containers() -> Result<Vec<AppContainer>, String> {
     }
 }
 
-// 通过 SID 字节数组设置回环豁免
-//
-// 目的：为指定的 UWP 应用启用或禁用网络回环豁免
+// 通过 SID 字节数组设置回环豁免。
 #[cfg(windows)]
 pub fn set_loopback_exemption_by_sid(sid_bytes: &[u8], enabled: bool) -> Result<(), String> {
     // 验证 SID 字节数组的最小长度
@@ -507,9 +496,7 @@ pub fn set_loopback_exemption_by_sid(sid_bytes: &[u8], enabled: bool) -> Result<
     }
 }
 
-// 通过包家族名称设置回环豁免
-//
-// 目的：使用更友好的包名方式设置回环豁免
+// 通过包家族名称设置回环豁免。
 #[cfg(windows)]
 pub fn set_loopback_exemption(package_family_name: &str, enabled: bool) -> Result<(), String> {
     unsafe {

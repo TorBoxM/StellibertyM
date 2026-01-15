@@ -12,9 +12,8 @@ import 'package:stelliberty/ui/widgets/home/info_container.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
 
-/// Clash 信息卡片
-///
-/// 显示核心版本号和代理地址
+// 核心信息卡片：展示核心版本号与代理地址。
+// 提供更新检查与运行模式相关入口。
 class ClashInfoCard extends StatefulWidget {
   const ClashInfoCard({super.key});
 

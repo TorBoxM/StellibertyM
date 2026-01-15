@@ -55,9 +55,8 @@ class _PortSettingsCardState extends State<PortSettingsCard> {
     super.dispose();
   }
 
-  // 验证端口号
-  // [value] 端口字符串
-  // [allowEmpty] 是否允许为空（用于可选端口）
+  // 验证端口号字符串，返回错误提示或 null。
+  // allowEmpty 用于可选端口场景。
   String? _validatePort(String value, {bool allowEmpty = false}) {
     final trans = context.translate;
     if (value.isEmpty) {

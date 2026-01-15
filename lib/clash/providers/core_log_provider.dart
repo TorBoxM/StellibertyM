@@ -151,13 +151,11 @@ class LogProvider extends ChangeNotifier {
     Logger.info('LogProvider: 已订阅日志流');
   }
 
-  // 启动批量更新定时器（动态批量优化，保证即时性）
+  // 启动批量更新定时器（动态批量优化，兼顾即时性与性能）。
   void _startBatchUpdateTimer() {
     _batchUpdateTimer = Timer.periodic(_batchUpdateInterval, (_) {
-      // 动态批量策略：
-      // 1. 累积足够日志（>=5 条）立即更新
-      // 2. 或超过最大间隔（500ms）强制更新
-      // 3. 保证日志即时显示的同时减少高频更新
+      // 动态批量策略：满足阈值立即更新；超时则强制更新。
+      // 目标是减少高频 notify 的开销。
       final shouldFlush =
           _pendingLogs.length >= _batchThreshold ||
           (_pendingLogs.isNotEmpty && _shouldFlushPending());

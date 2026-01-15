@@ -12,13 +12,8 @@ class FileSelectionResult {
   const FileSelectionResult({required this.file, required this.fileName});
 }
 
-// 文件选择器组件
-// 支持拖拽和点击选择文件
-// 特性：
-// - 毛玻璃背景效果
-// - 拖拽导入支持
-// - 文件状态显示
-// - 文件存在性验证
+// 文件选择器：支持拖拽与点击选择，并校验文件存在性。
+// 用于导入本地文件并展示当前状态。
 class FileSelectorWidget extends StatefulWidget {
   // 选择文件后的回调
   final ValueChanged<FileSelectionResult> onFileSelected;

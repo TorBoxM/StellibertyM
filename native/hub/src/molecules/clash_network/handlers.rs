@@ -1,6 +1,5 @@
-// IPC 请求处理器
-//
-// 处理 Dart 层发送的 IPC 请求，通过 IpcClient 转发给 Clash 核心
+// IPC 请求处理器：接收 Dart 请求并转发到核心接口。
+// 内置重试、连接池与必要的降噪日志策略。
 
 use super::ipc_client::IpcClient;
 use super::ws_client::WebSocketClient;
@@ -112,9 +111,8 @@ pub struct StreamResult {
 
 // 检查错误是否为 IPC 尚未就绪（启动时的正常情况）
 fn is_ipc_not_ready_error(error_msg: &str) -> bool {
-    // Windows: os error 2 (系统找不到指定的文件)
-    // Linux: os error 111 (ECONNREFUSED，拒绝连接)
-    // macOS: os error 61 (ECONNREFUSED，拒绝连接)
+    // Windows：os error 2（文件不存在）。
+    // Linux：os error 111；macOS：os error 61（均为拒绝连接）。
     error_msg.contains("系统找不到指定的文件")
         || error_msg.contains("os error 2")
         || error_msg.contains("拒绝连接")
@@ -133,14 +131,8 @@ fn should_retry_on_error(error_msg: &str, attempt: usize, max_retries: usize) ->
             || error_msg.contains("Broken pipe"))
 }
 
-// 公共函数：处理 IPC 请求的核心逻辑（带自动重试）
-//
-// 参数：
-// - method: HTTP 方法名（"GET"/"POST"/"PUT"/"PATCH"/"DELETE"）
-// - path: 请求路径
-// - body: 请求体（Option<&str>）
-// - request_id: 请求 ID
-// - log_response: 是否记录响应体（仅 GET 请求）
+// 处理 IPC 请求的核心逻辑（带自动重试）。
+// 由请求方法、路径与请求体组成，结果通过信号返回。
 async fn handle_ipc_request_with_retry(
     method: &str,
     path: &str,
@@ -817,9 +809,8 @@ impl StopLogStream {
     }
 }
 
-// 公开的 IPC GET 请求接口（供 Rust 内部模块使用）
-//
-// 用于批量延迟测试等场景，直接使用连接池发送 IPC GET 请求
+// 内部 IPC GET 接口：直接使用连接池发送请求。
+// 用于批量延迟测试等内部调用场景。
 pub async fn internal_ipc_get(path: &str) -> Result<String, String> {
     // 从连接池获取连接
     let ipc_conn = acquire_connection().await?;

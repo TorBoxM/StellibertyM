@@ -10,10 +10,8 @@ import 'package:stelliberty/ui/common/modern_switch.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
 
-// 虚拟网卡模式控制卡片
-//
-// 提供 TUN 模式开关和状态显示
-// 支持服务模式、管理员模式或 root 模式启动
+// 虚拟网卡模式控制卡片：提供 TUN 开关与状态提示。
+// 兼容服务模式与提权运行场景。
 class TunModeCard extends StatefulWidget {
   const TunModeCard({super.key});
 

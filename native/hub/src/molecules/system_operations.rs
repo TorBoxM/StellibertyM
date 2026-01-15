@@ -1,5 +1,7 @@
 // 系统操作分子模块
 
+use crate::atoms::{network_interfaces, system_proxy};
+
 pub mod app_update;
 pub mod auto_start;
 pub mod backup;
@@ -23,6 +25,9 @@ pub use power_event::{
 pub use url_launcher::{OpenUrl, OpenUrlResult};
 
 pub fn init_listeners() {
+    system_proxy::init();
+    network_interfaces::init();
+
     app_update::init_dart_signal_listeners();
     auto_start::init_dart_signal_listeners();
     backup::init_dart_signal_listeners();

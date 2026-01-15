@@ -53,10 +53,8 @@ class SubscriptionService {
     Logger.info('订阅服务初始化完成，路径：$subscriptionDir');
   }
 
-  // 下载订阅配置
-  // 返回更新后的订阅对象
-  // proxyMode: 由调用者决定使用的代理模式
-  // mixedPort: 混合端口
+  // 下载订阅配置并返回更新后的订阅对象。
+  // 代理模式与混合端口由调用方传入。
   Future<Subscription> downloadSubscription(
     Subscription subscription,
     SubscriptionProxyMode proxyMode,
@@ -272,9 +270,8 @@ class SubscriptionService {
     return await configFile.readAsString();
   }
 
-  // 读取应用覆写后的订阅配置
-  // 这是提供给 Clash 核心使用的最终配置
-  // 注意：订阅文件已包含 DNS 和规则覆写，此方法仅用于兼容性读取
+  // 读取带覆写的订阅配置，供核心使用。
+  // 订阅文件已包含覆写，该方法仅用于兼容性读取。
   Future<String> readSubscriptionConfigWithOverrides(
     Subscription subscription,
   ) async {
@@ -451,11 +448,8 @@ class SubscriptionService {
     Logger.info('本地订阅保存成功（已保存原始配置）：${subscription.name}');
   }
 
-  // 应用所有覆写（DNS 覆写 → 规则覆写）
-  // 确保规则覆写优先级高于 DNS 覆写
-  //
-  // 【重要】此方法用于在生成 runtime_config.yaml 时应用覆写
-  // 不会修改原始订阅文件
+  // 应用覆写（DNS 覆写 → 规则覆写），规则覆写优先级更高。
+  // 仅用于生成运行时配置，不修改原始订阅文件。
   Future<String> applyAllOverrides(
     String baseConfig,
     Subscription subscription,

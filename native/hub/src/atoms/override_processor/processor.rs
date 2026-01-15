@@ -1,6 +1,5 @@
-// 覆写处理器
-//
-// 组合 YAML 合并器和 JavaScript 执行器，提供统一的覆写处理能力
+// 覆写处理器：组合 YAML 合并与 JavaScript 执行能力。
+// 提供统一的覆写应用流程。
 
 use super::js_executor::JsExecutor;
 use super::yaml_merger::YamlMerger;
@@ -13,9 +12,7 @@ pub struct OverrideProcessor {
 }
 
 impl OverrideProcessor {
-    // 创建新的覆写处理器
-    //
-    // 目的：初始化 YAML 合并器和 JavaScript 执行器
+    // 创建覆写处理器并初始化执行环境。
     pub fn new() -> Result<Self, String> {
         let yaml_merger = YamlMerger::new();
         let js_executor =
@@ -27,9 +24,7 @@ impl OverrideProcessor {
         })
     }
 
-    // 应用所有覆写到基础配置
-    //
-    // 目的：按顺序应用每个覆写，返回最终配置
+    // 按顺序应用覆写并返回最终配置。
     pub fn apply_overrides(
         &mut self,
         base_config: &str,

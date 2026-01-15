@@ -25,9 +25,8 @@ import 'package:stelliberty/ui/pages/core_log_page.dart';
 import 'sidebar.dart';
 import 'mobile_bottom_nav.dart';
 
-// 主页面，根据平台选择不同布局
-// 桌面端：侧边栏 + 内容区
-// 移动端：底部导航栏 + 内容区
+// 主页面：根据平台选择不同布局。
+// 桌面端使用侧边栏；移动端使用底部导航。
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 

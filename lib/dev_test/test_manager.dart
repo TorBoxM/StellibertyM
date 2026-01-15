@@ -2,9 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:stelliberty/dev_test/override_test.dart';
 import 'package:stelliberty/dev_test/ipc_api_test.dart';
 
-// 开发测试管理器
-// 用法：flutter run --dart-define=TEST_TYPE=override
-// 测试模式仅在 Debug 模式可用，Release 模式下禁用
+// 开发测试管理器：按 TEST_TYPE 运行指定测试入口。
+// 仅在非 Release 模式启用。
 class TestManager {
   // 获取测试类型
   static String? get testType {

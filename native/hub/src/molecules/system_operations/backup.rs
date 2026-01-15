@@ -1,6 +1,5 @@
-// 备份与还原服务
-//
-// 目的：处理应用数据的备份和还原操作
+// 备份与还原服务：负责导出与导入应用数据。
+// 使用结构化元信息描述版本与路径。
 
 use base64::{Engine as _, engine::general_purpose};
 use rinf::{DartSignal, RustSignal};

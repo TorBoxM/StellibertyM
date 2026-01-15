@@ -1,11 +1,5 @@
-// 订阅内容解析器
-//
-// 支持解析多种订阅源格式：
-// - 标准 Clash YAML 配置
-// - Base64 编码的代理链接列表
-// - 纯文本代理链接列表（vless、vmess、hysteria2、ss、trojan 等）
-//
-// 将各种格式统一转换为标准 Clash 配置
+// 订阅内容解析器：支持 Clash YAML 与代理链接列表（Base64/纯文本）。
+// 输出统一为标准 Clash 配置。
 
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use serde_json::{Value as JsonValue, json};
@@ -16,12 +10,7 @@ use url::Url;
 pub struct ProxyParser;
 
 impl ProxyParser {
-    // 解析订阅内容为标准 Clash 配置
-    //
-    // 支持：
-    // 1. 标准 Clash YAML
-    // 2. Base64 编码的代理链接列表
-    // 3. 纯文本代理链接列表
+    // 解析订阅内容并输出标准 Clash 配置。
     pub fn parse_subscription(content: &str) -> Result<String, String> {
         let content = content.trim();
 
@@ -660,10 +649,8 @@ impl ProxyParser {
         urlencoding::decode(s).unwrap_or_default().to_string()
     }
 
-    // 生成标准 Clash 配置（精简版）
-    //
-    // 注意：端口、模式、日志、DNS 等运行时参数会由 ConfigInjector 统一注入
-    // 这里只生成核心的代理节点、代理组、规则配置
+    // 生成精简 Clash 配置（代理节点、代理组、规则）。
+    // 运行时参数由注入器统一补全。
     fn generate_clash_config(proxies: Vec<JsonValue>) -> Result<String, String> {
         let proxy_names: Vec<String> = proxies
             .iter()

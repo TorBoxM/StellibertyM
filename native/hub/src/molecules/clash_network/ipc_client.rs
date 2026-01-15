@@ -1,7 +1,5 @@
-// Clash IPC 客户端
-//
-// 通过 Named Pipe (Windows) 或 Unix Socket (Unix) 与 Clash 核心通信
-// 使用 Tokio 原生实现 + 手动 HTTP 协议解析
+// Clash IPC 客户端：通过 Named Pipe（Windows）或 Unix Socket（Unix）通信。
+// 使用 Tokio 实现，并手动解析 HTTP 协议。
 
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 

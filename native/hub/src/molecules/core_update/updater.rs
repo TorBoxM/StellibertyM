@@ -1,6 +1,5 @@
-// 核心更新服务
-//
-// 目的：处理 Mihomo 核心的下载、解压和替换
+// 核心更新服务：下载、解压并替换 Mihomo 核心。
+// 通过 rinf 信号对外提供查询与下载能力。
 
 use flate2::read::GzDecoder;
 use reqwest::Client;
@@ -16,9 +15,7 @@ use zip::ZipArchive;
 const GITHUB_REPO: &str = "MetaCubeX/mihomo";
 const API_BASE_URL: &str = "https://api.github.com/repos";
 
-// ============================================================================
 // 消息定义
-// ============================================================================
 
 // Dart → Rust：获取最新核心版本信息请求
 #[derive(Deserialize, DartSignal)]
@@ -72,9 +69,7 @@ pub struct ReplaceCoreResponse {
     pub error_message: Option<String>,
 }
 
-// ============================================================================
 // 消息处理器
-// ============================================================================
 
 impl GetLatestCoreVersionRequest {
     pub async fn handle(self) {
@@ -144,9 +139,7 @@ impl ReplaceCoreRequest {
     }
 }
 
-// ============================================================================
 // 核心更新逻辑
-// ============================================================================
 
 // 获取最新的 Release 信息
 async fn get_latest_release() -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
@@ -168,13 +161,8 @@ async fn get_latest_release() -> Result<Value, Box<dyn std::error::Error + Send 
     Ok(json)
 }
 
-// 下载核心文件
-//
-// 参数：
-// - platform: 平台名称（windows, linux, darwin）
-// - arch: 架构名称（amd64, arm64）
-//
-// 返回：(版本号, 核心字节数据)
+// 下载核心文件并返回版本号与核心字节数据。
+// 平台与架构由调用方传入。
 async fn download_core(
     platform: &str,
     arch: &str,
@@ -310,12 +298,8 @@ fn extract_core(
     }
 }
 
-// 替换核心文件
-//
-// 参数：
-// - core_dir: 核心文件目录
-// - core_bytes: 新核心字节数据
-// - platform: 平台名称
+// 替换核心文件并在失败时尝试回滚。
+// 非 Windows 平台会补充可执行权限。
 async fn replace_core(
     core_dir: &str,
     core_bytes: &[u8],
@@ -386,9 +370,7 @@ fn send_progress(progress: f64, message: &str, downloaded: u64, total: u64) {
     signal.send_signal_to_dart();
 }
 
-// ============================================================================
 // 消息监听器
-// ============================================================================
 
 // 初始化消息监听器
 pub fn init_dart_signal_listeners() {

@@ -3,16 +3,8 @@ import 'package:stelliberty/clash/model/override_model.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/ui/common/modern_popup_menu.dart';
 
-// 覆写卡片组件
-// 显示覆写配置的信息：
-// - 类型图标（远程/本地）
-// - 配置名称
-// - 格式标签（YAML/JS）
-// - 独立更新按钮（仅远程）
-// - 操作菜单（编辑配置、编辑文件、删除）
-// 支持拖拽排序：
-// - isDragging: 正在被拖拽
-// - isDragTarget: 拖拽目标位置
+// 覆写卡片组件：展示覆写项信息与操作入口。
+// 支持拖拽排序（isDragging/isDragTarget）。
 class OverrideCard extends StatelessWidget {
   final OverrideConfig config;
   final bool isUpdating;

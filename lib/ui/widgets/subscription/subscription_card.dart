@@ -9,6 +9,7 @@ import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
 import 'package:stelliberty/ui/common/modern_popup_menu.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
+import 'package:stelliberty/ui/widgets/subscription/qr_code_overlay.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
 // 订阅卡片组件：展示订阅概览与操作入口。
@@ -357,12 +358,18 @@ class SubscriptionCard extends StatelessWidget {
         label: trans.subscription.menu.provider_view,
         onPressed: onViewProvider,
       ),
-      // 本地文件订阅不显示复制链接选项
+      // 本地文件订阅不显示复制链接和二维码分享选项
       if (!subscription.isLocalFile)
         PopupMenuItemData(
           icon: Icons.copy,
           label: trans.subscription.menu.copy_link,
           onPressed: () => _copyUrl(context),
+        ),
+      if (!subscription.isLocalFile)
+        PopupMenuItemData(
+          icon: Icons.qr_code,
+          label: trans.subscription.menu.qr_share,
+          onPressed: () => _showQrCode(context),
         ),
       PopupMenuItemData(
         icon: Icons.delete,
@@ -516,6 +523,11 @@ class SubscriptionCard extends StatelessWidget {
         trans.subscription.copy_failed.replaceAll('{error}', e.toString()),
       );
     }
+  }
+
+  // 显示二维码
+  void _showQrCode(BuildContext context) {
+    QrCodeOverlay.show(context, data: subscription.url);
   }
 
   // 格式化字节数

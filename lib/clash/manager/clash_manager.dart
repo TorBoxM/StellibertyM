@@ -5,6 +5,7 @@ import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/clash/model/connection_model.dart';
 import 'package:stelliberty/clash/model/traffic_data_model.dart';
 import 'package:stelliberty/clash/model/log_message_model.dart';
+import 'package:stelliberty/clash/model/rule_model.dart';
 import 'package:stelliberty/clash/services/traffic_monitor.dart';
 import 'package:stelliberty/clash/services/core_log_service.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
@@ -550,6 +551,13 @@ class ClashManager {
 
   Future<List<ConnectionInfo>> getConnections() async {
     return await _connectionManager.getConnections();
+  }
+
+  Future<List<RuleItem>> getRules() async {
+    if (!isCoreRunning) {
+      return [];
+    }
+    return await _apiClient.getRules();
   }
 
   Future<bool> closeConnection(String connectionId) async {

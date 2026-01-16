@@ -5,10 +5,11 @@ enum ContentView {
   // 主页相关视图
   home,
   proxy,
-  subscriptions,
-  overrides,
   connections,
   logs,
+  rules,
+  subscriptions,
+  overrides,
 
   // 设置相关视图
   settingsOverview,

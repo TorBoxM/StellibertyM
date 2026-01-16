@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/clash/model/connection_model.dart';
+import 'package:stelliberty/clash/model/rule_model.dart';
 import 'package:stelliberty/clash/network/ipc_request_helper.dart';
 
 // Clash API 客户端：通过 IPC 转发请求并解析响应。
@@ -730,6 +731,20 @@ class ClashApiClient {
     } catch (e) {
       Logger.error('关闭所有连接出错：$e');
       return false;
+    }
+  }
+
+  Future<List<RuleItem>> getRules() async {
+    try {
+      final data = await _internalGet('/rules');
+      final rules = (data['rules'] as List?) ?? const [];
+      return rules
+          .whereType<Map<String, dynamic>>()
+          .map(RuleItem.fromJson)
+          .toList(growable: false);
+    } catch (e) {
+      Logger.error('获取规则列表出错：$e');
+      return [];
     }
   }
 

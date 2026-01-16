@@ -20,8 +20,17 @@
     "proxy": "Proxies",
     "connections": "Connections",
     "logs": "Logs",
+    "rules": "Rules",
     "subscriptions": "Profiles",
     "settings": "Settings"
+  },
+  "rules": {
+    "title": "Rules",
+    "total_rules": "{count} rules",
+    "search_placeholder": "Search rules...",
+    "empty": "No rules",
+    "core_not_running": "Core is not running",
+    "providers": "Providers"
   },
   "subscription": {
     "title": "Profiles",

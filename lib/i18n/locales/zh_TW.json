@@ -20,8 +20,17 @@
     "proxy": "代理",
     "connections": "連線",
     "logs": "記錄",
+    "rules": "規則",
     "subscriptions": "訂閱",
     "settings": "設定"
+  },
+  "rules": {
+    "title": "規則",
+    "total_rules": "{count} 條規則",
+    "search_placeholder": "搜尋規則...",
+    "empty": "暫無規則",
+    "core_not_running": "核心未執行",
+    "providers": "提供者"
   },
   "subscription": {
     "title": "訂閱",

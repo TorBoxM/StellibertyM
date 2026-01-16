@@ -20,8 +20,17 @@
     "proxy": "代理",
     "connections": "连接",
     "logs": "日志",
+    "rules": "规则",
     "subscriptions": "订阅",
     "settings": "设置"
+  },
+  "rules": {
+    "title": "规则",
+    "total_rules": "{count} 条规则",
+    "search_placeholder": "搜索规则...",
+    "empty": "暂无规则",
+    "core_not_running": "核心未运行",
+    "providers": "提供者"
   },
   "subscription": {
     "title": "订阅",

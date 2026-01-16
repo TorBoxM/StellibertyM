@@ -21,6 +21,7 @@ import 'package:stelliberty/ui/pages/override_page.dart';
 import 'package:stelliberty/ui/pages/home_page.dart';
 import 'package:stelliberty/ui/pages/connection_page.dart';
 import 'package:stelliberty/ui/pages/core_log_page.dart';
+import 'package:stelliberty/ui/pages/rules_page.dart';
 
 import 'sidebar.dart';
 import 'mobile_bottom_nav.dart';
@@ -96,6 +97,8 @@ class _DynamicContentArea extends StatelessWidget {
         return const OverridePage(key: ValueKey('overrides'));
       case ContentView.logs:
         return const LogPage(key: ValueKey('logs'));
+      case ContentView.rules:
+        return const RulesPage(key: ValueKey('rules'));
       case ContentView.settingsOverview:
         return const SettingsOverviewPage(key: ValueKey('settings_overview'));
       case ContentView.settingsAppearance:

@@ -29,6 +29,7 @@ import 'package:stelliberty/clash/services/override_service.dart';
 import 'package:stelliberty/clash/services/dns_service.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/providers/connection_provider.dart';
+import 'package:stelliberty/clash/providers/rules_provider.dart';
 import 'package:stelliberty/clash/providers/subscription_provider.dart';
 import 'package:stelliberty/clash/providers/core_log_provider.dart';
 import 'package:stelliberty/clash/providers/traffic_provider.dart';
@@ -212,6 +213,9 @@ class ProviderSetup {
       ChangeNotifierProvider.value(value: bundle.overrideProvider),
       ChangeNotifierProvider(
         create: (context) => ConnectionProvider(context.read<ClashProvider>()),
+      ),
+      ChangeNotifierProvider(
+        create: (context) => RulesProvider(context.read<ClashProvider>()),
       ),
       ChangeNotifierProvider.value(value: bundle.logProvider),
       ChangeNotifierProvider.value(value: bundle.trafficProvider),

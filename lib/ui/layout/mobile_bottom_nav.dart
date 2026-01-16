@@ -55,6 +55,7 @@ class MobileBottomNav extends StatelessWidget {
         return 0;
       case ContentView.subscriptions:
       case ContentView.overrides:
+      case ContentView.rules:
         return 1;
       case ContentView.proxy:
       case ContentView.connections:

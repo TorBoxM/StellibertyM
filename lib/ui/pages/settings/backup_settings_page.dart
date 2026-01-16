@@ -11,7 +11,6 @@ import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/ui/common/modern_feature_card.dart';
 import 'package:stelliberty/ui/constants/spacing.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
-import 'package:stelliberty/ui/widgets/confirm_dialog.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/providers/content_provider.dart';
 import 'package:stelliberty/services/log_print_service.dart';
@@ -131,22 +130,6 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
       setState(() => _isCreating = false);
 
       ModernToast.show(trans.backup.backup_success, type: ToastType.success);
-
-      // 显示安全提示
-      if (!mounted) return;
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(trans.backup.security_warning),
-          content: Text(trans.backup.security_warning_message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(trans.common.ok),
-            ),
-          ],
-        ),
-      );
     } catch (e) {
       Logger.error('创建备份失败：$e');
       if (!mounted) return;
@@ -168,18 +151,6 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
     );
 
     if (result == null || result.files.isEmpty) return;
-
-    // 确认对话框
-    if (!mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => ConfirmDialog(
-        title: trans.backup.restore_confirm,
-        message: trans.backup.restore_confirm_message,
-      ),
-    );
-
-    if (confirmed != true) return;
 
     setState(() => _isRestoring = true);
 

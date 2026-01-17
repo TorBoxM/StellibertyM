@@ -4,7 +4,7 @@ use futures_util::stream::{self, StreamExt};
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::{spawn, sync::Semaphore};
+use tokio::spawn;
 
 use crate::atoms::IpcClient;
 
@@ -106,7 +106,7 @@ async fn handle_batch_delay_test_request(request: BatchDelayTestRequest) {
     let node_names = request.node_names;
     let test_url = request.test_url;
     let timeout_ms = request.timeout_ms;
-    let concurrency = request.concurrency as usize;
+    let concurrency = request.concurrency.max(1) as usize;
 
     // 进度回调：每个节点测试完成后发送进度信号
     let on_progress = Arc::new(move |node_name: String, delay_ms: i32| {
@@ -157,38 +157,15 @@ async fn batch_test_delays(
         concurrency
     );
 
-    // 信号量控制并发数（滑动窗口）
-    let semaphore = Arc::new(Semaphore::new(concurrency));
     let test_url = Arc::new(test_url);
 
     // 创建测试任务流
     let tasks = stream::iter(node_names.into_iter().enumerate())
         .map(|(index, node_name)| {
-            let semaphore = Arc::clone(&semaphore);
             let test_url = Arc::clone(&test_url);
             let on_progress = Arc::clone(&on_progress);
 
             async move {
-                // 获取信号量许可（阻塞，直到有空闲槽位）
-                let _permit = match semaphore.acquire().await {
-                    Ok(permit) => permit,
-                    Err(e) => {
-                        log::error!(
-                            "获取信号量许可失败（节点 {}/{}：{}）：{:?}",
-                            index + 1,
-                            total,
-                            node_name,
-                            e
-                        );
-                        // 即使获取许可失败，也要发送失败结果
-                        on_progress(node_name.clone(), -1);
-                        return Some(BatchTestResult {
-                            node_name,
-                            delay_ms: -1,
-                        });
-                    }
-                };
-
                 log::debug!("开始测试节点 ({}/{}): {}", index + 1, total, node_name);
 
                 // 执行单个节点的延迟测试
@@ -227,11 +204,10 @@ async fn test_single_node(node_name: &str, test_url: &str, timeout_ms: u32) -> i
 
     log::debug!("测试节点延迟：{}", node_name);
 
-    // 发送 IPC GET 请求
-    match IpcClient::get(&path).await {
-        Ok(body) => {
-            // 解析 JSON 响应：{"delay": 123}
-            match serde_json::from_str::<serde_json::Value>(&body) {
+    let max_retries = 3;
+    for attempt in 0..=max_retries {
+        match IpcClient::get(&path).await {
+            Ok(body) => match serde_json::from_str::<serde_json::Value>(&body) {
                 Ok(json) => {
                     if let Some(delay) = json.get("delay").and_then(|v| v.as_i64()) {
                         let delay_i32 = delay as i32;
@@ -240,21 +216,34 @@ async fn test_single_node(node_name: &str, test_url: &str, timeout_ms: u32) -> i
                         } else {
                             log::warn!("节点延迟测试失败：{} - 超时", node_name);
                         }
-                        delay_i32
+                        return delay_i32;
                     } else {
                         log::error!("节点延迟测试响应格式错误：{}", node_name);
-                        -1
+                        return -1;
                     }
                 }
                 Err(e) => {
                     log::error!("节点延迟测试 JSON 解析失败：{} - {}", node_name, e);
-                    -1
+                    return -1;
                 }
+            },
+            Err(e) => {
+                let should_retry = e.contains("HTTP 503")
+                    || e.contains("HTTP 504")
+                    || e.contains("os error 231")
+                    || e.contains("Named Pipe");
+
+                if attempt < max_retries && should_retry {
+                    tokio::time::sleep(std::time::Duration::from_millis(80 * (attempt as u64 + 1)))
+                        .await;
+                    continue;
+                }
+
+                log::warn!("节点延迟测试 IPC 请求失败：{} - {}", node_name, e);
+                return -1;
             }
         }
-        Err(e) => {
-            log::warn!("节点延迟测试 IPC 请求失败：{} - {}", node_name, e);
-            -1
-        }
     }
+
+    -1
 }

@@ -2,6 +2,7 @@
 // 不包含连接池与重试策略。
 
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::time::{Duration, timeout};
 
 #[cfg(unix)]
 use tokio::net::UnixStream;
@@ -69,11 +70,28 @@ impl IpcClient {
     ) -> Result<IpcHttpResponse, String> {
         use tokio::net::windows::named_pipe::ClientOptions;
 
-        let mut stream = ClientOptions::new()
-            .open(ipc_path)
-            .map_err(|e| format!("连接 Named Pipe 失败：{}", e))?;
+        let mut last_err = None;
+        for retry in 0..20 {
+            match ClientOptions::new().open(ipc_path) {
+                Ok(mut stream) => {
+                    return Self::send_request(&mut stream, method, path, body).await;
+                }
+                Err(e) => {
+                    let is_busy = e.raw_os_error() == Some(231);
+                    last_err = Some(e);
+                    if is_busy {
+                        tokio::time::sleep(Duration::from_millis(15 * (retry + 1))).await;
+                        continue;
+                    }
+                    break;
+                }
+            }
+        }
 
-        Self::send_request(&mut stream, method, path, body).await
+        let err = last_err
+            .map(|e| e.to_string())
+            .unwrap_or_else(|| "未知错误".to_string());
+        Err(format!("连接 Named Pipe 失败：{}", err))
     }
 
     #[cfg(unix)]
@@ -115,6 +133,7 @@ impl IpcClient {
     fn build_http_request(method: &str, path: &str, body: Option<&str>) -> String {
         let mut request = format!("{} {} HTTP/1.1\r\n", method, path);
         request.push_str("Host: localhost\r\n");
+        request.push_str("Connection: close\r\n");
 
         if let Some(body_str) = body {
             request.push_str("Content-Type: application/json\r\n");
@@ -187,7 +206,14 @@ impl IpcClient {
                 .map_err(|e| format!("读取响应体失败：{}", e))?;
             String::from_utf8(body_bytes).map_err(|e| format!("解码响应体失败：{}", e))?
         } else {
-            String::new()
+            let mut body_bytes = Vec::new();
+            match timeout(Duration::from_secs(5), reader.read_to_end(&mut body_bytes)).await {
+                Ok(Ok(_)) => {
+                    String::from_utf8(body_bytes).map_err(|e| format!("解码响应体失败：{}", e))?
+                }
+                Ok(Err(e)) => return Err(format!("读取响应体失败：{}", e)),
+                Err(_) => return Err("读取响应体超时".to_string()),
+            }
         };
 
         Ok(IpcHttpResponse { status_code, body })

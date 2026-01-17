@@ -1,8 +1,7 @@
 // Clash 协调器：编排所有 Clash 相关操作
 
 use crate::molecules::{
-    clash_config, clash_network, clash_process, core_update, delay_testing, override_processing,
-    subscription_management,
+    clash_config, clash_network, clash_process, core_update, delay_testing, overrides, subscription,
 };
 
 pub struct ClashCoordinator;
@@ -31,10 +30,10 @@ pub fn init() {
     clash_network::init_listeners();
 
     // 初始化覆写处理
-    override_processing::init_listeners();
+    overrides::init_listeners();
 
     // 初始化订阅管理
-    subscription_management::init_listeners();
+    subscription::init_listeners();
 
     // 初始化核心更新
     core_update::init_listeners();

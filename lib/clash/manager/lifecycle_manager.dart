@@ -52,13 +52,13 @@ class LifecycleManager {
   CoreState get coreState => _coreState;
 
   // 更新核心状态并通知
-  void _updateCoreState(CoreState newState) {
-    if (_coreState == newState) return;
+  void _updateCoreState(CoreState nextState) {
+    if (_coreState == nextState) return;
 
     final previousState = _coreState;
-    _coreState = newState;
-    Logger.debug('核心状态变化：${previousState.name} -> ${newState.name}');
-    _onCoreStateChanged?.call(newState);
+    _coreState = nextState;
+    Logger.debug('核心状态变化：${previousState.name} -> ${nextState.name}');
+    _onCoreStateChanged?.call(nextState);
     _notifyListeners();
   }
 

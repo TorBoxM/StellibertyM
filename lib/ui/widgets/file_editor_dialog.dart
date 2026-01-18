@@ -296,15 +296,15 @@ class _FileEditorDialogState extends State<FileEditorDialog> {
   void _updateStats() {
     if (_disposed) return;
     final text = _controller.text;
-    final newCharCount = text.length;
-    final newLineCount = text.split('\n').length;
+    final nextCharCount = text.length;
+    final nextLineCount = text.split('\n').length;
 
-    if (newCharCount != _charCount || newLineCount != _lineCount) {
+    if (nextCharCount != _charCount || nextLineCount != _lineCount) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (_disposed || !mounted) return;
         setState(() {
-          _charCount = newCharCount;
-          _lineCount = newLineCount;
+          _charCount = nextCharCount;
+          _lineCount = nextLineCount;
         });
       });
     }

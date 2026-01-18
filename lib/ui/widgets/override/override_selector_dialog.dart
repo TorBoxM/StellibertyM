@@ -118,15 +118,15 @@ class _OverrideSelectorDialogState extends State<OverrideSelectorDialog> {
       return;
     }
 
-    final newSortPreference = [for (final o in _orderedOverrides) o.id];
-    final newSelectedIds = [
+    final nextSortPreference = [for (final o in _orderedOverrides) o.id];
+    final nextSelectedIds = [
       for (final o in _orderedOverrides)
         if (_orderedSelectedIds.contains(o.id)) o.id,
     ];
 
     final hasChanges =
-        !_areListsEqual(newSelectedIds, widget.initialSelectedIds) ||
-        !_areListsEqual(newSortPreference, widget.initialSortPreference);
+        !_areListsEqual(nextSelectedIds, widget.initialSelectedIds) ||
+        !_areListsEqual(nextSortPreference, widget.initialSortPreference);
 
     if (!hasChanges) {
       Navigator.of(context).pop();
@@ -134,12 +134,12 @@ class _OverrideSelectorDialogState extends State<OverrideSelectorDialog> {
     }
 
     Logger.info(
-      '保存覆写配置 - 选中: ${newSelectedIds.length} 个，'
-      '排序: ${newSortPreference.length} 个',
+      '保存覆写配置 - 选中: ${nextSelectedIds.length} 个，'
+      '排序: ${nextSortPreference.length} 个',
     );
     Navigator.of(
       context,
-    ).pop((selectedIds: newSelectedIds, sortPreference: newSortPreference));
+    ).pop((selectedIds: nextSelectedIds, sortPreference: nextSortPreference));
   }
 
   bool _areListsEqual(List<String> a, List<String> b) {

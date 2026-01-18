@@ -55,38 +55,38 @@ class TrafficProvider extends ChangeNotifier {
   // 处理流量数据
   void _handleTrafficData(TrafficData data) {
     final now = data.timestamp;
-    int newTotalUpload = _state.totalUpload;
-    int newTotalDownload = _state.totalDownload;
+    int nextTotalUpload = _state.totalUpload;
+    int nextTotalDownload = _state.totalDownload;
 
     if (_lastTimestamp != null) {
       final interval = now.difference(_lastTimestamp!).inMilliseconds / 1000.0;
       if (interval > 0 && interval < 10) {
-        newTotalUpload += (data.upload * interval).round();
-        newTotalDownload += (data.download * interval).round();
+        nextTotalUpload += (data.upload * interval).round();
+        nextTotalDownload += (data.download * interval).round();
       }
     }
     _lastTimestamp = now;
 
-    final newUploadHistory = List<double>.from(_state.uploadHistory);
-    newUploadHistory.removeAt(0);
-    newUploadHistory.add(data.upload / 1024.0);
+    final nextUploadHistory = List<double>.from(_state.uploadHistory);
+    nextUploadHistory.removeAt(0);
+    nextUploadHistory.add(data.upload / 1024.0);
 
-    final newDownloadHistory = List<double>.from(_state.downloadHistory);
-    newDownloadHistory.removeAt(0);
-    newDownloadHistory.add(data.download / 1024.0);
+    final nextDownloadHistory = List<double>.from(_state.downloadHistory);
+    nextDownloadHistory.removeAt(0);
+    nextDownloadHistory.add(data.download / 1024.0);
 
-    final newTrafficData = data.copyWithTotal(
-      totalUpload: newTotalUpload,
-      totalDownload: newTotalDownload,
+    final nextTrafficData = data.copyWithTotal(
+      totalUpload: nextTotalUpload,
+      totalDownload: nextTotalDownload,
     );
 
     _state = _state.copyWith(
-      totalUpload: newTotalUpload,
-      totalDownload: newTotalDownload,
+      totalUpload: nextTotalUpload,
+      totalDownload: nextTotalDownload,
       lastTimestamp: now,
-      lastTrafficData: newTrafficData,
-      uploadHistory: newUploadHistory,
-      downloadHistory: newDownloadHistory,
+      lastTrafficData: nextTrafficData,
+      uploadHistory: nextUploadHistory,
+      downloadHistory: nextDownloadHistory,
     );
 
     notifyListeners();

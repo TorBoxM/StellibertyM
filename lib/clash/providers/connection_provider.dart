@@ -210,10 +210,10 @@ class ConnectionProvider extends ChangeNotifier {
   // 检查连接列表是否发生变化
   bool _hasConnectionsChanged(
     List<ConnectionInfo> oldConnections,
-    List<ConnectionInfo> newConnections,
+    List<ConnectionInfo> nextConnections,
   ) {
     // 数量不同，肯定有变化
-    if (oldConnections.length != newConnections.length) {
+    if (oldConnections.length != nextConnections.length) {
       return true;
     }
 
@@ -224,7 +224,7 @@ class ConnectionProvider extends ChangeNotifier {
 
     // 创建 ID 集合进行快速比较
     final previousIds = oldConnections.map((c) => c.id).toSet();
-    final currentIds = newConnections.map((c) => c.id).toSet();
+    final currentIds = nextConnections.map((c) => c.id).toSet();
 
     // 比较 ID 集合是否相同
     return !previousIds.containsAll(currentIds) ||

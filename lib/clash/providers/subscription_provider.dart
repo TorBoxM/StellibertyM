@@ -82,8 +82,8 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   // 更新状态并通知监听器
-  void _updateState(SubscriptionState newState) {
-    _state = newState;
+  void _updateState(SubscriptionState nextState) {
+    _state = nextState;
     notifyListeners();
   }
 
@@ -938,10 +938,10 @@ class SubscriptionProvider extends ChangeNotifier {
       final subscription = _subscriptions[i];
       if (subscription.overrideIds.contains(overrideId)) {
         Logger.debug('从订阅 ${subscription.name} 中移除覆写引用');
-        final newOverrideIds = subscription.overrideIds
+        final nextOverrideIds = subscription.overrideIds
             .where((id) => id != overrideId)
             .toList();
-        _subscriptions[i] = subscription.copyWith(overrideIds: newOverrideIds);
+        _subscriptions[i] = subscription.copyWith(overrideIds: nextOverrideIds);
         hasChanges = true;
       }
     }

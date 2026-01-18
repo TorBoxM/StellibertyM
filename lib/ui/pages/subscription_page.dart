@@ -641,11 +641,11 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         context,
         fileName: '${latestSubscription.name}.yaml',
         initialContent: content,
-        onSave: (newContent) async {
+        onSave: (nextContent) async {
           // 保存文件并重载配置
           return await provider.saveSubscriptionFile(
             subscription.id,
-            newContent,
+            nextContent,
           );
         },
       );

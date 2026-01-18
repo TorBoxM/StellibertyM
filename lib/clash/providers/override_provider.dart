@@ -19,8 +19,8 @@ class OverrideProvider extends ChangeNotifier {
   OverrideState get overrideState => _state;
 
   // 更新状态并通知
-  void _updateState(OverrideState newState) {
-    _state = newState;
+  void _updateState(OverrideState nextState) {
+    _state = nextState;
     notifyListeners();
   }
 

@@ -23,12 +23,12 @@ class ServiceProvider extends ChangeNotifier {
   bool? get wasLastOperationSuccessful => _wasLastOperationSuccessful;
 
   // 更新服务状态
-  void _updateServiceState(ServiceState newState) {
-    if (_serviceState == newState) return;
+  void _updateServiceState(ServiceState nextState) {
+    if (_serviceState == nextState) return;
 
     final previousState = _serviceState;
-    _serviceState = newState;
-    Logger.debug('服务状态变化：${previousState.name} -> ${newState.name}');
+    _serviceState = nextState;
+    Logger.debug('服务状态变化：${previousState.name} -> ${nextState.name}');
     notifyListeners();
   }
 
@@ -46,8 +46,8 @@ class ServiceProvider extends ChangeNotifier {
 
   // 刷新服务状态
   Future<void> refreshStatus() async {
-    final newState = await _manager.refreshStatus();
-    _updateServiceState(newState);
+    final nextState = await _manager.refreshStatus();
+    _updateServiceState(nextState);
   }
 
   // 安装服务

@@ -161,15 +161,15 @@ class LogProvider extends ChangeNotifier {
           (_pendingLogs.isNotEmpty && _shouldFlushPending());
 
       if (shouldFlush) {
-        final newLogs = List<ClashLogMessage>.from(_state.logs)
+        final nextLogs = List<ClashLogMessage>.from(_state.logs)
           ..addAll(_pendingLogs);
 
         // 限制日志数量
-        while (newLogs.length > _maxLogsCount) {
-          newLogs.removeAt(0);
+        while (nextLogs.length > _maxLogsCount) {
+          nextLogs.removeAt(0);
         }
 
-        _state = _state.copyWith(logs: newLogs);
+        _state = _state.copyWith(logs: nextLogs);
         _pendingLogs.clear();
         _invalidateCache();
         _lastFlushedAt = DateTime.now();

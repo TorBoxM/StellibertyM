@@ -98,13 +98,13 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool get isCoreStopping => _coreState == CoreState.stopping;
 
   // 更新核心状态
-  void _updateCoreState(CoreState newState) {
-    if (_coreState == newState) return;
+  void _updateCoreState(CoreState nextState) {
+    if (_coreState == nextState) return;
 
-    _coreState = newState;
+    _coreState = nextState;
 
     // 核心启动成功后，刷新配置状态
-    if (newState == CoreState.running) {
+    if (nextState == CoreState.running) {
       _syncConfigFromManager();
     }
 

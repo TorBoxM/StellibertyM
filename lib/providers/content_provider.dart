@@ -49,15 +49,15 @@ class ContentProvider extends ChangeNotifier {
 
   // 切换到指定视图，变化时通知监听器
   // 添加防抖机制，防止快速连续切换导致页面重复初始化
-  void switchView(ContentView newView) {
-    if (_currentView == newView) return;
+  void switchView(ContentView nextView) {
+    if (_currentView == nextView) return;
 
     // 防抖检查
     if (!_canSwitch) {
       return;
     }
 
-    _currentView = newView;
+    _currentView = nextView;
     _lastSwitchTime = DateTime.now();
     notifyListeners();
   }

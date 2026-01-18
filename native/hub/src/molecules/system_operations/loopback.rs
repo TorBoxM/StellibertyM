@@ -437,7 +437,7 @@ pub fn set_loopback_exemption_by_sid(sid_bytes: &[u8], enabled: bool) -> Result<
 
         // 性能优化：直接比较字节数组，避免重复调用 compare_sids
         let target_sid_bytes = std::slice::from_raw_parts(target_sid as *const u8, sid_bytes.len());
-        let mut new_sids: Vec<SID_AND_ATTRIBUTES> = loopback_slice
+        let mut next_sids: Vec<SID_AND_ATTRIBUTES> = loopback_slice
             .iter()
             .filter(|item| {
                 if let Some(item_bytes) = sid_to_bytes(item.Sid.0 as *mut SID) {
@@ -450,16 +450,16 @@ pub fn set_loopback_exemption_by_sid(sid_bytes: &[u8], enabled: bool) -> Result<
             .collect();
 
         if enabled {
-            new_sids.push(SID_AND_ATTRIBUTES {
+            next_sids.push(SID_AND_ATTRIBUTES {
                 Sid: PSID(target_sid as *mut _),
                 Attributes: 0,
             });
         }
 
-        let result = if new_sids.is_empty() {
+        let result = if next_sids.is_empty() {
             NetworkIsolationSetAppContainerConfig(&[])
         } else {
-            NetworkIsolationSetAppContainerConfig(&new_sids)
+            NetworkIsolationSetAppContainerConfig(&next_sids)
         };
 
         if !loopback_sids.is_null() {
@@ -544,7 +544,7 @@ pub fn set_loopback_exemption(package_family_name: &str, enabled: bool) -> Resul
         // 性能优化：获取目标 SID 字节数组用于比较
         let target_sid_bytes = sid_to_bytes(target_sid_unwrapped);
 
-        let mut new_sids: Vec<SID_AND_ATTRIBUTES> = loopback_slice
+        let mut next_sids: Vec<SID_AND_ATTRIBUTES> = loopback_slice
             .iter()
             .filter(|item| {
                 if let (Some(target_bytes), Some(item_bytes)) =
@@ -559,16 +559,16 @@ pub fn set_loopback_exemption(package_family_name: &str, enabled: bool) -> Resul
             .collect();
 
         if enabled {
-            new_sids.push(SID_AND_ATTRIBUTES {
+            next_sids.push(SID_AND_ATTRIBUTES {
                 Sid: PSID(target_sid_unwrapped as *mut _),
                 Attributes: 0,
             });
         }
 
-        let result = if new_sids.is_empty() {
+        let result = if next_sids.is_empty() {
             NetworkIsolationSetAppContainerConfig(&[])
         } else {
-            NetworkIsolationSetAppContainerConfig(&new_sids)
+            NetworkIsolationSetAppContainerConfig(&next_sids)
         };
 
         if !loopback_sids.is_null() {

@@ -69,6 +69,11 @@ class SubscriptionManager {
     return await _service.readSubscriptionConfig(subscription);
   }
 
+  // 导入本地文件
+  Future<String> importLocalFile(String filePath) async {
+    return await _service.parseLocalFile(filePath);
+  }
+
   // 下载订阅
   // 根据 Clash 运行状态自动选择代理模式
   Future<Subscription> downloadSubscription(Subscription subscription) async {

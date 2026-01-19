@@ -763,6 +763,27 @@ class SubscriptionProvider extends ChangeNotifier {
     Logger.info('启动时更新完成');
   }
 
+  // 导入本地文件并创建订阅
+  Future<bool> importLocalFile({
+    required String name,
+    required String filePath,
+  }) async {
+    try {
+      // 调用 Manager 解析文件
+      final parsedConfig = await _manager.importLocalFile(filePath);
+
+      // 创建本地订阅
+      return await addLocalSubscription(
+        name: name,
+        filePath: filePath,
+        content: parsedConfig,
+      );
+    } catch (e) {
+      Logger.error('导入本地文件失败：$e');
+      return false;
+    }
+  }
+
   // 添加本地订阅
   Future<bool> addLocalSubscription({
     required String name,

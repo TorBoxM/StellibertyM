@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';
 import 'package:stelliberty/ui/widgets/proxy/proxy_node_card.dart';
-import 'package:stelliberty/ui/notifiers/proxy_notifier.dart';
+import 'package:stelliberty/ui/viewmodels/proxy_viewmodel.dart';
 import 'package:stelliberty/ui/constants/spacing.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/i18n/i18n.dart';
@@ -68,7 +68,7 @@ class _ProxyNodeGridState {
 class ProxyNodeGrid extends StatefulWidget {
   final ClashProvider clashProvider;
   final String selectedGroupName; // 改为只传递组名
-  final ProxyNotifier viewModel; // 用于排序
+  final ProxyViewModel viewModel; // 用于排序
   final ScrollController scrollController;
   final Function(int) onCrossAxisCountChanged;
   final Function(String groupName, String proxyName) onSelectProxy;

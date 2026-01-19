@@ -35,6 +35,7 @@ import 'package:stelliberty/clash/providers/core_log_provider.dart';
 import 'package:stelliberty/clash/providers/traffic_provider.dart';
 import 'package:stelliberty/clash/providers/override_provider.dart';
 import 'package:stelliberty/clash/providers/service_provider.dart';
+import 'package:stelliberty/clash/providers/behavior_settings_provider.dart';
 import 'package:stelliberty/clash/model/override_model.dart' as app_override;
 import 'package:stelliberty/src/bindings/bindings.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
@@ -225,6 +226,7 @@ class ProviderSetup {
       ChangeNotifierProvider.value(value: bundle.languageProvider),
       ChangeNotifierProvider.value(value: bundle.windowEffectProvider),
       ChangeNotifierProvider.value(value: bundle.appUpdateProvider),
+      ChangeNotifierProvider(create: (_) => BehaviorSettingsProvider()),
     ];
   }
 

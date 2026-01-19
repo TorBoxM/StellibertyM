@@ -130,12 +130,21 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
       setState(() => _isCreating = false);
 
       ModernToast.show(trans.backup.backup_success, type: ToastType.success);
-    } catch (e) {
+    } on BackupException catch (e) {
       Logger.error('创建备份失败：$e');
       if (!mounted) return;
       setState(() => _isCreating = false);
 
       ModernToast.show(_getErrorMessage(e), type: ToastType.error);
+    } catch (e) {
+      Logger.error('创建备份失败：$e');
+      if (!mounted) return;
+      setState(() => _isCreating = false);
+
+      ModernToast.show(
+        '${trans.backup.error_unknown}: $e',
+        type: ToastType.error,
+      );
     }
   }
 
@@ -160,65 +169,81 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
 
       if (!mounted) return;
 
-      // 重新加载订阅和覆写数据
-      Logger.info('备份还原成功，重新加载所有数据');
-
-      // 重新初始化 AppPreferences 和 ClashPreferences
-      await AppPreferences.instance.init();
-      await ClashPreferences.instance.init();
-
-      if (!mounted) return;
-
-      final clashProvider = Provider.of<ClashProvider>(context, listen: false);
-      final subscriptionProvider = Provider.of<SubscriptionProvider>(
-        context,
-        listen: false,
-      );
-      final overrideProvider = Provider.of<OverrideProvider>(
-        context,
-        listen: false,
-      );
-
-      // 重新初始化 Provider 以加载还原的数据
-      clashProvider.refreshConfigState();
-      await subscriptionProvider.initialize();
-      await overrideProvider.initialize();
-
-      // 如果核心正在运行，重启核心以应用新配置
-      if (ClashManager.instance.isCoreRunning) {
-        Logger.info('重启核心以应用新配置');
-        await ClashManager.instance.restartCore();
-      }
+      // 重新加载所有数据
+      await _reloadAfterRestore();
 
       if (!mounted) return;
       setState(() => _isRestoring = false);
 
       ModernToast.show(trans.backup.restore_success, type: ToastType.success);
-    } catch (e) {
+    } on BackupException catch (e) {
       Logger.error('还原备份失败：$e');
       if (!mounted) return;
       setState(() => _isRestoring = false);
 
       ModernToast.show(_getErrorMessage(e), type: ToastType.error);
+    } catch (e) {
+      Logger.error('还原备份失败：$e');
+      if (!mounted) return;
+      setState(() => _isRestoring = false);
+
+      ModernToast.show(
+        '${trans.backup.error_unknown}: $e',
+        type: ToastType.error,
+      );
+    }
+  }
+
+  // 还原后重新加载所有数据
+  Future<void> _reloadAfterRestore() async {
+    Logger.info('备份还原成功，重新加载所有数据');
+
+    // 重新初始化 Preferences
+    await AppPreferences.instance.init();
+    await ClashPreferences.instance.init();
+
+    if (!mounted) return;
+
+    // 重新初始化 Provider
+    final clashProvider = Provider.of<ClashProvider>(context, listen: false);
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(
+      context,
+      listen: false,
+    );
+    final overrideProvider = Provider.of<OverrideProvider>(
+      context,
+      listen: false,
+    );
+
+    clashProvider.refreshConfigState();
+    await subscriptionProvider.initialize();
+    await overrideProvider.initialize();
+
+    // 如果核心正在运行，重启核心以应用新配置
+    if (ClashManager.instance.isCoreRunning) {
+      Logger.info('重启核心以应用新配置');
+      await ClashManager.instance.restartCore();
     }
   }
 
   // 获取友好的错误消息
-  String _getErrorMessage(Object error) {
+  String _getErrorMessage(BackupException error) {
     final trans = context.translate;
-    final errorStr = error.toString();
     final t = trans.backup;
 
-    if (errorStr.contains('不存在') || errorStr.contains('not found')) {
-      return t.error_file_not_found;
-    } else if (errorStr.contains('格式错误') || errorStr.contains('format')) {
-      return t.error_invalid_format;
-    } else if (errorStr.contains('版本') || errorStr.contains('version')) {
-      return t.error_version_mismatch;
-    } else if (errorStr.contains('不完整') || errorStr.contains('incomplete')) {
-      return t.error_data_incomplete;
-    } else {
-      return '${t.error_unknown}: $errorStr';
+    switch (error.type) {
+      case BackupErrorType.fileNotFound:
+        return t.error_file_not_found;
+      case BackupErrorType.invalidFormat:
+        return t.error_invalid_format;
+      case BackupErrorType.versionMismatch:
+        return t.error_version_mismatch;
+      case BackupErrorType.dataIncomplete:
+        return t.error_data_incomplete;
+      case BackupErrorType.operationInProgress:
+      case BackupErrorType.timeout:
+      case BackupErrorType.unknown:
+        return error.message;
     }
   }
 }

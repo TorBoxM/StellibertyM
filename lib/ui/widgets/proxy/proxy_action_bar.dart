@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/ui/widgets/modern_tooltip.dart';
-import 'package:stelliberty/ui/notifiers/proxy_notifier.dart';
+import 'package:stelliberty/ui/viewmodels/proxy_viewmodel.dart';
 
 // 代理页面操作按钮栏
 class ProxyActionBar extends StatefulWidget {
@@ -12,7 +12,7 @@ class ProxyActionBar extends StatefulWidget {
   final VoidCallback? onScrollToTop;
   final int sortMode;
   final ValueChanged<int> onSortModeChanged;
-  final ProxyNotifier viewModel;
+  final ProxyViewModel viewModel;
   final String layoutMode; // 'horizontal' 或 'vertical'
   final VoidCallback onLayoutModeChanged;
 

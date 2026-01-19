@@ -5,7 +5,7 @@ import 'package:stelliberty/ui/common/modern_dropdown_menu.dart';
 import 'package:stelliberty/ui/common/modern_text_field.dart';
 import 'package:stelliberty/ui/common/modern_switch.dart';
 import 'package:stelliberty/ui/widgets/modern_multiline_text_field.dart';
-import 'package:stelliberty/ui/notifiers/system_proxy_notifier.dart';
+import 'package:stelliberty/ui/viewmodels/system_proxy_viewmodel.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/services/log_print_service.dart';
@@ -19,13 +19,13 @@ class SystemProxyCard extends StatefulWidget {
 }
 
 class _SystemProxyCardState extends State<SystemProxyCard> {
-  late SystemProxyNotifier _viewModel;
+  late SystemProxyViewModel _viewModel;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _viewModel = SystemProxyNotifier();
+    _viewModel = SystemProxyViewModel();
   }
 
   @override

@@ -4,9 +4,9 @@ import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// ProxyPage 的业务逻辑
+// ProxyPage 的 UI 状态管理
 // 负责代理节点排序、搜索和定位计算
-class ProxyNotifier extends ChangeNotifier {
+class ProxyViewModel extends ChangeNotifier {
   final ClashProvider _clashProvider;
 
   int _sortMode = 0;
@@ -18,7 +18,7 @@ class ProxyNotifier extends ChangeNotifier {
   static const double proxyCardSpacing = 16.0;
   static const double proxyCardTotalHeight = proxyCardHeight + proxyCardSpacing;
 
-  ProxyNotifier({required ClashProvider clashProvider})
+  ProxyViewModel({required ClashProvider clashProvider})
     : _clashProvider = clashProvider {
     _loadSortMode();
   }

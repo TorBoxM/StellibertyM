@@ -17,7 +17,6 @@ import 'package:stelliberty/ui/widgets/confirm_dialog.dart';
 import 'package:stelliberty/providers/content_provider.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/services/log_print_service.dart';
-import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'package:stelliberty/ui/common/modern_top_toolbar.dart';
 import 'package:stelliberty/ui/constants/spacing.dart';
 
@@ -721,69 +720,10 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     SubscriptionProvider provider,
     SubscriptionDialogResult result,
   ) async {
-    StreamSubscription? subscription;
-
-    try {
-      final file = File(result.localFilePath!);
-      final dialogTrans = context.translate.subscription_dialog;
-
-      if (!await file.exists()) {
-        throw Exception(dialogTrans.file_not_exist);
-      }
-
-      // 读取文件内容
-      final content = await file.readAsString();
-
-      // 使用 ProxyParser 解析订阅内容（支持标准 YAML、Base64 编码、纯文本代理链接）
-      // 创建 Completer 等待解析结果
-      final completer = Completer<String>();
-      final requestId = 'import-${DateTime.now().millisecondsSinceEpoch}';
-
-      // 订阅 Rust 信号流，只接收匹配的 request_id
-      subscription = ParseSubscriptionResponse.rustSignalStream.listen((
-        rustResult,
-      ) {
-        if (completer.isCompleted) return;
-        if (rustResult.message.requestId != requestId) return;
-
-        if (rustResult.message.isSuccessful) {
-          completer.complete(rustResult.message.parsedConfig);
-        } else {
-          completer.completeError(Exception(rustResult.message.errorMessage));
-        }
-        subscription?.cancel(); // 收到响应后立即取消监听
-      });
-
-      // 发送解析请求到 Rust
-      final parseRequest = ParseSubscriptionRequest(
-        requestId: requestId,
-        content: content,
-      );
-      parseRequest.sendSignalToRust();
-
-      // 等待解析结果
-      final parsedConfig = await completer.future.timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('订阅解析超时');
-        },
-      );
-
-      // 创建本地配置订阅（使用解析后的配置）
-      final isSuccess = await provider.addLocalSubscription(
-        name: result.name,
-        filePath: result.localFilePath!,
-        content: parsedConfig,
-      );
-
-      return isSuccess;
-    } catch (error) {
-      Logger.error('导入本地文件失败：$error');
-      return false;
-    } finally {
-      // 停止监听信号流，防止内存泄漏
-      await subscription?.cancel();
-    }
+    return await provider.importLocalFile(
+      name: result.name,
+      filePath: result.localFilePath!,
+    );
   }
 }
 

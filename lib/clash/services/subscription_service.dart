@@ -14,6 +14,8 @@ import 'package:stelliberty/src/bindings/signals/signals.dart';
 // 订阅服务
 // 负责订阅的下载、保存、验证等操作
 class SubscriptionService {
+  static int _parseRequestSequence = 0;
+
   // 覆写服务
   OverrideService? _overrideService;
 
@@ -51,6 +53,58 @@ class SubscriptionService {
   Future<void> initialize() async {
     final subscriptionDir = PathService.instance.subscriptionsDir;
     Logger.info('订阅服务初始化完成，路径：$subscriptionDir');
+  }
+
+  // 解析本地文件（通过 Rust）
+  Future<String> parseLocalFile(String filePath) async {
+    final file = File(filePath);
+
+    if (!await file.exists()) {
+      throw Exception('文件不存在');
+    }
+
+    final content = await file.readAsString();
+    return await _parseSubscriptionContent(content);
+  }
+
+  // 解析订阅内容（通过 Rust）
+  Future<String> _parseSubscriptionContent(String content) async {
+    final requestId = _buildParseRequestId();
+    final completer = Completer<String>();
+    StreamSubscription? subscription;
+
+    try {
+      subscription = ParseSubscriptionResponse.rustSignalStream.listen((result) {
+        if (completer.isCompleted) return;
+        if (result.message.requestId != requestId) return;
+
+        if (result.message.isSuccessful) {
+          completer.complete(result.message.parsedConfig);
+        } else {
+          completer.completeError(Exception(result.message.errorMessage));
+        }
+        subscription?.cancel();
+      });
+
+      final parseRequest = ParseSubscriptionRequest(
+        requestId: requestId,
+        content: content,
+      );
+      parseRequest.sendSignalToRust();
+
+      return await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw Exception('订阅解析超时'),
+      );
+    } finally {
+      await subscription?.cancel();
+    }
+  }
+
+  String _buildParseRequestId() {
+    _parseRequestSequence = (_parseRequestSequence + 1) & 0x7fffffff;
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    return 'parse-$timestamp-$_parseRequestSequence';
   }
 
   // 下载订阅配置并返回更新后的订阅对象。
@@ -109,72 +163,32 @@ class SubscriptionService {
       // 解析订阅信息
       final info = _convertSubscriptionInfo(downloadResult.subscriptionInfo);
 
-      // 获取配置内容
-      String configContent = downloadResult.content;
+      // 获取配置内容并解析
+      final parsedConfigContent = await _parseSubscriptionContent(
+        downloadResult.content,
+      );
 
-      // 使用 ProxyParser 解析订阅内容（支持标准 YAML、Base64 编码、纯文本代理链接）
-      // 创建 Completer 等待解析结果
-      final parseCompleter = Completer<String>();
-      StreamSubscription? parseSubscription;
+      // 验证配置文件
+      _validateConfig(parsedConfigContent);
 
-      try {
-        // 订阅 Rust 信号流，只接收匹配的 request_id
-        parseSubscription = ParseSubscriptionResponse.rustSignalStream.listen((
-          result,
-        ) {
-          if (!parseCompleter.isCompleted &&
-              result.message.requestId == requestId) {
-            if (result.message.isSuccessful) {
-              parseCompleter.complete(result.message.parsedConfig);
-            } else {
-              parseCompleter.completeError(
-                Exception(result.message.errorMessage),
-              );
-            }
-            parseSubscription?.cancel(); // 收到响应后立即取消监听
-          }
-        });
+      // 【重要】保存原始订阅文件，不应用任何覆写
+      // 覆写将在生成 runtime_config.yaml 时应用
+      final configPath = PathService.instance.getSubscriptionConfigPath(
+        subscription.id,
+      );
+      final configFile = File(configPath);
+      // 确保父目录存在
+      await configFile.parent.create(recursive: true);
+      await configFile.writeAsString(parsedConfigContent);
 
-        // 发送解析请求到 Rust
-        final parseRequest = ParseSubscriptionRequest(
-          requestId: requestId,
-          content: configContent,
-        );
-        parseRequest.sendSignalToRust();
+      Logger.debug('订阅已保存至：$configPath');
 
-        // 等待解析结果
-        final parsedConfigContent = await parseCompleter.future.timeout(
-          const Duration(seconds: 30),
-          onTimeout: () {
-            throw Exception('订阅解析超时');
-          },
-        );
-
-        // 验证配置文件
-        _validateConfig(parsedConfigContent);
-
-        // 【重要】保存原始订阅文件，不应用任何覆写
-        // 覆写将在生成 runtime_config.yaml 时应用
-        final configPath = PathService.instance.getSubscriptionConfigPath(
-          subscription.id,
-        );
-        final configFile = File(configPath);
-        // 确保父目录存在
-        await configFile.parent.create(recursive: true);
-        await configFile.writeAsString(parsedConfigContent);
-
-        Logger.debug('订阅已保存至：$configPath');
-
-        // 返回更新后的订阅
-        return subscription.copyWith(
-          lastUpdatedAt: DateTime.now(),
-          info: info,
-          isUpdating: false,
-        );
-      } finally {
-        // 停止监听信号流（即使发生异常）
-        await parseSubscription?.cancel();
-      }
+      // 返回更新后的订阅
+      return subscription.copyWith(
+        lastUpdatedAt: DateTime.now(),
+        info: info,
+        isUpdating: false,
+      );
     } catch (e) {
       Logger.error('下载订阅失败：${subscription.name} - $e');
       rethrow;

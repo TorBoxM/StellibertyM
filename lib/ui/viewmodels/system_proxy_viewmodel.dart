@@ -7,9 +7,9 @@ import 'package:stelliberty/services/system_proxy_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
-// 系统代理配置的业务逻辑
+// 系统代理配置的 UI 状态管理
 // 负责代理主机、绕过规则、PAC 脚本配置，以及网络接口管理
-class SystemProxyNotifier extends ChangeNotifier {
+class SystemProxyViewModel extends ChangeNotifier {
   final ClashManager _clashManager;
 
   // UI 控制器
@@ -29,7 +29,7 @@ class SystemProxyNotifier extends ChangeNotifier {
   StreamSubscription<RustSignalPack<NetworkInterfacesInfo>>?
   _networkSubscription;
 
-  SystemProxyNotifier({ClashManager? clashManager})
+  SystemProxyViewModel({ClashManager? clashManager})
     : _clashManager = clashManager ?? ClashManager.instance {
     _initialize();
   }
@@ -265,7 +265,7 @@ class SystemProxyNotifier extends ChangeNotifier {
     _networkSubscription?.cancel();
     _networkSubscription = null;
     _isNetworkInitialized = false;
-    Logger.info('销毁 SystemProxyNotifier');
+    Logger.info('销毁 SystemProxyViewModel');
     super.dispose();
   }
 }

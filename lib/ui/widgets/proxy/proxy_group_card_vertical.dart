@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';
 import 'package:stelliberty/ui/widgets/proxy/proxy_node_card.dart';
-import 'package:stelliberty/ui/notifiers/proxy_notifier.dart';
+import 'package:stelliberty/ui/viewmodels/proxy_viewmodel.dart';
 import 'package:stelliberty/services/image_cache_service.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 
@@ -17,7 +17,7 @@ class ProxyGroupCardVertical extends StatefulWidget {
   final bool isCoreRunning;
   final Map<String, dynamic> proxyNodes;
   final Set<String> testingNodes; // 正在测试的节点集合
-  final ProxyNotifier viewModel;
+  final ProxyViewModel viewModel;
   final VoidCallback? onLocate;
   final Map<String, GlobalKey>? nodeKeys;
 

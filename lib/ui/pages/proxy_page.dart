@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/providers/subscription_provider.dart';
 import 'package:stelliberty/storage/preferences.dart';
-import 'package:stelliberty/ui/notifiers/proxy_notifier.dart';
+import 'package:stelliberty/ui/viewmodels/proxy_viewmodel.dart';
 import 'package:stelliberty/ui/widgets/modern_toast.dart';
 import 'package:stelliberty/ui/widgets/proxy/proxy_action_bar.dart';
 import 'package:stelliberty/ui/widgets/proxy/proxy_empty_state.dart';
@@ -58,7 +58,7 @@ class ProxyPage extends StatefulWidget {
 class _ProxyPageWidgetState extends State<ProxyPage> {
   late ScrollController _nodeListScrollController;
   final ScrollController _tabScrollController = ScrollController();
-  late ProxyNotifier _viewModel;
+  late ProxyViewModel _viewModel;
   int _currentCrossAxisCount = 2;
 
   // UI 状态
@@ -83,7 +83,7 @@ class _ProxyPageWidgetState extends State<ProxyPage> {
 
     final clashProvider = context.read<ClashProvider>();
 
-    _viewModel = ProxyNotifier(clashProvider: clashProvider);
+    _viewModel = ProxyViewModel(clashProvider: clashProvider);
 
     // 创建默认 ScrollController
     _nodeListScrollController = ScrollController();

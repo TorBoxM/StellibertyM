@@ -33,6 +33,7 @@ import 'package:stelliberty/clash/providers/rules_provider.dart';
 import 'package:stelliberty/clash/providers/subscription_provider.dart';
 import 'package:stelliberty/clash/providers/core_log_provider.dart';
 import 'package:stelliberty/clash/providers/traffic_provider.dart';
+import 'package:stelliberty/clash/providers/resource_usage_provider.dart';
 import 'package:stelliberty/clash/providers/override_provider.dart';
 import 'package:stelliberty/clash/providers/service_provider.dart';
 import 'package:stelliberty/clash/providers/behavior_settings_provider.dart';
@@ -220,6 +221,7 @@ class ProviderSetup {
       ),
       ChangeNotifierProvider.value(value: bundle.logProvider),
       ChangeNotifierProvider.value(value: bundle.trafficProvider),
+      ChangeNotifierProvider.value(value: bundle.resourceUsageProvider),
       ChangeNotifierProvider.value(value: bundle.serviceProvider),
       ChangeNotifierProvider(create: (_) => ContentProvider()),
       ChangeNotifierProvider.value(value: bundle.themeProvider),
@@ -347,6 +349,7 @@ class ProviderSetup {
     final clashProvider = ClashProvider();
     final logProvider = LogProvider(clashProvider);
     final trafficProvider = TrafficProvider();
+    final resourceUsageProvider = ResourceUsageProvider(clashProvider);
     final serviceProvider = ServiceProvider();
     final appUpdateProvider = AppUpdateProvider();
 
@@ -381,6 +384,7 @@ class ProviderSetup {
       clashProvider: clashProvider,
       logProvider: logProvider,
       trafficProvider: trafficProvider,
+      resourceUsageProvider: resourceUsageProvider,
       serviceProvider: serviceProvider,
       appUpdateProvider: appUpdateProvider,
     );
@@ -417,6 +421,7 @@ class ProviderSetup {
       clashProvider: clashProvider,
       logProvider: LogProvider(clashProvider),
       trafficProvider: TrafficProvider(),
+      resourceUsageProvider: ResourceUsageProvider(clashProvider),
       serviceProvider: ServiceProvider(),
       appUpdateProvider: AppUpdateProvider(),
     );
@@ -436,6 +441,7 @@ class ProviderBundle {
   final ClashProvider clashProvider;
   final LogProvider logProvider;
   final TrafficProvider trafficProvider;
+  final ResourceUsageProvider resourceUsageProvider;
   final ServiceProvider serviceProvider;
   final AppUpdateProvider appUpdateProvider;
 
@@ -448,6 +454,7 @@ class ProviderBundle {
     required this.clashProvider,
     required this.logProvider,
     required this.trafficProvider,
+    required this.resourceUsageProvider,
     required this.serviceProvider,
     required this.appUpdateProvider,
   });

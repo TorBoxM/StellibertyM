@@ -74,7 +74,9 @@ class SubscriptionService {
     StreamSubscription? subscription;
 
     try {
-      subscription = ParseSubscriptionResponse.rustSignalStream.listen((result) {
+      subscription = ParseSubscriptionResponse.rustSignalStream.listen((
+        result,
+      ) {
         if (completer.isCompleted) return;
         if (result.message.requestId != requestId) return;
 

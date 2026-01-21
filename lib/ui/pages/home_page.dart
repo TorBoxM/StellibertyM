@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:stelliberty/ui/widgets/home/clash_info_card.dart';
 import 'package:stelliberty/ui/widgets/home/outbound_mode_card.dart';
 import 'package:stelliberty/ui/widgets/home/proxy_switch_card.dart';
-import 'package:stelliberty/ui/widgets/home/traffic_stats_card.dart';
+import 'package:provider/provider.dart';
+import 'package:stelliberty/clash/model/traffic_data_model.dart';
+import 'package:stelliberty/clash/providers/clash_provider.dart';
+import 'package:stelliberty/clash/providers/traffic_provider.dart';
+import 'package:stelliberty/ui/widgets/home/running_status_card.dart';
+import 'package:stelliberty/ui/widgets/home/traffic_speed_card.dart';
 import 'package:stelliberty/ui/widgets/home/tun_mode_card.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/ui/constants/spacing.dart';
@@ -62,20 +66,20 @@ class _HomePageContentState extends State<HomePageContent> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // 第二行：流量统计卡片（占据整行）
-                    TrafficStatsCard(),
-                    const SizedBox(height: 24),
-                    // 第三行：Clash 信息卡片 + 出站模式卡片
+                    // 第二行：运行状态卡片 + 出站模式卡片
                     IntrinsicHeight(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: ClashInfoCard()),
-                          const SizedBox(width: 25),
+                        children: const [
+                          Expanded(child: RunningStatusCard()),
+                          SizedBox(width: 25),
                           Expanded(child: OutboundModeCard()),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    // 第三行：网速显示卡片
+                    _buildTrafficSection(context),
                   ],
                 ),
               ),
@@ -84,5 +88,34 @@ class _HomePageContentState extends State<HomePageContent> {
         );
       },
     );
+  }
+
+  Widget _buildTrafficSection(BuildContext context) {
+    final trafficProvider = context.read<TrafficProvider>();
+    final isCoreRunning = context.select<ClashProvider, bool>(
+      (m) => m.isCoreRunning,
+    );
+
+    return isCoreRunning
+        ? StreamBuilder<TrafficData>(
+            stream: context.read<ClashProvider>().trafficStream,
+            builder: (context, snapshot) {
+              final traffic = snapshot.data ?? TrafficData.zero;
+              final trafficWithTotal = traffic.copyWithTotal(
+                totalUpload: trafficProvider.totalUpload,
+                totalDownload: trafficProvider.totalDownload,
+              );
+              return TrafficSpeedCard(
+                traffic: trafficWithTotal,
+                isCoreRunning: isCoreRunning,
+                onReset: trafficProvider.resetTotalTraffic,
+              );
+            },
+          )
+        : TrafficSpeedCard(
+            traffic: trafficProvider.lastTrafficData ?? TrafficData.zero,
+            isCoreRunning: isCoreRunning,
+            onReset: trafficProvider.resetTotalTraffic,
+          );
   }
 }

@@ -104,7 +104,6 @@ class _TunModeCardState extends State<TunModeCard> {
     return ModernTooltip(
       message: isAvailable ? '' : _getPlatformRequirementHint(context),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             isAvailable
@@ -116,15 +115,19 @@ class _TunModeCardState extends State<TunModeCard> {
                 : theme.colorScheme.error,
           ),
           const SizedBox(width: 6),
-          Text(
-            isAvailable
-                ? trans.home.tun_status_available
-                : trans.home.tun_status_unavailable,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 13,
-              color: isAvailable
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.error,
+          Expanded(
+            child: Text(
+              isAvailable
+                  ? trans.home.tun_status_available
+                  : trans.home.tun_status_unavailable,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 13,
+                color: isAvailable
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.error,
+              ),
             ),
           ),
         ],

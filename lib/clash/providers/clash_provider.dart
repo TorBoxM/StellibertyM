@@ -22,6 +22,8 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   // 核心状态
   CoreState _coreState = CoreState.stopped;
   CoreState get coreState => _coreState;
+  DateTime? _coreStartedAt;
+  DateTime? get coreStartedAt => _coreStartedAt;
 
   String _coreVersion = 'Unknown';
   String get coreVersion => _coreVersion;
@@ -101,7 +103,14 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   void _updateCoreState(CoreState nextState) {
     if (_coreState == nextState) return;
 
+    final wasRunning = _coreState.isRunning;
     _coreState = nextState;
+
+    if (!wasRunning && nextState.isRunning) {
+      _coreStartedAt = DateTime.now();
+    } else if (wasRunning && !nextState.isRunning) {
+      _coreStartedAt = null;
+    }
 
     // 核心启动成功后，刷新配置状态
     if (nextState == CoreState.running) {

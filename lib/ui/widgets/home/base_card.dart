@@ -15,16 +15,12 @@ class BaseCard extends StatelessWidget {
   // 卡片内容区域
   final Widget child;
 
-  // 是否显示标题栏（默认显示）
-  final bool shouldShowHeader;
-
   const BaseCard({
     super.key,
     required this.icon,
     required this.title,
     required this.child,
     this.trailing,
-    this.shouldShowHeader = true,
   });
 
   @override
@@ -50,13 +46,7 @@ class BaseCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          children: [
-            if (shouldShowHeader) ...[
-              _buildHeader(context),
-              const SizedBox(height: 16),
-            ],
-            child,
-          ],
+          children: [_buildHeader(context), const SizedBox(height: 16), child],
         ),
       ),
     );
@@ -68,12 +58,15 @@ class BaseCard extends StatelessWidget {
         Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            overflow: TextOverflow.ellipsis,
+          child: Transform.translate(
+            offset: const Offset(0, -2),
+            child: Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
         if (trailing != null) ...[const SizedBox(width: 8), trailing!],

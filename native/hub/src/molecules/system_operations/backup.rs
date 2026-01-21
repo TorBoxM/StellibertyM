@@ -416,18 +416,20 @@ async fn restore_preferences(
     let mut merged_prefs = prefs.clone();
     if Path::new(path).exists() {
         match async_fs::read_to_string(path).await {
-            Ok(content) => match serde_json::from_str::<HashMap<String, serde_json::Value>>(&content) {
-                Ok(existing_prefs) => {
-                    for key in EXCLUDED_PREFERENCE_KEYS {
-                        if let Some(value) = existing_prefs.get(key) {
-                            merged_prefs.insert(key.to_string(), value.clone());
+            Ok(content) => {
+                match serde_json::from_str::<HashMap<String, serde_json::Value>>(&content) {
+                    Ok(existing_prefs) => {
+                        for key in EXCLUDED_PREFERENCE_KEYS {
+                            if let Some(value) = existing_prefs.get(key) {
+                                merged_prefs.insert(key.to_string(), value.clone());
+                            }
                         }
                     }
+                    Err(e) => {
+                        log::warn!("读取现有配置失败：{}", e);
+                    }
                 }
-                Err(e) => {
-                    log::warn!("读取现有配置失败：{}", e);
-                }
-            },
+            }
             Err(e) => {
                 log::warn!("读取现有配置失败：{}", e);
             }

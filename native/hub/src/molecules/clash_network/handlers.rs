@@ -102,6 +102,21 @@ pub struct IpcTrafficData {
     pub download: u64,
 }
 
+// Dart → Rust：开始监听内存数据
+#[derive(Deserialize, DartSignal)]
+pub struct StartMemoryStream;
+
+// Dart → Rust：停止监听内存数据
+#[derive(Deserialize, DartSignal)]
+pub struct StopMemoryStream;
+
+// Rust → Dart：内存数据
+#[derive(Serialize, RustSignal)]
+pub struct IpcMemoryData {
+    pub inuse: u64,
+    pub oslimit: u64,
+}
+
 // Rust → Dart：流操作结果
 #[derive(Serialize, RustSignal)]
 pub struct StreamResult {
@@ -452,6 +467,10 @@ static TRAFFIC_CONNECTION_ID: Lazy<Arc<RwLock<Option<u32>>>> =
 static LOG_CONNECTION_ID: Lazy<Arc<RwLock<Option<u32>>>> =
     Lazy::new(|| Arc::new(RwLock::new(None)));
 
+// 存储当前的内存监控连接 ID
+static MEMORY_CONNECTION_ID: Lazy<Arc<RwLock<Option<u32>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(None)));
+
 // 确保 WebSocket 客户端已初始化（统一入口）
 async fn ensure_ws_client_initialized() {
     let mut client_guard = WS_CLIENT.write().await;
@@ -649,6 +668,20 @@ pub fn init_rest_api_listeners() {
             StopLogStream::handle_stop().await;
         }
     });
+
+    tokio::spawn(async {
+        let receiver = StartMemoryStream::get_dart_signal_receiver();
+        while let Some(_dart_signal) = receiver.recv().await {
+            StartMemoryStream::handle_start().await;
+        }
+    });
+
+    tokio::spawn(async {
+        let receiver = StopMemoryStream::get_dart_signal_receiver();
+        while let Some(_dart_signal) = receiver.recv().await {
+            StopMemoryStream::handle_stop().await;
+        }
+    });
 }
 
 // WebSocket 流式数据处理器
@@ -791,6 +824,80 @@ impl StopLogStream {
         // 获取并清除连接 ID
         let connection_id = {
             let mut id_guard = LOG_CONNECTION_ID.write().await;
+            id_guard.take()
+        };
+
+        if let Some(id) = connection_id {
+            let client = WS_CLIENT.read().await;
+            if let Some(ws_client) = client.as_ref() {
+                ws_client.disconnect(id).await;
+            }
+        }
+
+        StreamResult {
+            is_successful: true,
+            error_message: None,
+        }
+        .send_signal_to_dart();
+    }
+}
+
+impl StartMemoryStream {
+    async fn handle_start() {
+        log::info!("开始监听内存数据");
+
+        // 确保 WebSocket 客户端已初始化
+        ensure_ws_client_initialized().await;
+
+        // 建立 WebSocket 连接
+        let client = WS_CLIENT.read().await;
+        if let Some(ws_client) = client.as_ref() {
+            match ws_client
+                .connect("/memory", |json_value| {
+                    // 解析内存数据
+                    if let Some(obj) = json_value.as_object() {
+                        let inuse = obj.get("inuse").and_then(|v| v.as_u64()).unwrap_or(0);
+                        let oslimit = obj.get("oslimit").and_then(|v| v.as_u64()).unwrap_or(0);
+
+                        // 发送到 Dart 层
+                        IpcMemoryData { inuse, oslimit }.send_signal_to_dart();
+                    }
+                })
+                .await
+            {
+                Ok(connection_id) => {
+                    log::info!("内存监控 WebSocket 连接已建立：{}", connection_id);
+
+                    // 保存连接 ID
+                    let mut id_guard = MEMORY_CONNECTION_ID.write().await;
+                    *id_guard = Some(connection_id);
+
+                    StreamResult {
+                        is_successful: true,
+                        error_message: None,
+                    }
+                    .send_signal_to_dart();
+                }
+                Err(e) => {
+                    log::error!("内存监控 WebSocket 连接失败：{}", e);
+                    StreamResult {
+                        is_successful: false,
+                        error_message: Some(e),
+                    }
+                    .send_signal_to_dart();
+                }
+            }
+        }
+    }
+}
+
+impl StopMemoryStream {
+    async fn handle_stop() {
+        log::info!("停止监听内存数据");
+
+        // 获取并清除连接 ID
+        let connection_id = {
+            let mut id_guard = MEMORY_CONNECTION_ID.write().await;
             id_guard.take()
         };
 

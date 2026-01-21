@@ -35,7 +35,10 @@ class _BehaviorSettingsPageState extends State<BehaviorSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final contentProvider = Provider.of<ContentProvider>(context, listen: false);
+    final contentProvider = Provider.of<ContentProvider>(
+      context,
+      listen: false,
+    );
     final trans = context.translate;
 
     return Consumer<BehaviorSettingsProvider>(
@@ -54,8 +57,9 @@ class _BehaviorSettingsPageState extends State<BehaviorSettingsPage> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
-                    onPressed: () =>
-                        contentProvider.switchView(ContentView.settingsOverview),
+                    onPressed: () => contentProvider.switchView(
+                      ContentView.settingsOverview,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(

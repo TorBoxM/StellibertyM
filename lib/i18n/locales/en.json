@@ -542,11 +542,11 @@
       "empty_to_disable": "Leave empty to disable"
     },
     "tun_mode": {
-      "title": "Virtual Network Card Configuration",
-      "subtitle": "Advanced virtual network card parameters",
+      "title": "Virtual Network Adapter Configuration",
+      "subtitle": "Advanced virtual network adapter parameters",
       
       "network_stack": "Network Stack",
-      "device_name": "Virtual Network Card Name",
+      "device_name": "Virtual Network Adapter Name",
       "mtu": "Maximum Transmission Unit (MTU)",
       "auto_route": "Auto Route",
       "auto_detect_interface": "Auto Detect Interface",
@@ -571,8 +571,8 @@
       },
       "system_integration": {
         "title": "System Integration",
-        "subtitle": "System Proxy, TUN Virtual Network Card",
-        "subtitle_windows": "System Proxy, TUN Virtual Network Card, UWP Loopback"
+        "subtitle": "System Proxy, TUN Virtual Network Adapter",
+        "subtitle_windows": "System Proxy, TUN Virtual Network Adapter, UWP Loopback"
       },
       "dns_config": {
         "title": "DNS Config",
@@ -648,7 +648,7 @@
     "restart_core": "Restart Core",
     "running": "Running",
     "stopped": "Stopped",
-    "tun_mode": "Virtual Network Card",
+    "tun_mode": "Virtual Network Adapter",
     "no_subscription": "No subscription configuration available",
     "please_add_subscription": "Please add a subscription first",
     "no_proxy_groups": "No proxy groups available",
@@ -671,10 +671,10 @@
     "switch_failed": "Switch failed: {error}",
     "need_admin_permission": "Administrator permission required",
     "understood": "Understood",
-    "tun_enabled": "Virtual network card enabled",
-    "tun_disabled": "Virtual network card disabled",
+    "tun_enabled": "Virtual network adapter enabled",
+    "tun_disabled": "Virtual network adapter disabled",
     "tun_restarting": ", restarting Clash...",
-    "tun_switch_failed": "Failed to switch virtual network card",
+    "tun_switch_failed": "Failed to switch virtual network adapter",
     "scroll_left": "Scroll left",
     "scroll_right": "Scroll right",
     "test_delay": "Test Delay",
@@ -686,7 +686,7 @@
     "located_to": "Located to: {name}",
     "proxy_control": "System Proxy",
     "restarting_core": "Restarting...",
-    "tun_mode_label": "Virtual Network Card Mode",
+    "tun_mode_label": "Virtual Network Adapter Mode",
     "tun_requires_admin": "Requires administrator or root privileges",
     "tun_requires_service": "Service installation required to enable TUN mode",
     "switched_to_mode": "Switched to {name}",
@@ -719,11 +719,11 @@
     "empty_no_proxy_groups": "No proxy groups"
   },
   "admin": {
-    "windows": "Virtual network card requires administrator privileges.\n\nPlease right-click the application icon, select \"Run as administrator\", and restart the application.",
-    "linux": "Virtual network card requires root privileges.\n\nNecessary permissions will be granted to the Clash core file.",
-    "macos": "Virtual network card requires administrator privileges.\n\nA system authorization dialog will appear, please enter the administrator password.",
-    "android": "Android platform does not support virtual network card.",
-    "generic": "Virtual network card requires administrator privileges."
+    "windows": "Virtual network adapter requires administrator privileges.\n\nPlease right-click the application icon, select \"Run as administrator\", and restart the application.",
+    "linux": "Virtual network adapter requires root privileges.\n\nNecessary permissions will be granted to the Clash core file.",
+    "macos": "Virtual network adapter requires administrator privileges.\n\nA system authorization dialog will appear, please enter the administrator password.",
+    "android": "Android platform does not support virtual network adapter.",
+    "generic": "Virtual network adapter requires administrator privileges."
   },
   "dns_settings": {
     "title": "DNS Settings",
@@ -796,7 +796,7 @@
     "show_window": "Show Window",
     "close_menu": "Close Menu",
     "toggle_proxy": "System Proxy",
-    "toggle_tun": "Virtual Network Card",
+    "toggle_tun": "Virtual Network Adapter",
     "outbound_mode": "Outbound Mode",
     "rule_mode": "Rule Mode",
     "global_mode": "Global Mode",
@@ -888,7 +888,7 @@
     "saving": "Saving..."
   },
   "tun_config": {
-    "title": "Virtual Network Card Configuration",
+    "title": "Virtual Network Adapter Configuration",
     "service_mode": "Service Mode",
     "service_installed": "Installed - TUN mode requires administrator privileges",
     "service_not_installed": "Not installed - Install to enable TUN mode",
@@ -932,11 +932,21 @@
     "description": "User-Agent identifier for downloading subscriptions"
   },
   "home": {
+    "running_status": "Running Status",
+    "running_status_uptime": "Uptime",
+    "running_status_connections": "Connections",
+    "running_status_status": "Status",
+    "running_status_platform": "Platform",
+    "running_status_connected": "Connected",
+    "running_status_disconnected": "Disconnected",
+    "core_status": "Core Status",
+    "core_status_running": "Running",
+    "core_status_stopped": "Stopped",
+    "core_status_restarting": "Restarting",
     "traffic_stats": "Network Speed",
     "upload": "Upload",
     "download": "Download",
-    "reset_traffic_title": "Reset Traffic Statistics",
-    "reset_traffic_confirm": "Are you sure you want to reset accumulated traffic statistics?",
+    "reset": "Reset",
     "proxy_address": "Proxy Address",
     "core_version": "Core Version",
     "clash_info": "Clash Info",
@@ -944,7 +954,6 @@
     "service_mode": "Service Mode",
     "admin_mode": "Admin Mode",
     "normal_mode": "Normal Mode",
-    "reset": "Reset",
     "update_core": "Update Core",
     "updating_core": "Updating...",
     "core_update_success": "Core updated successfully",
@@ -972,15 +981,15 @@
     "system_proxy_status": "System Proxy Status",
     "system_proxy_enabled": "System proxy enabled, traffic will be forwarded through proxy",
     "system_proxy_disabled": "System proxy disabled",
-    "tun_requires_windows": "Requires service installation or run as Administrator\n\nGo to \"Settings > System Integration > Virtual Network Card Configuration\" to install service",
-    "tun_requires_linux": "Requires service installation or run as root\n\nGo to \"Settings > System Integration > Virtual Network Card Configuration\" to install service",
-    "tun_requires_macos": "Requires service installation or run as Administrator\n\nGo to \"Settings > System Integration > Virtual Network Card Configuration\" to install service",
+    "tun_requires_windows": "Requires service installation or run as Administrator\n\nGo to \"Settings > System Integration > Virtual Network Adapter Configuration\" to install service",
+    "tun_requires_linux": "Requires service installation or run as root\n\nGo to \"Settings > System Integration > Virtual Network Adapter Configuration\" to install service",
+    "tun_requires_macos": "Requires service installation or run as Administrator\n\nGo to \"Settings > System Integration > Virtual Network Adapter Configuration\" to install service",
     "enable_tun": "Enable TUN",
     "disable_tun": "Disable TUN",
     "tun_stack_label": "Stack: ",
     "tun_device_label": "Device: ",
-    "tun_status_available": "Available",
-    "tun_status_unavailable": "Unavailable",
+    "tun_status_available": "Virtual network adapter available",
+    "tun_status_unavailable": "Virtual network adapter unavailable",
     "node_status": "Node Status",
     "current_node": "Current Node",
     "network_delay": "Network Delay",
@@ -1064,3 +1073,4 @@
     "security_warning_message": "Backup file contains all app configurations and subscription information. Please keep it secure and avoid sharing with others"
   }
 }
+

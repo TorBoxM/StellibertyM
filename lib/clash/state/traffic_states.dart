@@ -18,10 +18,6 @@ class TrafficState {
     required this.downloadHistory,
   });
 
-  // 简单辅助方法
-  int get totalTraffic => totalUpload + totalDownload;
-  bool get hasTraffic => totalUpload > 0 || totalDownload > 0;
-
   factory TrafficState.initial() {
     return TrafficState(
       totalUpload: 0,

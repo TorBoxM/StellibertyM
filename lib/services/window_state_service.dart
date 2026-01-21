@@ -12,8 +12,8 @@ import 'package:stelliberty/services/log_print_service.dart';
 // 窗口状态管理器，负责窗口尺寸、位置及最大化状态的持久化
 class WindowStateManager {
   // 默认窗口配置
-  static const _defaultSize = Size(900, 660);
-  static const _minSize = Size(900, 660);
+  static const _defaultSize = Size(1080, 720);
+  static const _minSize = Size(1080, 720);
 
   // 缓存窗口状态，避免重复读取
   static _WindowState? _cachedState;

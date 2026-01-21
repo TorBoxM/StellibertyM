@@ -25,11 +25,13 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="../../.github/screenshots/home-page.jpg" alt="主页"/></td>
-    <td width="50%"><img src="../../.github/screenshots/uwp-loopback-manager.jpg" alt="UWP 回环管理器"/></td>
+    <td width="33%"><img src="../../.github/screenshots/home-page-light.jpg" alt="主页（亮色）"/></td>
+    <td width="33%"><img src="../../.github/screenshots/home-page-dark.jpg" alt="主页（暗色）"/></td>
+    <td width="33%"><img src="../../.github/screenshots/uwp-loopback-manager.jpg" alt="UWP 回环管理器"/></td>
   </tr>
   <tr>
-    <td align="center"><b>主页</b></td>
+    <td align="center"><b>主页（亮色）</b></td>
+    <td align="center"><b>主页（暗色）</b></td>
     <td align="center"><b>UWP 回环管理器</b></td>
   </tr>
 </table>

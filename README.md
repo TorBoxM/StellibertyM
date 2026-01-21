@@ -24,11 +24,13 @@ Featuring the unique **MD3M** (Material Design 3 Modern) visual style
 
 <table>
   <tr>
-    <td width="50%"><img src=".github/screenshots/home-page.jpg" alt="Home Page"/></td>
-    <td width="50%"><img src=".github/screenshots/uwp-loopback-manager.jpg" alt="UWP Loopback Manager"/></td>
+    <td width="33%"><img src=".github/screenshots/home-page-light.jpg" alt="Home Page (Light)"/></td>
+    <td width="33%"><img src=".github/screenshots/home-page-dark.jpg" alt="Home Page (Dark)"/></td>
+    <td width="33%"><img src=".github/screenshots/uwp-loopback-manager.jpg" alt="UWP Loopback Manager"/></td>
   </tr>
   <tr>
-    <td align="center"><b>Home Page</b></td>
+    <td align="center"><b>Home Page (Light)</b></td>
+    <td align="center"><b>Home Page (Dark)</b></td>
     <td align="center"><b>UWP Loopback Manager</b></td>
   </tr>
 </table>

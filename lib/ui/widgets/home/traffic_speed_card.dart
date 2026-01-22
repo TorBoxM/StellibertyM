@@ -63,64 +63,85 @@ class TrafficSpeedCard extends StatelessWidget {
 
     return SizedBox(
       height: 176,
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildSpeedStat(
-                  context,
-                  label: trans.connection.upload_speed,
-                  value: _formatSpeed(traffic.upload.toDouble()),
-                  color: uploadColor,
-                  icon: Icons.arrow_upward_rounded,
-                ),
-                const SizedBox(width: 20),
-                _buildSpeedStat(
-                  context,
-                  label: trans.connection.download_speed,
-                  value: _formatSpeed(traffic.download.toDouble()),
-                  color: downloadColor,
-                  icon: Icons.arrow_downward_rounded,
-                ),
-              ],
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RepaintBoundary(
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 120,
-                    child: CustomPaint(
-                      size: const Size(double.infinity, 120),
-                      painter: _TrafficWavePainter(
-                        uploadHistory: trafficProvider.uploadHistory,
-                        downloadHistory: trafficProvider.downloadHistory,
-                        uploadColor: uploadColor,
-                        downloadColor: downloadColor,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = 24.0;
+          final availableWidth = constraints.maxWidth - gap;
+          final segmentWidth = availableWidth > 0 ? availableWidth / 2 : 0.0;
+
+          return Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: segmentWidth,
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: _buildSpeedStat(
+                          context,
+                          label: trans.connection.upload_speed,
+                          value: _formatSpeed(traffic.upload.toDouble()),
+                          color: uploadColor,
+                          icon: Icons.arrow_upward_rounded,
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: gap),
+                    SizedBox(
+                      width: segmentWidth,
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: _buildSpeedStat(
+                          context,
+                          label: trans.connection.download_speed,
+                          value: _formatSpeed(traffic.download.toDouble()),
+                          color: downloadColor,
+                          icon: Icons.arrow_downward_rounded,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _buildTrafficTotals(
-                  context,
-                  uploadTotal: totalUpload,
-                  downloadTotal: totalDownload,
-                  uploadColor: uploadColor,
-                  downloadColor: downloadColor,
+              ),
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RepaintBoundary(
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 120,
+                        child: CustomPaint(
+                          size: const Size(double.infinity, 120),
+                          painter: _TrafficWavePainter(
+                            uploadHistory: trafficProvider.uploadHistory,
+                            downloadHistory: trafficProvider.downloadHistory,
+                            uploadColor: uploadColor,
+                            downloadColor: downloadColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTrafficTotals(
+                      context,
+                      uploadTotal: totalUpload,
+                      downloadTotal: totalDownload,
+                      uploadColor: uploadColor,
+                      downloadColor: downloadColor,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -347,9 +368,14 @@ class _TrafficWavePainter extends CustomPainter {
       ..color = color.withValues(alpha: 0.12)
       ..style = PaintingStyle.fill;
 
+    const dotRadius = 6.0;
     final dotPaint = Paint()
       ..color = color.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
+    final dotBorderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
 
     final path = Path();
     final fillPath = Path();
@@ -382,13 +408,14 @@ class _TrafficWavePainter extends CustomPainter {
     }
 
     // 处理最后一个点
+    Offset? lastPoint;
     if (history.length > 1) {
       final lastX = rect.left + (history.length - 1) * stepX;
       final lastY =
           rect.bottom - (history.last / normalizedMax * rect.height * 0.8);
       path.lineTo(lastX, lastY);
       fillPath.lineTo(lastX, lastY);
-      canvas.drawCircle(Offset(lastX, lastY), 3.0, dotPaint);
+      lastPoint = Offset(lastX, lastY);
     }
 
     // 填充区域
@@ -398,6 +425,11 @@ class _TrafficWavePainter extends CustomPainter {
 
     // 绘制线条
     canvas.drawPath(path, linePaint);
+
+    if (lastPoint != null) {
+      canvas.drawCircle(lastPoint, dotRadius, dotPaint);
+      canvas.drawCircle(lastPoint, dotRadius, dotBorderPaint);
+    }
   }
 
   @override

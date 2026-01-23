@@ -119,9 +119,11 @@ pub async fn run_console_mode() -> Result<()> {
     // 注册 Ctrl+C 信号处理器
     let shutdown_tx_clone = shutdown_tx.clone();
     tokio::spawn(async move {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("无法注册 Ctrl+C 处理器");
+        if let Err(e) = tokio::signal::ctrl_c().await {
+            log::error!("注册 Ctrl+C 处理器失败: {e}");
+            let _ = shutdown_tx_clone.send(()).await;
+            return;
+        }
         log::info!("收到 Ctrl+C 信号");
         let _ = shutdown_tx_clone.send(()).await;
     });

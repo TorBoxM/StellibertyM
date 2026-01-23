@@ -28,7 +28,7 @@ dependencies:
   # Meta 注解支持
   meta: ^1.11.0
   # Google Fonts 支持
-  google_fonts: ^7.0.2
+  google_fonts: ^8.0.0
   # 强调色支持
   system_theme: ^3.1.2
   # 窗口效果

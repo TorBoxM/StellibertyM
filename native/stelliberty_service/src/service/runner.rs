@@ -255,8 +255,23 @@ pub async fn run_service() -> Result<()> {
     tokio::spawn(async move {
         use tokio::signal::unix::{SignalKind, signal};
 
-        let mut sigterm = signal(SignalKind::terminate()).expect("无法注册 SIGTERM");
-        let mut sigint = signal(SignalKind::interrupt()).expect("无法注册 SIGINT");
+        let mut sigterm = match signal(SignalKind::terminate()) {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("注册 SIGTERM 失败: {e}");
+                let _ = shutdown_tx_clone.send(()).await;
+                return;
+            }
+        };
+
+        let mut sigint = match signal(SignalKind::interrupt()) {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("注册 SIGINT 失败: {e}");
+                let _ = shutdown_tx_clone.send(()).await;
+                return;
+            }
+        };
 
         tokio::select! {
             _ = sigterm.recv() => log::info!("收到 SIGTERM 信号"),

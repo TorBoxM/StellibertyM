@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:stelliberty/clash/network/api_client.dart';
 import 'package:stelliberty/clash/config/config_injector.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
+import 'package:stelliberty/clash/model/log_message_model.dart';
+import 'package:stelliberty/clash/services/core_log_service.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
@@ -262,6 +264,9 @@ class ConfigManager {
         final success = await _apiClient.setLogLevel(level);
         if (success) {
           Logger.info('日志等级（支持重载）：$level');
+          // 同步日志监控状态
+          final logLevel = ClashLogLevelExtension.fromString(level);
+          await ClashLogService.instance.updateLogLevel(logLevel);
         }
         return success;
       }

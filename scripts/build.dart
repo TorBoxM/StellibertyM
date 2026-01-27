@@ -212,11 +212,12 @@ Future<void> runFlutterBuild({
 }
 
 // 打包为 ZIP（使用 archive 包）
+// 便携版会在 data 目录创建 .portable 标识文件
 Future<void> packZip({
   required String sourceDir,
   required String outputPath,
 }) async {
-  log('▶️  正在打包为 ZIP...');
+  log('▶️  正在打包为 ZIP（便携版）...');
 
   // 确保输出目录存在
   final outputDir = Directory(p.dirname(outputPath));
@@ -255,6 +256,16 @@ Future<void> packZip({
       log('📦 添加: $relativePath');
     }
   }
+
+  // 添加便携版标识文件到 data 目录
+  const portableMarkerPath = 'data/.portable';
+  final portableMarkerFile = ArchiveFile(
+    portableMarkerPath,
+    0,
+    [], // 空文件
+  );
+  archive.addFile(portableMarkerFile);
+  log('📦 添加: $portableMarkerPath（便携版标识）');
 
   log('📦 正在压缩（最大压缩率）...');
 

@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 import 'package:stelliberty/services/log_print_service.dart';
+import 'package:stelliberty/services/path_service.dart';
 
 // 应用更新信息
 class AppUpdateInfo {
@@ -29,6 +31,24 @@ class AppUpdateService {
   static final AppUpdateService instance = AppUpdateService._();
 
   static const String _githubRepo = 'Kindness-Kismet/Stelliberty';
+  static const String _portableMarkerFileName = '.portable';
+
+  // 检测是否为便携版（检查 data 目录下是否存在 .portable 标识文件）
+  bool _checkIsPortable() {
+    // 移动端不支持便携版
+    if (Platform.isAndroid || Platform.isIOS) {
+      return false;
+    }
+
+    try {
+      final portableMarkerPath =
+          '${PathService.instance.appDataPath}/$_portableMarkerFileName';
+      return File(portableMarkerPath).existsSync();
+    } catch (e) {
+      Logger.warning('检测便携版标识失败: $e');
+      return false;
+    }
+  }
 
   // 检查更新
   Future<AppUpdateInfo?> checkForUpdate() async {
@@ -37,10 +57,15 @@ class AppUpdateService {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
+      // 检测是否为便携版
+      final isPortable = _checkIsPortable();
+      Logger.debug('便携版检测: $isPortable');
+
       // 发送请求到 Rust 后端
       CheckAppUpdateRequest(
         currentVersion: currentVersion,
         githubRepo: _githubRepo,
+        isPortable: isPortable,
       ).sendSignalToRust();
 
       // 等待 Rust 响应

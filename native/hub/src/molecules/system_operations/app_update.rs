@@ -11,6 +11,7 @@ use std::cmp::Ordering;
 pub struct CheckAppUpdateRequest {
     pub current_version: String,
     pub github_repo: String,
+    pub is_portable: bool,
 }
 
 // Rust → Dart：应用更新检查响应
@@ -29,13 +30,19 @@ impl CheckAppUpdateRequest {
     pub fn handle(&self) {
         let current_version = self.current_version.clone();
         let github_repo = self.github_repo.clone();
+        let is_portable = self.is_portable;
 
         // 使用 tokio::spawn 异步处理更新检查
         // 任务会独立运行，完成后自动清理
         tokio::spawn(async move {
-            log::info!("检查更新: {} (当前版本: {})", github_repo, current_version);
+            log::info!(
+                "检查更新: {} (当前版本: {}, 便携版: {})",
+                github_repo,
+                current_version,
+                is_portable
+            );
 
-            let result = check_github_update(&current_version, &github_repo).await;
+            let result = check_github_update(&current_version, &github_repo, is_portable).await;
 
             match result {
                 Ok(update_result) => {
@@ -93,6 +100,7 @@ struct PlatformMatchRules {
     platform_keywords: &'static [&'static str],
     arch_keywords: &'static [&'static str],
     required_keywords: &'static [&'static str],
+    excluded_keywords: &'static [&'static str],
 }
 
 // HTTP 客户端单例 - 避免重复创建连接导致的内存泄漏
@@ -113,9 +121,10 @@ fn get_http_client() -> Result<&'static reqwest::Client, String> {
 pub async fn check_github_update(
     current_version: &str,
     github_repo: &str,
+    is_portable: bool,
 ) -> Result<UpdateCheckResult, String> {
     log::info!("开始检查 GitHub 更新: {}", github_repo);
-    log::info!("当前版本: {}", current_version);
+    log::info!("当前版本: {}, 便携版: {}", current_version, is_portable);
 
     // 构建 GitHub API URL
     let api_url = format!(
@@ -155,7 +164,7 @@ pub async fn check_github_update(
     let arch = get_architecture();
     log::info!("当前平台: {}, 架构: {}", platform, arch);
 
-    let download_url = find_matching_asset(&release.assets, &platform, &arch);
+    let download_url = find_matching_asset(&release.assets, &platform, &arch, is_portable);
     match &download_url {
         Some(_) => log::info!("找到匹配的下载链接"),
         None => log::warn!("未找到匹配当前平台的安装包"),
@@ -187,8 +196,13 @@ fn compare_versions(v1: &str, v2: &str) -> Ordering {
 }
 
 // 查找匹配的安装包
-fn find_matching_asset(assets: &[GitHubAsset], platform: &str, arch: &str) -> Option<String> {
-    let rules = get_platform_match_rules(platform, arch)?;
+fn find_matching_asset(
+    assets: &[GitHubAsset],
+    platform: &str,
+    arch: &str,
+    is_portable: bool,
+) -> Option<String> {
+    let rules = get_platform_match_rules(platform, arch, is_portable)?;
 
     assets.iter().find_map(|asset| {
         let name_lower = asset.name.to_lowercase();
@@ -205,7 +219,12 @@ fn find_matching_asset(assets: &[GitHubAsset], platform: &str, arch: &str) -> Op
                 || rules
                     .required_keywords
                     .iter()
-                    .all(|k| name_lower.contains(k)));
+                    .all(|k| name_lower.contains(k)))
+            && (rules.excluded_keywords.is_empty()
+                || rules
+                    .excluded_keywords
+                    .iter()
+                    .all(|k| !name_lower.contains(k)));
 
         if matches {
             log::info!("找到匹配的安装包: {}", asset.name);
@@ -217,7 +236,33 @@ fn find_matching_asset(assets: &[GitHubAsset], platform: &str, arch: &str) -> Op
 }
 
 // 获取平台匹配规则
-fn get_platform_match_rules(platform: &str, arch: &str) -> Option<PlatformMatchRules> {
+// is_portable: 便携版匹配 ZIP，安装版匹配平台特定安装包
+fn get_platform_match_rules(
+    platform: &str,
+    arch: &str,
+    is_portable: bool,
+) -> Option<PlatformMatchRules> {
+    // 便携版：所有桌面平台都匹配 ZIP
+    if is_portable && (platform == "windows" || platform == "linux" || platform == "macos") {
+        return Some(PlatformMatchRules {
+            file_extension: ".zip",
+            platform_keywords: match platform {
+                "windows" => &["win", "windows"],
+                "linux" => &["linux"],
+                "macos" => &["macos", "darwin", "osx"],
+                _ => return None,
+            },
+            arch_keywords: if arch == "arm64" {
+                &["arm64", "aarch64"]
+            } else {
+                &["x64", "amd64", "x86_64"]
+            },
+            required_keywords: &[],
+            excluded_keywords: &["debug"],
+        });
+    }
+
+    // 安装版：匹配平台特定安装包
     match platform {
         "windows" => Some(PlatformMatchRules {
             file_extension: ".exe",
@@ -228,6 +273,7 @@ fn get_platform_match_rules(platform: &str, arch: &str) -> Option<PlatformMatchR
                 &["x64", "amd64", "x86_64"]
             },
             required_keywords: &["setup"],
+            excluded_keywords: &["debug"],
         }),
 
         "linux" => Some(PlatformMatchRules {
@@ -239,6 +285,7 @@ fn get_platform_match_rules(platform: &str, arch: &str) -> Option<PlatformMatchR
                 &["x64", "amd64", "x86_64"]
             },
             required_keywords: &[],
+            excluded_keywords: &["debug"],
         }),
 
         "macos" => Some(PlatformMatchRules {
@@ -250,6 +297,7 @@ fn get_platform_match_rules(platform: &str, arch: &str) -> Option<PlatformMatchR
                 &["x64", "intel", "amd64"]
             },
             required_keywords: &[],
+            excluded_keywords: &["debug"],
         }),
 
         "android" => Some(PlatformMatchRules {
@@ -257,6 +305,7 @@ fn get_platform_match_rules(platform: &str, arch: &str) -> Option<PlatformMatchR
             platform_keywords: &["android"],
             arch_keywords: &[],
             required_keywords: &[],
+            excluded_keywords: &["debug"],
         }),
 
         _ => None,

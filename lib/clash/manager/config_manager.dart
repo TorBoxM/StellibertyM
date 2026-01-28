@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:stelliberty/clash/network/api_client.dart';
+import 'package:stelliberty/clash/client/clash_core_client.dart';
 import 'package:stelliberty/clash/config/config_injector.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/clash/model/log_message_model.dart';
@@ -11,14 +11,14 @@ import 'package:stelliberty/src/bindings/signals/signals.dart';
 // Clash 配置管理器
 // 负责配置的读取、更新、重载（纯业务逻辑，无状态缓存）
 class ConfigManager {
-  final ClashApiClient _apiClient;
+  final ClashCoreClient _coreClient;
   final bool Function() _isCoreRunning;
 
   ConfigManager({
-    required ClashApiClient apiClient,
+    required ClashCoreClient coreClient,
     Function()? notifyListeners,
     required bool Function() isCoreRunning,
-  }) : _apiClient = apiClient,
+  }) : _coreClient = coreClient,
        _isCoreRunning = isCoreRunning;
 
   // 获取配置
@@ -26,7 +26,7 @@ class ConfigManager {
     if (!_isCoreRunning()) {
       throw Exception('Clash 未在运行');
     }
-    return await _apiClient.getConfig();
+    return await _coreClient.getConfig();
   }
 
   // 更新配置
@@ -34,7 +34,7 @@ class ConfigManager {
     if (!_isCoreRunning()) {
       throw Exception('Clash 未在运行');
     }
-    return await _apiClient.updateConfig(config);
+    return await _coreClient.updateConfig(config);
   }
 
   // 重载配置文件
@@ -67,7 +67,7 @@ class ConfigManager {
         return false;
       }
 
-      final success = await _apiClient.reloadConfig(
+      final success = await _coreClient.reloadConfig(
         configPath: runtimeConfigPath,
         force: true,
       );
@@ -131,7 +131,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setAllowLan(enabled);
+        final success = await _coreClient.setAllowLan(enabled);
         if (success) {
           Logger.info('局域网代理（支持重载）：${enabled ? "启用" : "禁用"}');
         }
@@ -153,7 +153,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setIpv6(enabled);
+        final success = await _coreClient.setIpv6(enabled);
         if (success) {
           Logger.info('IPv6（支持重载）：${enabled ? "启用" : "禁用"}');
         }
@@ -175,7 +175,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTcpConcurrent(enabled);
+        final success = await _coreClient.setTcpConcurrent(enabled);
         if (success) {
           Logger.info('TCP 并发配置已更新：${enabled ? "启用" : "禁用"}');
         }
@@ -197,7 +197,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setUnifiedDelay(enabled);
+        final success = await _coreClient.setUnifiedDelay(enabled);
         if (success) {
           Logger.info('统一延迟配置已更新：${enabled ? "启用（去除握手延迟）" : "禁用（包含握手延迟）"}');
         }
@@ -219,7 +219,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setGeodataLoader(mode);
+        final success = await _coreClient.setGeodataLoader(mode);
         if (success) {
           Logger.info('GEO 数据加载模式（支持重载）：$mode');
         }
@@ -241,7 +241,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setFindProcessMode(mode);
+        final success = await _coreClient.setFindProcessMode(mode);
         if (success) {
           Logger.info('查找进程模式（支持重载）：$mode');
         }
@@ -263,7 +263,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setLogLevel(level);
+        final success = await _coreClient.setLogLevel(level);
         if (success) {
           Logger.info('日志等级（支持重载）：$level');
           // 同步日志监控状态
@@ -292,7 +292,7 @@ class ConfigManager {
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
         final address = enabled ? defaultAddress : '';
-        final success = await _apiClient.setExternalController(address);
+        final success = await _coreClient.setExternalController(address);
         if (success) {
           Logger.info('外部控制器（支持重载）：${enabled ? "启用" : "禁用"} - $address');
         }
@@ -351,7 +351,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setMixedPort(port);
+        final success = await _coreClient.setMixedPort(port);
         if (success) {
           Logger.info('混合端口（支持重载）：$port');
         }
@@ -379,7 +379,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setSocksPort(port ?? 0);
+        final success = await _coreClient.setSocksPort(port ?? 0);
         if (success) {
           Logger.info('SOCKS 端口（支持重载）：${port ?? "未设置"}');
         }
@@ -407,7 +407,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setHttpPort(port ?? 0);
+        final success = await _coreClient.setHttpPort(port ?? 0);
         if (success) {
           Logger.info('HTTP 端口（支持重载）：${port ?? "未设置"}');
         }
@@ -430,7 +430,7 @@ class ConfigManager {
       // 如果核心正在运行，异步调用 API（不阻塞返回）
       if (_isCoreRunning()) {
         unawaited(
-          _apiClient
+          _coreClient
               .setTunEnable(enabled)
               .then((success) {
                 if (success) {
@@ -458,7 +458,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTunStack(stack);
+        final success = await _coreClient.setTunStack(stack);
         if (success) {
           Logger.info('虚拟网卡网络栈（支持重载）：$stack');
         }
@@ -480,7 +480,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTunDevice(device);
+        final success = await _coreClient.setTunDevice(device);
         if (success) {
           Logger.info('虚拟网卡设备名称（支持重载）：$device');
         }
@@ -503,7 +503,7 @@ class ConfigManager {
       // 如果核心正在运行，异步调用 API（不阻塞返回）
       if (_isCoreRunning()) {
         unawaited(
-          _apiClient
+          _coreClient
               .setTunAutoRoute(enabled)
               .then((success) {
                 if (success) {
@@ -531,7 +531,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTunAutoRedirect(enabled);
+        final success = await _coreClient.setTunAutoRedirect(enabled);
         if (success) {
           Logger.info('虚拟网卡自动 TCP 重定向（支持重载）：${enabled ? "启用" : "禁用"}');
         }
@@ -554,7 +554,7 @@ class ConfigManager {
       // 如果核心正在运行，异步调用 API（不阻塞返回）
       if (_isCoreRunning()) {
         unawaited(
-          _apiClient
+          _coreClient
               .setTunAutoDetectInterface(enabled)
               .then((success) {
                 if (success) {
@@ -582,7 +582,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTunDnsHijack(dnsHijack);
+        final success = await _coreClient.setTunDnsHijack(dnsHijack);
         if (success) {
           Logger.info('虚拟网卡 DNS 劫持列表（支持重载）：$dnsHijack');
         }
@@ -605,7 +605,7 @@ class ConfigManager {
       // 如果核心正在运行，异步调用 API（不阻塞返回）
       if (_isCoreRunning()) {
         unawaited(
-          _apiClient
+          _coreClient
               .setTunStrictRoute(enabled)
               .then((success) {
                 if (success) {
@@ -633,7 +633,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTunRouteExcludeAddress(addresses);
+        final success = await _coreClient.setTunRouteExcludeAddress(addresses);
         if (success) {
           Logger.info('虚拟网卡排除网段列表（支持重载）：$addresses');
         }
@@ -655,7 +655,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTunDisableIcmpForwarding(disabled);
+        final success = await _coreClient.setTunDisableIcmpForwarding(disabled);
         if (success) {
           Logger.info('虚拟网卡 ICMP 转发（支持重载）：${disabled ? "禁用" : "启用"}');
         }
@@ -684,7 +684,7 @@ class ConfigManager {
 
       // 如果核心正在运行，调用 API
       if (_isCoreRunning()) {
-        final success = await _apiClient.setTunMtu(mtu);
+        final success = await _coreClient.setTunMtu(mtu);
         if (success) {
           Logger.info('虚拟网卡 MTU 值（支持重载）：$mtu');
         }
@@ -706,7 +706,7 @@ class ConfigManager {
 
       if (_isCoreRunning()) {
         // 核心运行时，调用 API 设置
-        final success = await _apiClient.setMode(outboundMode);
+        final success = await _coreClient.setMode(outboundMode);
         if (success) {
           Logger.info('出站模式已切换：$outboundMode');
         }

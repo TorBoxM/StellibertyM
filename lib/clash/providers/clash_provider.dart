@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:stelliberty/clash/manager/clash_manager.dart';
+import 'package:stelliberty/clash/client/clash_core_client.dart';
 import 'package:stelliberty/clash/state/core_states.dart';
 import 'package:stelliberty/clash/state/config_states.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';
@@ -8,6 +10,7 @@ import 'package:stelliberty/clash/model/traffic_data_model.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/services/log_print_service.dart';
+import 'package:stelliberty/clash/services/vpn_service.dart';
 import 'package:stelliberty/clash/services/config_watcher.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart' as signals;
 
@@ -44,6 +47,62 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     _isSystemProxyEnabled = enabled;
     Logger.debug('系统代理状态更新：$enabled');
     notifyListeners();
+  }
+
+  // Android VPN 状态（仅 Android 使用）
+  bool _isAndroidVpnEnabled = false;
+  bool get isAndroidVpnEnabled => _isAndroidVpnEnabled;
+
+  DateTime? _androidVpnStartedAt;
+  DateTime? get androidVpnStartedAt => _androidVpnStartedAt;
+
+  // Android 核心状态（仅 Android 使用）
+  bool _isAndroidCoreRunning = false;
+  bool get isAndroidCoreRunning => _isAndroidCoreRunning;
+
+  DateTime? _androidCoreStartedAt;
+  DateTime? get androidCoreStartedAt => _androidCoreStartedAt;
+
+  void _updateAndroidVpnState(bool enabled) {
+    if (_isAndroidVpnEnabled == enabled) {
+      if (enabled && _androidVpnStartedAt == null) {
+        _androidVpnStartedAt = DateTime.now();
+        Logger.debug(
+          'Android VPN 启动时间补齐：${_androidVpnStartedAt!.toIso8601String()}',
+        );
+        notifyListeners();
+      }
+      return;
+    }
+
+    _isAndroidVpnEnabled = enabled;
+    if (enabled) {
+      _androidVpnStartedAt = DateTime.now();
+    } else {
+      _androidVpnStartedAt = null;
+    }
+    Logger.debug('Android VPN 状态更新：$enabled');
+    notifyListeners();
+  }
+
+  void _updateAndroidCoreState({
+    required bool isRunning,
+    required String version,
+    required DateTime? startedAt,
+  }) {
+    final resolvedStartedAt = isRunning ? startedAt : null;
+    final shouldNotify =
+        _isAndroidCoreRunning != isRunning ||
+        _androidCoreStartedAt != resolvedStartedAt ||
+        _coreVersion != version;
+
+    _isAndroidCoreRunning = isRunning;
+    _androidCoreStartedAt = resolvedStartedAt;
+    _coreVersion = version;
+
+    if (shouldNotify) {
+      notifyListeners();
+    }
   }
 
   // 配置状态
@@ -93,8 +152,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   int? get socksPort => _configState.socksPort;
   int? get httpPort => _configState.httpPort;
 
-  // 运行状态（基于 CoreState）
-  bool get isCoreRunning => _coreState.isRunning;
+  // 运行状态（基于 CoreState，Android 使用独立状态）
+  bool get isCoreRunning =>
+      Platform.isAndroid ? _isAndroidCoreRunning : _coreState.isRunning;
   bool get isCoreRestarting => _coreState == CoreState.restarting;
   bool get isCoreStarting => _coreState == CoreState.starting;
   bool get isCoreStopping => _coreState == CoreState.stopping;
@@ -274,6 +334,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     // 初始同步配置状态（从 ConfigManager 拉取）
     _syncConfigFromManager();
 
+    // 注入核心运行状态回调（统一两端状态来源）
+    _clashManager.setCoreRunningProvider(() => isCoreRunning);
+
     // 设置状态变化回调（从各个 Manager 同步状态到 Provider）
     _clashManager.setStateChangeCallbacks(
       onCoreStateChanged: _updateCoreState,
@@ -296,7 +359,134 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // 初始化
   Future<void> initialize(String? configPath) async {
+    if (Platform.isAndroid) {
+      await refreshAndroidVpnState();
+      await _initializeAndroidCore(configPath);
+    }
     Logger.info('ClashProvider 初始化完成');
+  }
+
+  // 刷新 Android VPN 状态
+  Future<void> refreshAndroidVpnState() async {
+    if (!Platform.isAndroid) return;
+
+    try {
+      final enabled = await VpnService.getVpnState();
+      _updateAndroidVpnState(enabled);
+    } catch (e) {
+      Logger.error('获取 Android VPN 状态失败：$e');
+    }
+  }
+
+  Future<void> _initializeAndroidCore(String? configPath) async {
+    try {
+      final result = await VpnService.initCore(configPath: configPath);
+      final isSuccessful = result?['isSuccessful'] == true;
+
+      final rawVersion = result?['version'];
+      final version = rawVersion is String && rawVersion.trim().isNotEmpty
+          ? rawVersion.trim()
+          : 'Unknown';
+
+      final rawStartedAtMs = result?['startedAtMs'];
+      final startedAt = rawStartedAtMs is int
+          ? DateTime.fromMillisecondsSinceEpoch(rawStartedAtMs)
+          : null;
+
+      _updateAndroidCoreState(
+        isRunning: isSuccessful,
+        version: version,
+        startedAt: startedAt,
+      );
+
+      // 设置 JniCoreClient 的配置路径（用于 getConfig 等方法）
+      if (isSuccessful && configPath != null) {
+        ClashCoreClient.setConfigPath(configPath);
+        // 从核心加载代理列表
+        await loadProxies();
+      }
+
+      Logger.info(
+        'Android 核心初始化结果：success=$isSuccessful version=$version startedAt=${startedAt?.toIso8601String() ?? "null"}',
+      );
+    } catch (e) {
+      Logger.error('初始化 Android 核心失败：$e');
+      _updateAndroidCoreState(
+        isRunning: false,
+        version: 'Unknown',
+        startedAt: null,
+      );
+    }
+  }
+
+  // 启动 Android VPN（可选传入订阅配置路径，空则使用内置最小配置）
+  Future<bool> startAndroidVpn({required String? configPath}) async {
+    if (!Platform.isAndroid) return false;
+
+    try {
+      Logger.info('启动 Android VPN');
+      final requested = await VpnService.startVpn(configPath: configPath);
+      if (!requested) {
+        _updateAndroidVpnState(false);
+        return false;
+      }
+
+      final isRunning = await _waitForAndroidVpnState(
+        expectedEnabled: true,
+        timeout: const Duration(seconds: 10),
+      );
+      _updateAndroidVpnState(isRunning);
+      if (isRunning) {
+        await _initializeAndroidCore(configPath);
+        // 启动后从核心加载代理列表
+        Logger.info('Android VPN 已启动，从核心加载代理列表');
+        await loadProxies();
+      }
+      return isRunning;
+    } catch (e) {
+      Logger.error('启动 Android VPN 失败：$e');
+      return false;
+    }
+  }
+
+  // 停止 Android VPN
+  Future<bool> stopAndroidVpn() async {
+    if (!Platform.isAndroid) return false;
+
+    try {
+      Logger.info('停止 Android VPN');
+      final requested = await VpnService.stopVpn();
+      if (!requested) {
+        return false;
+      }
+
+      final isStopped = await _waitForAndroidVpnState(
+        expectedEnabled: false,
+        timeout: const Duration(seconds: 10),
+      );
+      _updateAndroidVpnState(!isStopped);
+      return isStopped;
+    } catch (e) {
+      Logger.error('停止 Android VPN 失败：$e');
+      return false;
+    }
+  }
+
+  Future<bool> _waitForAndroidVpnState({
+    required bool expectedEnabled,
+    required Duration timeout,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+
+    while (stopwatch.elapsed < timeout) {
+      final enabled = await VpnService.getVpnState();
+      if (enabled == expectedEnabled) {
+        return true;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+
+    return false;
   }
 
   // 应用生命周期状态变化时触发
@@ -306,6 +496,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     // 当应用从后台恢复时，刷新代理状态以同步外部控制器的节点切换
     if (state == AppLifecycleState.resumed) {
+      if (Platform.isAndroid) {
+        unawaited(refreshAndroidVpnState());
+      }
       Logger.debug('应用恢复，刷新代理数据（全局）');
       if (isCoreRunning) {
         // 刷新配置状态

@@ -1,5 +1,5 @@
 import 'package:stelliberty/storage/clash_preferences.dart';
-import 'package:stelliberty/clash/network/ipc_request_helper.dart';
+import 'package:stelliberty/clash/client/ipc_request_helper.dart';
 import 'package:stelliberty/clash/services/process_service.dart';
 import 'package:stelliberty/clash/config/config_injector.dart';
 import 'package:stelliberty/services/path_service.dart';

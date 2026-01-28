@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:stelliberty/ui/widgets/home/outbound_mode_card.dart';
 import 'package:stelliberty/ui/widgets/home/proxy_switch_card.dart';
@@ -32,6 +33,17 @@ class _HomePageContentState extends State<HomePageContent> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isMobilePlatform =
+            !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.android ||
+                defaultTargetPlatform == TargetPlatform.iOS);
+        final shouldShowTunCard = !isMobilePlatform;
+
+        final isCompactLayout = constraints.maxWidth < 600;
+        final horizontalPadding = isCompactLayout ? 16.0 : 25.0;
+        final sectionSpacing = isCompactLayout ? 16.0 : 24.0;
+        final cardSpacing = isCompactLayout ? 16.0 : 25.0;
+
         return Padding(
           padding: SpacingConstants.scrollbarPadding,
           child: SingleChildScrollView(
@@ -45,10 +57,12 @@ class _HomePageContentState extends State<HomePageContent> {
               ),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
-                  25.0,
+                  horizontalPadding,
                   // 抵消外层滚动条上边距，避免内容刚好溢出触发滚动抖动
-                  24.0 - SpacingConstants.scrollbarPaddingTop,
-                  25.0 - SpacingConstants.scrollbarRightCompensation,
+                  (isCompactLayout ? 16.0 : 24.0) -
+                      SpacingConstants.scrollbarPaddingTop,
+                  horizontalPadding -
+                      SpacingConstants.scrollbarRightCompensation,
                   2.0, // 距底2px
                 ),
                 child: Column(
@@ -56,29 +70,46 @@ class _HomePageContentState extends State<HomePageContent> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     // 第一行：代理控制卡片 + TUN 模式卡片
-                    IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: ProxySwitchCard()),
-                          const SizedBox(width: 25),
-                          Expanded(child: TunModeCard()),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    if (isCompactLayout) ...[
+                      ProxySwitchCard(),
+                      if (shouldShowTunCard) ...[
+                        SizedBox(height: sectionSpacing),
+                        TunModeCard(),
+                      ],
+                    ] else ...[
+                      if (shouldShowTunCard)
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(child: ProxySwitchCard()),
+                              SizedBox(width: cardSpacing),
+                              Expanded(child: TunModeCard()),
+                            ],
+                          ),
+                        )
+                      else
+                        ProxySwitchCard(),
+                    ],
+                    SizedBox(height: sectionSpacing),
                     // 第二行：运行状态卡片 + 出站模式卡片
-                    IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: const [
-                          Expanded(child: RunningStatusCard()),
-                          SizedBox(width: 25),
-                          Expanded(child: OutboundModeCard()),
-                        ],
+                    if (isCompactLayout) ...[
+                      const RunningStatusCard(),
+                      SizedBox(height: sectionSpacing),
+                      const OutboundModeCard(),
+                    ] else ...[
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Expanded(child: RunningStatusCard()),
+                            SizedBox(width: cardSpacing),
+                            const Expanded(child: OutboundModeCard()),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
+                    ],
+                    SizedBox(height: sectionSpacing),
                     // 第三行：网速显示卡片
                     _buildTrafficSection(context),
                   ],

@@ -1,18 +1,23 @@
 // JavaScript 覆写执行器：负责在 QuickJS 中执行覆写脚本并返回结果。
 // 入口约定： main(config) 返回可 JSON 序列化的配置对象。
 
-use rquickjs::{Context, Runtime};
 use serde_json::Value as JsonValue;
 use serde_yaml_ng::Value as YamlValue;
 
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
+use rquickjs::{Context, Runtime};
+
 // JavaScript 执行器
 pub struct JsExecutor {
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     runtime: Runtime,
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     context: Context,
 }
 
 impl JsExecutor {
     // 创建 JavaScript 执行器并初始化 QuickJS 上下文。
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     pub fn new() -> Result<Self, String> {
         let runtime = Runtime::new().map_err(|e| format!("初始化 JavaScript 运行时失败：{}", e))?;
         let context =
@@ -21,8 +26,14 @@ impl JsExecutor {
         Ok(Self { runtime, context })
     }
 
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+    pub fn new() -> Result<Self, String> {
+        Ok(Self {})
+    }
+
     // 应用 JavaScript 覆写：YAML 转 JSON，执行 main(config)，再转换为 YAML。
     // 返回覆写后的配置内容。
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     pub fn apply(&mut self, base_content: &str, js_code: &str) -> Result<String, String> {
         log::info!("JavaScript 覆写开始");
         log::info!("基础配置长度：{}字节", base_content.len());
@@ -144,6 +155,12 @@ impl JsExecutor {
         Ok(final_yaml)
     }
 
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+    pub fn apply(&mut self, _base_content: &str, _js_code: &str) -> Result<String, String> {
+        Err("当前平台不支持 JavaScript 覆写".to_string())
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     fn execute_js(&self, full_js_code: &str) -> Result<String, String> {
         // 保持运行时生命周期，避免上下文提前释放
         let _runtime = &self.runtime;

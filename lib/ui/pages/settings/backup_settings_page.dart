@@ -118,7 +118,7 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
 
     try {
       // 选择保存位置
-      final result = await FilePicker.saveFile(
+      final result = await FilePicker.platform.saveFile(
         dialogTitle: trans.backup.create_backup,
         fileName: BackupService.instance.generateBackupFileName(),
         type: FileType.custom,
@@ -160,7 +160,7 @@ class _BackupSettingsPageState extends State<BackupSettingsPage> {
     final trans = context.translate;
 
     // 选择备份文件
-    final result = await FilePicker.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       dialogTitle: trans.backup.select_backup_file,
       type: FileType.custom,
       allowedExtensions: ['stelliberty'],

@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
+import 'package:stelliberty/clash/providers/subscription_provider.dart';
 import 'package:stelliberty/ui/widgets/home/base_card.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 
@@ -29,6 +32,84 @@ class ProxySwitchCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trans = context.translate;
+
+    if (Platform.isAndroid) {
+      return Consumer2<ClashProvider, SubscriptionProvider>(
+        builder: (context, clashProvider, subscriptionProvider, child) {
+          final isVpnEnabled = clashProvider.isAndroidVpnEnabled;
+          final configPath = subscriptionProvider.getSubscriptionConfigPath();
+
+          return BaseCard(
+            icon: Icons.vpn_lock,
+            title: trans.home.vpn_mode_switch,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isVpnEnabled ? Colors.green : Colors.grey,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    isVpnEnabled
+                        ? trans.home.vpn_enabled
+                        : trans.home.vpn_disabled,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: isVpnEnabled ? Colors.green : Colors.grey,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    if (isVpnEnabled) {
+                      await clashProvider.stopAndroidVpn();
+                    } else {
+                      await clashProvider.startAndroidVpn(
+                        configPath: configPath,
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isVpnEnabled
+                        ? Colors.red.shade400
+                        : _getStartButtonColor(context),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                  child: Text(
+                    isVpnEnabled
+                        ? trans.home.disable_vpn
+                        : trans.home.enable_vpn,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
 
     return Selector<ClashProvider, ({bool isCoreRunning, bool isProxyEnabled})>(
       selector: (_, provider) => (

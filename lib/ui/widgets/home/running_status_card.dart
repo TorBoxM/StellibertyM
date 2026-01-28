@@ -43,15 +43,32 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
   Widget build(BuildContext context) {
     final trans = context.translate;
     final colorScheme = Theme.of(context).colorScheme;
-    final isCoreRunning = context.select<ClashProvider, bool>(
+    final isMobilePlatform = Platform.isAndroid || Platform.isIOS;
+    final desktopCoreRunning = context.select<ClashProvider, bool>(
       (provider) => provider.isCoreRunning,
     );
-    final isCoreRestarting = context.select<ClashProvider, bool>(
-      (provider) => provider.isCoreRestarting,
-    );
-    final coreStartedAt = context.select<ClashProvider, DateTime?>(
-      (provider) => provider.coreStartedAt,
-    );
+    final mobileCoreRunning = Platform.isAndroid
+        ? context.select<ClashProvider, bool>(
+            (provider) => provider.isAndroidCoreRunning,
+          )
+        : false;
+    final isCoreRunning = isMobilePlatform
+        ? mobileCoreRunning
+        : desktopCoreRunning;
+    final isCoreRestarting = isMobilePlatform
+        ? false
+        : context.select<ClashProvider, bool>(
+            (provider) => provider.isCoreRestarting,
+          );
+    final coreStartedAt = isMobilePlatform
+        ? Platform.isAndroid
+              ? context.select<ClashProvider, DateTime?>(
+                  (provider) => provider.androidCoreStartedAt,
+                )
+              : null
+        : context.select<ClashProvider, DateTime?>(
+            (provider) => provider.coreStartedAt,
+          );
     final appMemoryBytes = context.select<ResourceUsageProvider, int?>(
       (provider) => provider.appMemoryBytes,
     );
@@ -101,7 +118,9 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
     return BaseCard(
       icon: Icons.monitor_heart_outlined,
       title: trans.home.running_status,
-      trailing: _buildHeaderActions(context, isCoreRunning: isCoreRunning),
+      trailing: isMobilePlatform
+          ? null
+          : _buildHeaderActions(context, isCoreRunning: desktopCoreRunning),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

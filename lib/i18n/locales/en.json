@@ -965,6 +965,11 @@
     "restarting_core": "Restarting core...",
     "core_updated_to": "Core updated to {version}",
     "core_already_latest": "Core is already up to date",
+    "vpn_mode_switch": "VPN Mode",
+    "vpn_enabled": "Connected",
+    "vpn_disabled": "Disconnected",
+    "enable_vpn": "Start VPN",
+    "disable_vpn": "Stop VPN",
     "tun_mode_switch": "Enable TUN Mode",
     "tun_mode_enabled_desc": "Global traffic takeover enabled",
     "tun_mode_disabled_desc": "TUN mode disabled, click to enable",
@@ -1071,4 +1076,3 @@
     "security_warning_message": "Backup file contains all app configurations and subscription information. Please keep it secure and avoid sharing with others"
   }
 }
-

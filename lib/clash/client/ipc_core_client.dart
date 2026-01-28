@@ -3,60 +3,61 @@ import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/clash/model/connection_model.dart';
 import 'package:stelliberty/clash/model/rule_model.dart';
-import 'package:stelliberty/clash/network/ipc_request_helper.dart';
+import 'package:stelliberty/clash/client/clash_core_client.dart';
+import 'package:stelliberty/clash/client/ipc_request_helper.dart';
 
-// Clash API 客户端：通过 IPC 转发请求并解析响应。
-// 提供基础缓存以降低并发请求开销。
-class ClashApiClient {
-  ClashApiClient();
+// 桌面端核心客户端实现
+// 通过 IPC（Named Pipe / Unix Socket）与 Rust 服务通信
+class IpcCoreClient implements ClashCoreClient {
+  IpcCoreClient();
 
   // getConfig() 缓存机制（优化并发请求）
   Map<String, dynamic>? _configCache;
-  DateTime? _cachedAt;
-  Future<Map<String, dynamic>>? _pendingRequest;
-  static const _cacheDuration = Duration(seconds: 1);
+  DateTime? _configCachedAt;
+  Future<Map<String, dynamic>>? _configPendingRequest;
+  static const _configCacheDuration = Duration(seconds: 1);
 
-  // 内部 GET 请求（IPC 模式）
-  Future<Map<String, dynamic>> _internalGet(String path) async {
+  // 内部 GET 请求
+  Future<Map<String, dynamic>> _get(String path) async {
     return await IpcRequestHelper.instance.get(path);
   }
 
-  // 内部 PATCH 请求（IPC 模式）
-  Future<bool> _internalPatch(String path, Map<String, dynamic> body) async {
+  // 内部 PATCH 请求
+  Future<bool> _patch(String path, Map<String, dynamic> body) async {
     await IpcRequestHelper.instance.patch(path, body: body);
     return true;
   }
 
-  // 内部 PUT 请求（IPC 模式）
-  Future<bool> _internalPut(String path, Map<String, dynamic> body) async {
+  // 内部 PUT 请求
+  Future<bool> _put(String path, Map<String, dynamic> body) async {
     await IpcRequestHelper.instance.put(path, body: body);
     return true;
   }
 
-  // 内部 DELETE 请求（IPC 模式）
-  Future<bool> _internalDelete(String path) async {
+  // 内部 DELETE 请求
+  Future<bool> _delete(String path) async {
     await IpcRequestHelper.instance.delete(path);
     return true;
   }
 
-  // 检查 API 是否就绪（用于健康检查）
+  @override
   Future<bool> checkHealth({
     Duration timeout = const Duration(
       milliseconds: ClashDefaults.apiReadyCheckTimeout,
     ),
   }) async {
     try {
-      await _internalGet('/version');
+      await _get('/version');
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  // 获取 Clash 版本信息
+  @override
   Future<String> getVersion() async {
     try {
-      final data = await _internalGet('/version');
+      final data = await _get('/version');
       // Mihomo 返回格式: {"meta":true,"premium":true,"version":"Mihomo 1.18.1"}
       return data['version'] ?? 'Unknown';
     } catch (e) {
@@ -65,21 +66,22 @@ class ClashApiClient {
     }
   }
 
-  // 等待 API 就绪
+  @override
   Future<void> waitForReady({
     int maxRetries = ClashDefaults.apiReadyMaxRetries,
     Duration retryInterval = const Duration(
       milliseconds: ClashDefaults.apiReadyRetryInterval,
     ),
-    Duration checkTimeout = const Duration(
-      milliseconds: ClashDefaults.apiReadyCheckTimeout,
-    ),
+    Duration? checkTimeout,
   }) async {
+    final timeout =
+        checkTimeout ??
+        const Duration(milliseconds: ClashDefaults.apiReadyCheckTimeout);
     Object? lastError;
 
     for (int i = 0; i < maxRetries; i++) {
       try {
-        await _internalGet('/version').timeout(checkTimeout);
+        await _get('/version').timeout(timeout);
         return;
       } catch (e) {
         lastError = e;
@@ -96,10 +98,9 @@ class ClashApiClient {
               errorMsg.contains('Connection refused');
 
           if (isIpcNotReady) {
-            Logger.debug('等待 Clash API 就绪…（${i + 1}/$maxRetries）- IPC 尚未就绪');
+            Logger.debug('等待核心就绪…（${i + 1}/$maxRetries）- IPC 尚未就绪');
           } else {
-            // 其他类型的错误才输出详细信息
-            Logger.debug('等待 Clash API 就绪…（${i + 1}/$maxRetries）- 错误: $e');
+            Logger.debug('等待核心就绪…（${i + 1}/$maxRetries）- 错误: $e');
           }
         }
       }
@@ -109,19 +110,19 @@ class ClashApiClient {
 
     final totalTime =
         (maxRetries *
-                (checkTimeout.inMilliseconds + retryInterval.inMilliseconds) /
+                (timeout.inMilliseconds + retryInterval.inMilliseconds) /
                 1000)
             .toStringAsFixed(1);
 
-    Logger.error('Clash API 等待超时，最后一次错误: $lastError');
+    Logger.error('核心等待超时，最后一次错误: $lastError');
 
-    throw TimeoutException('Clash API 在 $totalTime 秒后仍未就绪。最后错误: $lastError');
+    throw TimeoutException('核心在 $totalTime 秒后仍未就绪。最后错误: $lastError');
   }
 
-  // 获取代理列表
+  @override
   Future<Map<String, dynamic>> getProxies() async {
     try {
-      final data = await _internalGet('/proxies');
+      final data = await _get('/proxies');
       return data['proxies'] ?? {};
     } catch (e) {
       Logger.error('获取代理列表出错：$e');
@@ -129,13 +130,13 @@ class ClashApiClient {
     }
   }
 
-  // 切换代理节点
+  @override
   Future<bool> changeProxy(String groupName, String proxyName) async {
     try {
       // URL 编码处理中文和特殊字符
       final encodedGroupName = Uri.encodeComponent(groupName);
 
-      await _internalPut('/proxies/$encodedGroupName', {'name': proxyName});
+      await _put('/proxies/$encodedGroupName', {'name': proxyName});
       return true;
     } catch (e) {
       Logger.error('切换代理出错：$e');
@@ -143,20 +144,21 @@ class ClashApiClient {
     }
   }
 
-  // 测试代理延迟
+  @override
   Future<int> testProxyDelay(
     String proxyName, {
-    String testUrl = ClashDefaults.defaultTestUrl,
-    int timeoutMs = ClashDefaults.proxyDelayTestTimeout,
+    String? testUrl,
+    int? timeoutMs,
   }) async {
+    final url = testUrl ?? ClashDefaults.defaultTestUrl;
+    final timeout = timeoutMs ?? ClashDefaults.proxyDelayTestTimeout;
     try {
-      // URL 编码
       final encodedProxyName = Uri.encodeComponent(proxyName);
 
       Logger.debug('开始测试代理延迟：$proxyName');
 
-      final data = await _internalGet(
-        '/proxies/$encodedProxyName/delay?timeout=$timeoutMs&url=$testUrl',
+      final data = await _get(
+        '/proxies/$encodedProxyName/delay?timeout=$timeout&url=$url',
       );
 
       final delay = data['delay'] ?? -1;
@@ -174,16 +176,16 @@ class ClashApiClient {
     }
   }
 
-  // 清除 getConfig() 缓存（在配置修改后调用）
+  // 清除 getConfig() 缓存
   void _clearConfigCache() {
     _configCache = null;
-    _cachedAt = null;
+    _configCachedAt = null;
   }
 
-  // 实际执行 HTTP 请求获取配置（内部方法）
-  Future<Map<String, dynamic>> _fetchConfigInternal() async {
+  // 实际执行获取配置请求
+  Future<Map<String, dynamic>> _fetchConfig() async {
     try {
-      final data = await _internalGet('/configs');
+      final data = await _get('/configs');
       return data;
     } catch (e) {
       Logger.error('获取配置出错：$e');
@@ -191,39 +193,38 @@ class ClashApiClient {
     }
   }
 
-  // 获取 Clash 配置
+  @override
   Future<Map<String, dynamic>> getConfig() async {
     final now = DateTime.now();
 
     // 1. 短期缓存（1 秒内复用，避免频繁请求）
     if (_configCache != null &&
-        _cachedAt != null &&
-        now.difference(_cachedAt!) < _cacheDuration) {
+        _configCachedAt != null &&
+        now.difference(_configCachedAt!) < _configCacheDuration) {
       return _configCache!;
     }
 
     // 2. 请求合并（避免并发重复请求）
-    if (_pendingRequest != null) {
-      return await _pendingRequest!;
+    if (_configPendingRequest != null) {
+      return await _configPendingRequest!;
     }
 
     // 3. 发起新请求并缓存结果
-    _pendingRequest = _fetchConfigInternal();
+    _configPendingRequest = _fetchConfig();
     try {
-      final result = await _pendingRequest!;
+      final result = await _configPendingRequest!;
       _configCache = result;
-      _cachedAt = now;
+      _configCachedAt = now;
       return result;
     } finally {
-      _pendingRequest = null;
+      _configPendingRequest = null;
     }
   }
 
-  // 更新 Clash 配置
+  @override
   Future<bool> updateConfig(Map<String, dynamic> config) async {
     try {
-      await _internalPatch('/configs', config);
-      // 配置已修改，清除缓存
+      await _patch('/configs', config);
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -232,7 +233,7 @@ class ClashApiClient {
     }
   }
 
-  // 重载配置文件（不重启进程），可选指定配置路径与强制标志。
+  @override
   Future<bool> reloadConfig({String? configPath, bool force = true}) async {
     try {
       final path = force ? '/configs?force=true' : '/configs';
@@ -241,9 +242,8 @@ class ClashApiClient {
           ? <String, dynamic>{'path': configPath}
           : <String, dynamic>{};
 
-      await _internalPut(path, body);
+      await _put(path, body);
       Logger.info('配置文件重载成功');
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -252,11 +252,10 @@ class ClashApiClient {
     }
   }
 
-  // 设置局域网代理开关
+  @override
   Future<bool> setAllowLan(bool allow) async {
     try {
-      await _internalPatch('/configs', {'allow-lan': allow});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'allow-lan': allow});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -265,11 +264,10 @@ class ClashApiClient {
     }
   }
 
-  // 设置 IPv6 开关
+  @override
   Future<bool> setIpv6(bool enable) async {
     try {
-      await _internalPatch('/configs', {'ipv6': enable});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'ipv6': enable});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -278,33 +276,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取局域网代理状态
-  Future<bool> getAllowLan() async {
-    try {
-      final config = await getConfig();
-      return config['allow-lan'] ?? false;
-    } catch (e) {
-      Logger.error('获取局域网代理状态出错：$e');
-      return false;
-    }
-  }
-
-  // 获取 IPv6 状态
-  Future<bool> getIpv6() async {
-    try {
-      final config = await getConfig();
-      return config['ipv6'] ?? false;
-    } catch (e) {
-      Logger.error('获取 IPv6 状态出错：$e');
-      return false;
-    }
-  }
-
-  // 设置 TCP 并发开关
+  @override
   Future<bool> setTcpConcurrent(bool enable) async {
     try {
-      await _internalPatch('/configs', {'tcp-concurrent': enable});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'tcp-concurrent': enable});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -313,22 +288,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取 TCP 并发状态
-  Future<bool> getTcpConcurrent() async {
-    try {
-      final config = await getConfig();
-      return config['tcp-concurrent'] ?? true;
-    } catch (e) {
-      Logger.error('获取 TCP 并发状态出错：$e');
-      return true;
-    }
-  }
-
-  // 设置统一延迟
+  @override
   Future<bool> setUnifiedDelay(bool enable) async {
     try {
-      await _internalPatch('/configs', {'unified-delay': enable});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'unified-delay': enable});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -337,22 +300,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取统一延迟状态
-  Future<bool> getUnifiedDelay() async {
-    try {
-      final config = await getConfig();
-      return config['unified-delay'] ?? true;
-    } catch (e) {
-      Logger.error('获取统一延迟状态出错：$e');
-      return true;
-    }
-  }
-
-  // 设置 GEO 数据加载模式
+  @override
   Future<bool> setGeodataLoader(String mode) async {
     try {
-      await _internalPatch('/configs', {'geodata-loader': mode});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'geodata-loader': mode});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -361,22 +312,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取 GEO 数据加载模式
-  Future<String> getGeodataLoader() async {
-    try {
-      final config = await getConfig();
-      return config['geodata-loader'] ?? 'memconservative';
-    } catch (e) {
-      Logger.error('获取 GEO 数据加载模式出错：$e');
-      return 'memconservative';
-    }
-  }
-
-  // 设置查找进程模式
+  @override
   Future<bool> setFindProcessMode(String mode) async {
     try {
-      await _internalPatch('/configs', {'find-process-mode': mode});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'find-process-mode': mode});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -385,28 +324,15 @@ class ClashApiClient {
     }
   }
 
-  // 获取查找进程模式
-  Future<String> getFindProcessMode() async {
-    try {
-      final config = await getConfig();
-      return config['find-process-mode'] ?? 'off';
-    } catch (e) {
-      Logger.error('获取查找进程模式出错：$e');
-      return 'off';
-    }
-  }
-
-  // 设置日志等级
+  @override
   Future<bool> setLogLevel(String level) async {
     try {
-      // 验证日志等级
       const validLevels = ['debug', 'info', 'warning', 'error', 'silent'];
       if (!validLevels.contains(level)) {
         throw ArgumentError('无效的日志等级：$level');
       }
 
-      await _internalPatch('/configs', {'log-level': level});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'log-level': level});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -415,7 +341,7 @@ class ClashApiClient {
     }
   }
 
-  // 获取出站模式
+  @override
   Future<String> getMode() async {
     try {
       final config = await getConfig();
@@ -426,18 +352,16 @@ class ClashApiClient {
     }
   }
 
-  // 设置出站模式
-  // mode: 'rule' | 'global' | 'direct'
+  @override
   Future<bool> setMode(String mode) async {
     try {
-      // 验证出站模式
       const validModes = ['rule', 'global', 'direct'];
       if (!validModes.contains(mode)) {
         throw ArgumentError('无效的出站模式：$mode');
       }
 
-      await _internalPatch('/configs', {'mode': mode});
-      Logger.info('出站模式（支持配置重载）：$mode');
+      await _patch('/configs', {'mode': mode});
+      Logger.info('出站模式已设置：$mode');
       return true;
     } catch (e) {
       Logger.error('设置出站模式出错：$e');
@@ -445,22 +369,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取日志等级
-  Future<String> getLogLevel() async {
-    try {
-      final config = await getConfig();
-      return config['log-level'] ?? 'info';
-    } catch (e) {
-      Logger.error('获取日志等级出错：$e');
-      return 'info';
-    }
-  }
-
-  // 设置外部控制器
+  @override
   Future<bool> setExternalController(String? address) async {
     try {
-      await _internalPatch('/configs', {'external-controller': address ?? ''});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'external-controller': address ?? ''});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -469,23 +381,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取外部控制器状态
-  Future<String?> getExternalController() async {
-    try {
-      final config = await getConfig();
-      final controller = config['external-controller'];
-      return (controller == null || controller == '') ? null : controller;
-    } catch (e) {
-      Logger.error('获取外部控制器状态出错：$e');
-      return null;
-    }
-  }
-
-  // 设置混合端口（配置重载，无需重启）
+  @override
   Future<bool> setMixedPort(int port) async {
     try {
-      await _internalPatch('/configs', {'mixed-port': port});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'mixed-port': port});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -494,11 +393,10 @@ class ClashApiClient {
     }
   }
 
-  // 设置 SOCKS 端口（配置重载，无需重启）
+  @override
   Future<bool> setSocksPort(int port) async {
     try {
-      await _internalPatch('/configs', {'socks-port': port});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'socks-port': port});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -507,11 +405,10 @@ class ClashApiClient {
     }
   }
 
-  // 设置 HTTP 端口（配置重载，无需重启）
+  @override
   Future<bool> setHttpPort(int port) async {
     try {
-      await _internalPatch('/configs', {'port': port});
-      // 配置已修改，清除缓存
+      await _patch('/configs', {'port': port});
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -520,13 +417,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡模式启用状态（配置重载，无需重启）
+  @override
   Future<bool> setTunEnable(bool enable) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'enable': enable},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -535,13 +431,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡网络栈（配置重载，无需重启）
+  @override
   Future<bool> setTunStack(String stack) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'stack': stack},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -550,26 +445,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置 TCP Keep-Alive 间隔（配置重载，无需重启）
-  Future<bool> setKeepAliveInterval(int interval) async {
-    try {
-      await _internalPatch('/configs', {'keep-alive-interval': interval});
-      // 配置已修改，清除缓存
-      _clearConfigCache();
-      return true;
-    } catch (e) {
-      Logger.error('设置 Keep-Alive 间隔出错：$e');
-      rethrow;
-    }
-  }
-
-  // 设置虚拟网卡设备名称（配置重载，无需重启）
+  @override
   Future<bool> setTunDevice(String device) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'device': device},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -578,13 +459,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡自动路由（配置重载，无需重启）
+  @override
   Future<bool> setTunAutoRoute(bool enable) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'auto-route': enable},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -593,13 +473,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡自动检测接口（配置重载，无需重启）
+  @override
   Future<bool> setTunAutoDetectInterface(bool enable) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'auto-detect-interface': enable},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -608,13 +487,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡 DNS 劫持列表（配置重载，无需重启）
+  @override
   Future<bool> setTunDnsHijack(List<String> hijackList) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'dns-hijack': hijackList},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -623,13 +501,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡 MTU（配置重载，无需重启）
+  @override
   Future<bool> setTunMtu(int mtu) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'mtu': mtu},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -638,13 +515,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡严格路由（配置重载，无需重启）
+  @override
   Future<bool> setTunStrictRoute(bool enable) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'strict-route': enable},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -653,13 +529,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡自动 TCP 重定向（配置重载，无需重启）
+  @override
   Future<bool> setTunAutoRedirect(bool enable) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'auto-redirect': enable},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -668,13 +543,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡排除网段列表（配置重载，无需重启）
+  @override
   Future<bool> setTunRouteExcludeAddress(List<String> addresses) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'route-exclude-address': addresses},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -683,13 +557,12 @@ class ClashApiClient {
     }
   }
 
-  // 设置虚拟网卡禁用 ICMP 转发（配置重载，无需重启）
+  @override
   Future<bool> setTunDisableIcmpForwarding(bool disabled) async {
     try {
-      await _internalPatch('/configs', {
+      await _patch('/configs', {
         'tun': {'disable-icmp-forwarding': disabled},
       });
-      // 配置已修改，清除缓存
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -698,10 +571,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取当前所有连接
+  @override
   Future<List<ConnectionInfo>> getConnections() async {
     try {
-      final data = await _internalGet('/connections');
+      final data = await _get('/connections');
       final connections = data['connections'] as List<dynamic>? ?? [];
       return connections
           .map((conn) => ConnectionInfo.fromJson(conn as Map<String, dynamic>))
@@ -712,10 +585,10 @@ class ClashApiClient {
     }
   }
 
-  // 关闭指定连接
+  @override
   Future<bool> closeConnection(String connectionId) async {
     try {
-      await _internalDelete('/connections/$connectionId');
+      await _delete('/connections/$connectionId');
       return true;
     } catch (e) {
       Logger.error('关闭连接出错：$e');
@@ -723,10 +596,10 @@ class ClashApiClient {
     }
   }
 
-  // 关闭所有连接
+  @override
   Future<bool> closeAllConnections() async {
     try {
-      await _internalDelete('/connections');
+      await _delete('/connections');
       return true;
     } catch (e) {
       Logger.error('关闭所有连接出错：$e');
@@ -734,9 +607,10 @@ class ClashApiClient {
     }
   }
 
+  @override
   Future<List<RuleItem>> getRules() async {
     try {
-      final data = await _internalGet('/rules');
+      final data = await _get('/rules');
       final rules = (data['rules'] as List?) ?? const [];
       return rules
           .whereType<Map<String, dynamic>>()
@@ -748,10 +622,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取所有 Providers
+  @override
   Future<Map<String, dynamic>> getProviders() async {
     try {
-      final data = await _internalGet('/providers/proxies');
+      final data = await _get('/providers/proxies');
       return data['providers'] ?? {};
     } catch (e) {
       Logger.error('获取 Providers 出错：$e');
@@ -759,11 +633,11 @@ class ClashApiClient {
     }
   }
 
-  // 获取单个 Provider
+  @override
   Future<Map<String, dynamic>?> getProvider(String providerName) async {
     try {
       final encodedName = Uri.encodeComponent(providerName);
-      final data = await _internalGet('/providers/proxies/$encodedName');
+      final data = await _get('/providers/proxies/$encodedName');
       return data;
     } catch (e) {
       Logger.error('获取 Provider 出错：$e');
@@ -771,11 +645,11 @@ class ClashApiClient {
     }
   }
 
-  // 更新 Provider（从远程 URL 同步）
+  @override
   Future<bool> updateProvider(String providerName) async {
     try {
       final encodedName = Uri.encodeComponent(providerName);
-      await _internalPut('/providers/proxies/$encodedName', {});
+      await _put('/providers/proxies/$encodedName', {});
       Logger.info('Provider 已更新：$providerName');
       return true;
     } catch (e) {
@@ -784,11 +658,11 @@ class ClashApiClient {
     }
   }
 
-  // 健康检查 Provider
+  @override
   Future<bool> healthCheckProvider(String providerName) async {
     try {
       final encodedName = Uri.encodeComponent(providerName);
-      await _internalGet('/providers/proxies/$encodedName/healthcheck');
+      await _get('/providers/proxies/$encodedName/healthcheck');
       Logger.info('Provider 健康检查完成：$providerName');
       return true;
     } catch (e) {
@@ -797,10 +671,10 @@ class ClashApiClient {
     }
   }
 
-  // 获取所有规则 Providers
+  @override
   Future<Map<String, dynamic>> getRuleProviders() async {
     try {
-      final data = await _internalGet('/providers/rules');
+      final data = await _get('/providers/rules');
       return data['providers'] ?? {};
     } catch (e) {
       Logger.error('获取规则 Providers 出错：$e');
@@ -808,11 +682,11 @@ class ClashApiClient {
     }
   }
 
-  // 获取单个规则 Provider
+  @override
   Future<Map<String, dynamic>?> getRuleProvider(String providerName) async {
     try {
       final encodedName = Uri.encodeComponent(providerName);
-      final data = await _internalGet('/providers/rules/$encodedName');
+      final data = await _get('/providers/rules/$encodedName');
       return data;
     } catch (e) {
       Logger.error('获取规则 Provider 出错：$e');
@@ -820,11 +694,11 @@ class ClashApiClient {
     }
   }
 
-  // 更新规则 Provider
+  @override
   Future<bool> updateRuleProvider(String providerName) async {
     try {
       final encodedName = Uri.encodeComponent(providerName);
-      await _internalPut('/providers/rules/$encodedName', {});
+      await _put('/providers/rules/$encodedName', {});
       Logger.info('规则 Provider 已更新：$providerName');
       return true;
     } catch (e) {

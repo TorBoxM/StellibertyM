@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:stelliberty/clash/model/log_message_model.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/services/log_print_service.dart';
+import 'package:stelliberty/clash/services/vpn_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 
 // Clash 核心日志服务
-// 通过 IPCWebSocket（Rust 信号）获取实时日志数据
+// 桌面平台：通过 IPCWebSocket（Rust 信号）获取实时日志数据
+// Android 平台：通过 EventChannel 从原生端获取日志数据
 class ClashLogService {
   static final ClashLogService instance = ClashLogService._();
   ClashLogService._() {
@@ -27,7 +31,7 @@ class ClashLogService {
   // 当前日志级别
   ClashLogLevel get currentLogLevel => _currentLogLevel;
 
-  // 开始监控日志（IPC 模式）
+  // 开始监控日志
   Future<void> startMonitoring([String? _]) async {
     if (_isMonitoring) {
       return;
@@ -46,15 +50,27 @@ class ClashLogService {
       return;
     }
 
-    Logger.info('开始 Clash 日志监控 (IPC 模式，级别：${_currentLogLevel.toApiParam()})');
+    if (Platform.isAndroid) {
+      // Android 平台：通过 EventChannel 获取日志
+      Logger.info('开始 Clash 日志监控 (Android EventChannel 模式)');
+      _logSubscription = VpnService.coreLogStream?.listen(
+        _handleAndroidLogEvent,
+        onError: (error) {
+          Logger.error('Android 日志流错误：$error');
+        },
+      );
+    } else {
+      // 桌面平台：通过 Rust IPC 获取日志
+      Logger.info('开始 Clash 日志监控 (IPC 模式，级别：${_currentLogLevel.toApiParam()})');
 
-    // 监听来自 Rust 的日志数据
-    _logSubscription = IpcLogData.rustSignalStream.listen((signal) {
-      _handleLogData(signal.message);
-    });
+      // 监听来自 Rust 的日志数据
+      _logSubscription = IpcLogData.rustSignalStream.listen((signal) {
+        _handleLogData(signal.message);
+      });
 
-    // 发送启动日志监控信号到 Rust
-    const StartLogStream().sendSignalToRust();
+      // 发送启动日志监控信号到 Rust
+      const StartLogStream().sendSignalToRust();
+    }
   }
 
   // 停止监控日志
@@ -66,10 +82,12 @@ class ClashLogService {
     Logger.info('停止 Clash 日志监控');
     _isMonitoring = false;
 
-    // 发送停止信号到 Rust
-    const StopLogStream().sendSignalToRust();
+    if (!Platform.isAndroid) {
+      // 桌面平台：发送停止信号到 Rust
+      const StopLogStream().sendSignalToRust();
+    }
 
-    // 取消 Rust 流订阅
+    // 取消流订阅
     await _logSubscription?.cancel();
     _logSubscription = null;
 
@@ -106,6 +124,39 @@ class ClashLogService {
     } else {
       // 其他级别之间切换：无需任何操作，核心自动调整
       Logger.info('日志级别热更新完成，连接保持活动');
+    }
+  }
+
+  // 处理来自 Android 原生端的日志事件
+  void _handleAndroidLogEvent(String jsonString) {
+    try {
+      // Android 核心事件格式：
+      // {"id":"","method":"message","data":{"type":"log","data":{"level":"info","payload":"..."}},"code":0}
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final method = json['method'] as String?;
+
+      if (method == 'message') {
+        final data = json['data'] as Map<String, dynamic>?;
+        if (data == null) return;
+
+        final messageType = data['type'] as String?;
+        if (messageType == 'log') {
+          final logData = data['data'] as Map<String, dynamic>?;
+          if (logData != null) {
+            final logLevel = logData['level'] as String? ?? 'info';
+            final logPayload = logData['payload'] as String? ?? '';
+
+            final logMessage = ClashLogMessage(
+              type: logLevel.toUpperCase(),
+              payload: logPayload,
+            );
+            _controller.add(logMessage);
+          }
+        }
+      }
+      // 其他事件类型暂时忽略
+    } catch (e) {
+      Logger.error('处理 Android 日志事件失败：$e');
     }
   }
 

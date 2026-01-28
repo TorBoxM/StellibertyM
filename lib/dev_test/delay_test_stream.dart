@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:stelliberty/clash/config/config_injector.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';
-import 'package:stelliberty/clash/network/ipc_request_helper.dart';
+import 'package:stelliberty/clash/client/ipc_request_helper.dart';
 import 'package:stelliberty/clash/services/delay_test_service.dart';
 import 'package:stelliberty/clash/services/process_service.dart';
 import 'package:stelliberty/services/log_print_service.dart';

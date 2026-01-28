@@ -301,6 +301,11 @@ class ProviderSetup {
 
   // 启动 Clash 核心（不阻塞 UI）
   static Future<void> startClash(ProviderBundle providers) async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      Logger.info('移动端跳过 Clash 桌面核心自启动');
+      return;
+    }
+
     final configPath = providers.subscriptionProvider
         .getSubscriptionConfigPath();
 

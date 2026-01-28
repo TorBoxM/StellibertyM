@@ -202,11 +202,17 @@ class _ModernDialogState extends State<ModernDialog>
   // 构建对话框主体
   Widget _buildDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenSize = MediaQuery.of(context).size;
+    final viewInsets = MediaQuery.of(context).viewInsets;
+
+    // 计算可用高度（减去键盘高度和安全边距）
+    final availableHeight = screenSize.height - viewInsets.bottom - 64;
+    final maxHeight = availableHeight * widget.maxHeightRatio;
 
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: widget.maxWidth,
-        maxHeight: MediaQuery.of(context).size.height * widget.maxHeightRatio,
+        maxHeight: maxHeight,
       ),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 32),

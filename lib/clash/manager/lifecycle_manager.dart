@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:stelliberty/clash/network/api_client.dart';
+import 'package:stelliberty/clash/client/clash_core_client.dart';
 import 'package:stelliberty/clash/services/process_service.dart';
 import 'package:stelliberty/clash/manager/process_manager.dart';
 import 'package:stelliberty/clash/config/config_injector.dart';
@@ -19,7 +19,7 @@ import 'package:stelliberty/services/log_print_service.dart';
 class LifecycleManager {
   final ProcessService _processService;
   late final ProcessManager _processManager;
-  final ClashApiClient _apiClient;
+  final ClashCoreClient _coreClient;
   final TrafficMonitor _trafficMonitor;
   final ClashLogService _logService;
   final Function() _notifyListeners;
@@ -100,12 +100,12 @@ class LifecycleManager {
 
   LifecycleManager({
     required ProcessService processService,
-    required ClashApiClient apiClient,
+    required ClashCoreClient coreClient,
     required TrafficMonitor trafficMonitor,
     required ClashLogService logService,
     Function()? notifyListeners,
   }) : _processService = processService,
-       _apiClient = apiClient,
+       _coreClient = coreClient,
        _trafficMonitor = trafficMonitor,
        _logService = logService,
        _notifyListeners = notifyListeners ?? (() {}) {
@@ -467,7 +467,7 @@ class LifecycleManager {
 
       // 等待 IPC API 就绪（与普通模式保持一致）
       Logger.info('等待服务模式下的 IPC API 就绪…');
-      await _apiClient.waitForReady(
+      await _coreClient.waitForReady(
         maxRetries: ClashDefaults.apiReadyMaxRetries,
         retryInterval: Duration(
           milliseconds: ClashDefaults.apiReadyRetryInterval,
@@ -523,7 +523,7 @@ class LifecycleManager {
         // 任务 2: 立即开始轮询 API（不等进程启动完成）
         Future.delayed(
           Duration.zero,
-          () => _apiClient.waitForReady(
+          () => _coreClient.waitForReady(
             maxRetries: ClashDefaults.apiReadyMaxRetries,
             retryInterval: Duration(
               milliseconds: ClashDefaults.apiReadyRetryInterval,
@@ -630,7 +630,7 @@ class LifecycleManager {
 
       // 1. 检查核心是否能正常响应基本 API 调用
       try {
-        await _apiClient.getVersion().timeout(
+        await _coreClient.getVersion().timeout(
           const Duration(seconds: 3),
           onTimeout: () => throw TimeoutException('获取版本超时'),
         );
@@ -641,7 +641,7 @@ class LifecycleManager {
       }
 
       // 2. 检查是否能成功获取基本配置（最重要的验证）
-      final config = await _apiClient.getConfig().timeout(
+      final config = await _coreClient.getConfig().timeout(
         const Duration(seconds: 5),
         onTimeout: () => throw TimeoutException('获取配置超时'),
       );
@@ -668,7 +668,7 @@ class LifecycleManager {
     for (int i = 0; i < ClashDefaults.ipcReadyMaxRetries; i++) {
       try {
         // 尝试调用一个简单的 API 来检查 IPC 是否可用
-        final version = await _apiClient.getVersion();
+        final version = await _coreClient.getVersion();
         Logger.debug('IPC已就绪（第 ${i + 1} 次尝试），版本：$version');
         return version; // IPC 可用，返回版本号
       } catch (e) {

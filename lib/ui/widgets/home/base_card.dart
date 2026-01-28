@@ -29,6 +29,9 @@ class BaseCard extends StatelessWidget {
     final shadowColor = isDark
         ? Colors.white.withValues(alpha: 0.08)
         : Colors.black.withValues(alpha: 0.1);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompactLayout = screenWidth < 360;
+    final contentPadding = isCompactLayout ? 16.0 : 24.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -47,7 +50,7 @@ class BaseCard extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(contentPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -58,23 +61,61 @@ class BaseCard extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Transform.translate(
-            offset: const Offset(0, -2),
-            child: Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              overflow: TextOverflow.ellipsis,
+    final titleWidget = Transform.translate(
+      offset: const Offset(0, -2),
+      child: Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+
+    final trailingWidget = trailing;
+    if (trailingWidget == null) {
+      return Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(child: titleWidget),
+        ],
+      );
+    }
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isNarrowHeader = screenWidth < 500;
+
+    if (!isNarrowHeader) {
+      return Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(child: titleWidget),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: trailingWidget,
             ),
           ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(child: titleWidget),
+          ],
         ),
-        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+        const SizedBox(height: 8),
+        Align(alignment: Alignment.centerRight, child: trailingWidget),
       ],
     );
   }

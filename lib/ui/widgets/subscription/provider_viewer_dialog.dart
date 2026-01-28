@@ -128,9 +128,9 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
 
     try {
       final clashManager = ClashManager.instance;
-      final apiClient = clashManager.apiClient;
+      final coreClient = clashManager.coreClient;
 
-      if (apiClient == null) {
+      if (coreClient == null) {
         setState(() {
           _errorMessage = trans.provider.clash_not_running;
           _isLoading = false;
@@ -139,8 +139,8 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
       }
 
       // 获取代理 providers 和规则 providers
-      final proxyProvidersData = await apiClient.getProviders();
-      final ruleProvidersData = await apiClient.getRuleProviders();
+      final proxyProvidersData = await coreClient.getProviders();
+      final ruleProvidersData = await coreClient.getRuleProviders();
 
       Logger.debug(
         '加载提供者：代理提供者 ${proxyProvidersData.length} 个，规则提供者 ${ruleProvidersData.length} 个',
@@ -183,9 +183,9 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
     }
 
     final clashManager = ClashManager.instance;
-    final apiClient = clashManager.apiClient;
+    final coreClient = clashManager.coreClient;
 
-    if (apiClient == null) {
+    if (coreClient == null) {
       if (mounted) {
         ModernToast.error(trans.provider.clash_not_running);
       }
@@ -241,9 +241,9 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
         batch.map((provider) async {
           try {
             if (provider.type == ProviderType.proxy) {
-              await apiClient.updateProvider(provider.name);
+              await coreClient.updateProvider(provider.name);
             } else {
-              await apiClient.updateRuleProvider(provider.name);
+              await coreClient.updateRuleProvider(provider.name);
             }
             Logger.info('同步成功: ${provider.name}');
             return (provider.name, true, null);
@@ -303,7 +303,7 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
     final trans = context.translate;
     try {
       // 选择文件
-      final result = await FilePicker.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['yaml', 'yml'],
       );
@@ -730,9 +730,9 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
   Future<_SyncResult> _executeSyncOperation(Provider provider) async {
     try {
       final clashManager = ClashManager.instance;
-      final apiClient = clashManager.apiClient;
+      final coreClient = clashManager.coreClient;
 
-      if (apiClient == null) {
+      if (coreClient == null) {
         return _SyncResult(
           updatedProvider: provider.copyWith(isUpdating: false),
           isSuccessful: false,
@@ -742,17 +742,17 @@ class _ProviderViewerDialogState extends State<ProviderViewerDialog> {
 
       // 执行同步
       if (provider.type == ProviderType.proxy) {
-        await apiClient.updateProvider(provider.name);
+        await coreClient.updateProvider(provider.name);
       } else {
-        await apiClient.updateRuleProvider(provider.name);
+        await coreClient.updateRuleProvider(provider.name);
       }
 
       await Future.delayed(_syncDelay);
 
       // 获取更新数据
       final updatedData = await (provider.type == ProviderType.proxy
-          ? apiClient.getProvider(provider.name)
-          : apiClient.getRuleProvider(provider.name));
+          ? coreClient.getProvider(provider.name)
+          : coreClient.getRuleProvider(provider.name));
 
       if (updatedData != null) {
         return _SyncResult(

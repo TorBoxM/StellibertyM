@@ -3,7 +3,12 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.diffplug.spotless") version "7.0.2"
 }
+
+val shouldSplitPerAbi: Boolean =
+    (project.findProperty("split-per-abi")?.toString() == "true") ||
+        (project.findProperty("splitPerAbi")?.toString() == "true")
 
 android {
     namespace = "io.github.stelliberty"
@@ -15,10 +20,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
         applicationId = "io.github.stelliberty"
         // You can update the following values to match your application needs.
@@ -28,21 +29,69 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // 仅编译 x86_64 和 arm64-v8a 架构
-        ndk {
-            abiFilters += listOf("x86_64", "arm64-v8a")
+        if (!shouldSplitPerAbi) {
+            ndk {
+                abiFilters.clear()
+                abiFilters += listOf("x86_64", "arm64-v8a")
+            }
+        }
+
+        externalNativeBuild {
+            cmake {
+                // 编译 JNI 桥接库（clash_core_bridge），用于加载预编译核心 so 并注入回调。
+                cppFlags += "-std=c++17"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = shouldSplitPerAbi
+            reset()
+            include("x86_64", "arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
+    // 添加预编译的核心 so 文件路径
+    sourceSets {
+        getByName("main") {
+            java.setSrcDirs(listOf("src/main/kotlin", "src/main/java"))
+            jniLibs.srcDirs("../../assets/jniLibs")
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
 flutter {
     source = "../.."
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktfmt().kotlinlangStyle()
+    }
 }

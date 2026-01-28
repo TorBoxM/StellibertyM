@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:stelliberty/clash/network/api_client.dart';
+import 'package:stelliberty/clash/client/clash_core_client.dart';
 import 'package:stelliberty/clash/services/process_service.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/clash/model/connection_model.dart';
@@ -24,7 +24,7 @@ class ClashManager {
   static final ClashManager _instance = ClashManager._internal();
   static ClashManager get instance => _instance;
 
-  late final ClashApiClient _apiClient;
+  late final ClashCoreClient _coreClient;
   final ProcessService _processService = ProcessService();
   final TrafficMonitor _trafficMonitor = TrafficMonitor.instance;
   final ClashLogService _logService = ClashLogService.instance;
@@ -41,11 +41,20 @@ class ClashManager {
   // 首次启动标记
   static bool _isFirstStartAfterAppLaunch = true;
 
-  ClashApiClient? get apiClient => isCoreRunning ? _apiClient : null;
+  // 核心运行状态回调（由 Provider 注入，统一两端状态来源）
+  bool Function()? _coreRunningProvider;
+
+  // 注入核心运行状态回调（由 ClashProvider 在初始化时调用）
+  void setCoreRunningProvider(bool Function() provider) {
+    _coreRunningProvider = provider;
+  }
+
+  ClashCoreClient? get coreClient => isCoreRunning ? _coreClient : null;
   Stream<TrafficData>? get trafficStream => _trafficMonitor.trafficStream;
   Stream<ClashLogMessage> get logStream => _logService.logStream;
 
-  bool get isCoreRunning => _lifecycleManager.isCoreRunning;
+  bool get isCoreRunning =>
+      _coreRunningProvider?.call() ?? _lifecycleManager.isCoreRunning;
   bool get isCoreRestarting => _lifecycleManager.isCoreRestarting;
   String? get currentConfigPath => _lifecycleManager.currentConfigPath;
   String get coreVersion => _lifecycleManager.coreVersion;
@@ -99,28 +108,28 @@ class ClashManager {
   }
 
   ClashManager._internal() {
-    _apiClient = ClashApiClient();
+    _coreClient = ClashCoreClient.instance;
 
     _configManager = ConfigManager(
-      apiClient: _apiClient,
+      coreClient: _coreClient,
       isCoreRunning: () => isCoreRunning,
     );
 
     _lifecycleManager = LifecycleManager(
       processService: _processService,
-      apiClient: _apiClient,
+      coreClient: _coreClient,
       trafficMonitor: _trafficMonitor,
       logService: _logService,
     );
 
     _proxyManager = ProxyManager(
-      apiClient: _apiClient,
+      coreClient: _coreClient,
       isCoreRunning: () => isCoreRunning,
       getTestUrl: () => ClashPreferences.instance.getTestUrl(),
     );
 
     _connectionManager = ConnectionManager(
-      apiClient: _apiClient,
+      coreClient: _coreClient,
       isCoreRunning: () => isCoreRunning,
     );
 
@@ -557,7 +566,7 @@ class ClashManager {
     if (!isCoreRunning) {
       return [];
     }
-    return await _apiClient.getRules();
+    return await _coreClient.getRules();
   }
 
   Future<bool> closeConnection(String connectionId) async {
@@ -575,7 +584,7 @@ class ClashManager {
     }
 
     try {
-      return await _apiClient.getMode();
+      return await _coreClient.getMode();
     } catch (e) {
       Logger.error('获取出站模式失败：$e');
       return ClashDefaults.defaultOutboundMode;

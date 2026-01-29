@@ -13,7 +13,7 @@
 
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows11&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black) ![macOS](https://img.shields.io/badge/macOS-experimental-gray?style=flat-square&logo=apple&logoColor=white)
-![Android](https://img.shields.io/badge/Android-not_supported-lightgray?style=flat-square&logo=android&logoColor=white)
+![Android](https://img.shields.io/badge/Android-barely_working-orange?style=flat-square&logo=android&logoColor=white)
 
 A modern cross-platform Clash client built with Flutter and Rust
 Featuring the unique **MD3M** (Material Design 3 Modern) visual style

@@ -119,9 +119,17 @@ Future<void> main(List<String> args) async {
       await downloadGeoData(targetDir: geoDataDir);
       log('✅ GeoIP 数据下载完成。');
 
-      // Android 跳过 Step 4-6
-      log('⏭️  [4/6] 跳过 Service 编译');
-      log('⏭️  [5/6] 跳过托盘图标复制');
+      // Android 跳过 Step 4-6，但创建空文件夹满足 pubspec.yaml 要求
+      log('⏭️  [4/6] 跳过 Service 编译（创建空目录）');
+      await Directory(
+        p.join(projectRoot, 'assets', 'service'),
+      ).create(recursive: true);
+
+      log('⏭️  [5/6] 跳过托盘图标复制（创建空目录）');
+      await Directory(
+        p.join(projectRoot, 'assets', 'icons'),
+      ).create(recursive: true);
+
       log('⏭️  [6/6] 跳过打包工具安装');
     } else {
       log('▶️  [2/6] 正在获取最新的 Mihomo 核心...');

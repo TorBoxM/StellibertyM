@@ -14,7 +14,7 @@
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows11&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black)
 ![macOS](https://img.shields.io/badge/macOS-实验性-gray?style=flat-square&logo=apple&logoColor=white)
-![Android](https://img.shields.io/badge/Android-暂不支持-lightgray?style=flat-square&logo=android&logoColor=white)
+![Android](https://img.shields.io/badge/Android-barely_working-orange?style=flat-square&logo=android&logoColor=white)
 
 基于 Flutter 和 Rust 构建的现代跨平台 Clash 客户端
 采用独特的 **MD3M**（Material Design 3 Modern）视觉风格

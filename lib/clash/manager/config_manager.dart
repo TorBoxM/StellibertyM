@@ -648,20 +648,12 @@ class ConfigManager {
   }
 
   // 设置虚拟网卡禁用 ICMP 转发
+  // 注意：Mihomo PATCH API 的 tunSchema 不包含此字段，无法通过 PATCH 修改
+  // 由 ClashManager 调度配置重载来应用此设置
   Future<bool> setTunDisableIcmpForwarding(bool disabled) async {
     try {
-      // 先保存到持久化
       await ClashPreferences.instance.setTunDisableIcmpForwarding(disabled);
-
-      // 如果核心正在运行，调用 API
-      if (_isCoreRunning()) {
-        final success = await _coreClient.setTunDisableIcmpForwarding(disabled);
-        if (success) {
-          Logger.info('虚拟网卡 ICMP 转发（支持重载）：${disabled ? "禁用" : "启用"}');
-        }
-        return success;
-      }
-
+      Logger.info('虚拟网卡 ICMP 转发已保存：${disabled ? "禁用" : "启用"}（需重载生效）');
       return true;
     } catch (e) {
       Logger.error('设置虚拟网卡 ICMP 转发失败：$e');

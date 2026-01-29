@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:stelliberty/clash/client/clash_core_client.dart';
 import 'package:stelliberty/clash/services/process_service.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
@@ -43,6 +44,9 @@ class ClashManager {
 
   // 核心运行状态回调（由 Provider 注入，统一两端状态来源）
   bool Function()? _coreRunningProvider;
+
+  // 配置变更回调（由 Provider 注入，配置修改后通知 UI 刷新）
+  VoidCallback? _onConfigChanged;
 
   // 注入核心运行状态回调（由 ClashProvider 在初始化时调用）
   void setCoreRunningProvider(bool Function() provider) {
@@ -164,12 +168,14 @@ class ClashManager {
     Function(String?)? onConfigPathChanged,
     Function(ClashStartMode?)? onStartModeChanged,
     Function(bool)? onSystemProxyStateChanged,
+    VoidCallback? onConfigChanged,
   }) {
     _lifecycleManager.setOnCoreStateChanged(onCoreStateChanged);
     _lifecycleManager.setOnCoreVersionChanged(onCoreVersionChanged);
     _lifecycleManager.setOnConfigPathChanged(onConfigPathChanged);
     _lifecycleManager.setOnStartModeChanged(onStartModeChanged);
     _systemProxyManager.setOnSystemProxyStateChanged(onSystemProxyStateChanged);
+    _onConfigChanged = onConfigChanged;
     Logger.debug('已设置状态变化回调到各个 Manager');
   }
 
@@ -491,7 +497,11 @@ class ClashManager {
     Future<bool> Function() setter,
     String configName,
   ) async {
-    return await setter();
+    final success = await setter();
+    if (success) {
+      _onConfigChanged?.call();
+    }
+    return success;
   }
 
   Future<bool> setTunStack(String stack) async {
@@ -550,8 +560,14 @@ class ClashManager {
     );
   }
 
+  // ICMP 转发设置（Mihomo PATCH API 不支持此字段，需重载配置）
   Future<bool> setTunDisableIcmpForwarding(bool disabled) async {
-    return await _configManager.setTunDisableIcmpForwarding(disabled);
+    final success = await _configManager.setTunDisableIcmpForwarding(disabled);
+    if (success) {
+      _scheduleConfigReload('ICMP 转发');
+      _onConfigChanged?.call();
+    }
+    return success;
   }
 
   Future<bool> setTunMtu(int mtu) async {

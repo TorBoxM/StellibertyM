@@ -349,6 +349,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         }
       },
       onSystemProxyStateChanged: _updateSystemProxyState,
+      onConfigChanged: refreshConfigState,
     );
 
     // Provider 在调用 Manager 方法后手动通知

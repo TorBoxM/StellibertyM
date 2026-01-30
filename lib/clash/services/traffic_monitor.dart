@@ -51,10 +51,6 @@ class TrafficMonitor {
     await _trafficSubscription?.cancel();
     _trafficSubscription = null;
 
-    // 关闭流控制器
-    await _controller?.close();
-    _controller = null;
-
     Logger.info('流量监控已停止');
   }
 

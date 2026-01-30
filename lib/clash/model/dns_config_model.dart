@@ -95,7 +95,7 @@ class DnsConfig {
     this.preferH3 = false,
     this.respectRules = false,
     this.useHosts = false,
-    this.useSystemHosts = false,
+    this.useSystemHosts = true,
     this.directNameserverFollowPolicy = false,
 
     // DNS 服务器列表
@@ -119,44 +119,32 @@ class DnsConfig {
            defaultNameserver ??
            [
              'system',
-             '223.6.6.6',
-             '8.8.8.8',
-             '2400:3200::1',
-             '2001:4860:4860::8888',
+             '223.5.5.5',
            ],
        nameserver =
            nameserver ??
            [
-             '8.8.8.8',
-             'https://doh.pub/dns-query',
-             'https://dns.alidns.com/dns-query',
+             'tls://dns.alidns.com',
            ],
        fallback = fallback ?? [],
        proxyServerNameserver =
            proxyServerNameserver ??
            [
-             'https://doh.pub/dns-query',
-             'https://dns.alidns.com/dns-query',
-             'tls://223.5.5.5',
+             'tls://dns.alidns.com',
            ],
        directNameserver = directNameserver ?? [],
        fakeIpFilter =
            fakeIpFilter ??
            [
              '*.lan',
-             '*.local',
              '*.arpa',
-             'time.*.com',
-             'ntp.*.com',
-             '+.market.xiaomi.com',
-             'localhost.ptlogin2.qq.com',
-             '*.msftncsi.com',
-             'www.msftconnecttest.com',
+             '*.local',
+             'localhost',
            ],
        fallbackIpcidr = fallbackIpcidr ?? ['240.0.0.0/4', '0.0.0.0/32'],
        fallbackDomain =
            fallbackDomain ??
-           ['+.google.com', '+.facebook.com', '+.youtube.com'],
+           ['+.google.com', '+.youtube.com'],
        nameserverPolicy = nameserverPolicy ?? {},
        hosts = hosts ?? {};
 
@@ -240,9 +228,7 @@ class DnsConfig {
       final servers = proxyServerNameserver.isNotEmpty
           ? proxyServerNameserver
           : [
-              'https://doh.pub/dns-query',
-              'https://dns.alidns.com/dns-query',
-              'tls://223.5.5.5',
+              'tls://dns.alidns.com',
             ];
       dnsConfig['proxy-server-nameserver'] = servers;
     }

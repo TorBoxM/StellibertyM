@@ -37,7 +37,6 @@
     "config_count": "{count}個設定",
     "add_config": "新增設定",
     "updating": "更新中...",
-    "switching": "正在切換訂閱...",
     "update_all": "全部更新",
     "empty": "尚無設定",
     "empty_hint": "點擊上方「新增設定」按鈕開始使用",

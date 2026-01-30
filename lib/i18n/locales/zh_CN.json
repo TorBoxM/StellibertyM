@@ -37,7 +37,6 @@
     "config_count": "{count} 个配置",
     "add_config": "添加配置",
     "updating": "更新中...",
-    "switching": "正在切换订阅...",
     "update_all": "更新全部",
     "empty": "还没有配置",
     "empty_hint": "点击上方\"添加配置\"按钮开始使用",

@@ -37,7 +37,6 @@
     "config_count": "{count} profiles",
     "add_config": "Add Profile",
     "updating": "Updating...",
-    "switching": "Switching profile...",
     "update_all": "Update All",
     "empty": "No profiles yet",
     "empty_hint": "Click the \"Add Profile\" button above to get started",

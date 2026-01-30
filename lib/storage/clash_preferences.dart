@@ -200,7 +200,7 @@ class ClashPreferences {
   // ==================== IPv6 ====================
 
   // 获取 IPv6 是否启用
-  bool getIpv6() => _getBool(_kIpv6, false);
+  bool getIpv6() => _getBool(_kIpv6, true);
 
   // 保存 IPv6 启用状态
   Future<void> setIpv6(bool enabled) => _setBool(_kIpv6, enabled);
@@ -253,7 +253,7 @@ class ClashPreferences {
   // ==================== 统一延迟 ====================
 
   // 获取统一延迟是否启用
-  bool getUnifiedDelayEnabled() => _getBool(_kUnifiedDelayEnabled, false);
+  bool getUnifiedDelayEnabled() => _getBool(_kUnifiedDelayEnabled, true);
 
   // 保存统一延迟启用状态
   Future<void> setUnifiedDelayEnabled(bool enabled) =>
@@ -400,7 +400,7 @@ class ClashPreferences {
 
   // 获取虚拟网卡禁用 ICMP 转发状态
   bool getTunDisableIcmpForwarding() =>
-      _getBool(_kTunDisableIcmpForwarding, false);
+      _getBool(_kTunDisableIcmpForwarding, true);
 
   // 保存虚拟网卡禁用 ICMP 转发状态
   Future<void> setTunDisableIcmpForwarding(bool disabled) =>

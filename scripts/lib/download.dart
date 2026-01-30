@@ -240,12 +240,12 @@ Future<void> _downloadSingleGeoFile({
 // 下载 GeoIP 数据文件（并发下载，带重试机制）
 Future<void> downloadGeoData({required String targetDir}) async {
   const baseUrl =
-      'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest';
+      'https://geo.mapest.workers.dev';
 
   // 文件映射：下载URL文件名 -> 本地文件名
   final files = {
     'country.mmdb': 'country.mmdb',
-    'GeoLite2-ASN.mmdb': 'asn.mmdb',
+    'asn.mmdb': 'asn.mmdb',
     'geoip.dat': 'geoip.dat',
     'geoip.metadb': 'geoip.metadb',
     'geosite.dat': 'geosite.dat',

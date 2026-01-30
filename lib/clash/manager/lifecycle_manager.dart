@@ -172,7 +172,7 @@ class LifecycleManager {
         }
       }
       // 生成运行时配置（支持无配置路径时使用默认配置）
-      final generatedConfigPath = await ConfigInjector.injectCustomConfigParams(
+      final generatedConfig = await ConfigInjector.generateRuntimeConfig(
         configPath: configPath,
         overrides: overrides,
         mixedPort: mixedPort,
@@ -202,11 +202,11 @@ class LifecycleManager {
         outboundMode: outboundMode,
       );
 
-      if (generatedConfigPath == null) {
+      if (generatedConfig == null) {
         throw Exception('配置生成失败');
       }
 
-      final runtimeConfigPath = generatedConfigPath;
+      final runtimeConfigPath = generatedConfig.runtimeConfigPath;
 
       // 检查服务是否可用
       final serviceAvailable = _checkServiceAvailable();

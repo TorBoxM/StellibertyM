@@ -116,7 +116,7 @@ class DelayTestStream {
   }
 
   static Future<String?> _buildRuntimeConfig(String configPath) async {
-    return ConfigInjector.injectCustomConfigParams(
+    final generatedConfig = await ConfigInjector.generateRuntimeConfig(
       configPath: configPath,
       mixedPort: 17890,
       socksPort: null,
@@ -143,6 +143,8 @@ class DelayTestStream {
       isUnifiedDelayEnabled: false,
       outboundMode: 'rule',
     );
+
+    return generatedConfig?.runtimeConfigPath;
   }
 
   static Future<String> _resolveClashExecutable() async {

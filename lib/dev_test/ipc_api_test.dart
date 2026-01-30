@@ -31,7 +31,7 @@ class IpcApiTest {
       }
       Logger.info('使用测试配置：$testConfigPath');
 
-      final runtimeConfigPath = await ConfigInjector.injectCustomConfigParams(
+      final generatedConfig = await ConfigInjector.generateRuntimeConfig(
         configPath: testConfigPath,
         mixedPort: 17890,
         socksPort: null,
@@ -59,9 +59,10 @@ class IpcApiTest {
         outboundMode: 'rule',
       );
 
-      if (runtimeConfigPath == null) {
+      if (generatedConfig == null) {
         throw Exception('运行时配置生成失败');
       }
+      final runtimeConfigPath = generatedConfig.runtimeConfigPath;
 
       // 使用项目目录下的 clash-core（不使用构建后的副本）
       const execPath = 'assets/clash-core/clash-core';

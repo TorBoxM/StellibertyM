@@ -6,6 +6,17 @@ import 'package:stelliberty/clash/services/geo_service.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 
+// 运行时配置生成结果
+class GeneratedRuntimeConfig {
+  final String runtimeConfigPath;
+  final String configContent;
+
+  const GeneratedRuntimeConfig({
+    required this.runtimeConfigPath,
+    required this.configContent,
+  });
+}
+
 // Clash 配置注入器
 // 生成运行时配置文件（runtime_config.yaml），不修改订阅源文件
 class ConfigInjector {
@@ -14,8 +25,36 @@ class ConfigInjector {
     return 'proxies: []\nproxy-groups: []\nrules: []';
   }
 
+  // 读取基础配置内容（优先级：configContent > configPath > 默认）。
+  static Future<String> _resolveBaseConfigContent({
+    required String? configPath,
+    required String? configContent,
+  }) async {
+    if (configContent != null && configContent.isNotEmpty) {
+      return configContent;
+    }
+
+    if (configPath == null || configPath.isEmpty) {
+      Logger.info('使用默认配置启动核心');
+      return getDefaultConfigContent();
+    }
+
+    final configFile = File(configPath);
+    if (!await configFile.exists()) {
+      Logger.warning('配置文件不存在：$configPath');
+      return getDefaultConfigContent();
+    }
+
+    try {
+      return await configFile.readAsString();
+    } catch (e) {
+      Logger.error('读取配置失败：$e');
+      return getDefaultConfigContent();
+    }
+  }
+
   // 注入运行时参数，生成 runtime_config.yaml
-  static Future<String?> injectCustomConfigParams({
+  static Future<GeneratedRuntimeConfig?> generateRuntimeConfig({
     String? configPath,
     String? configContent,
     List<OverrideConfig> overrides = const [],
@@ -45,39 +84,21 @@ class ConfigInjector {
     required String outboundMode,
   }) async {
     try {
-      // 1. 获取配置内容（优先级：configContent > configPath > 默认）
-      String content;
-
-      if (configContent != null && configContent.isNotEmpty) {
-        content = configContent;
-      } else if (configPath != null && configPath.isNotEmpty) {
-        final configFile = File(configPath);
-        if (!await configFile.exists()) {
-          Logger.warning('配置文件不存在：$configPath');
-          content = getDefaultConfigContent();
-        } else {
-          try {
-            content = await configFile.readAsString();
-          } catch (e) {
-            Logger.error('读取配置失败：$e');
-            content = getDefaultConfigContent();
-          }
-        }
-      } else {
-        Logger.info('使用默认配置启动核心');
-        content = getDefaultConfigContent();
-      }
+      // 1. 读取基础配置内容
+      final content = await _resolveBaseConfigContent(
+        configPath: configPath,
+        configContent: configContent,
+      );
 
       // 2. 构建运行时参数
-      final isKeepAliveEnabled = ClashPreferences.instance
-          .getKeepAliveEnabled();
+      final prefs = ClashPreferences.instance;
+      final isKeepAliveEnabled = prefs.getKeepAliveEnabled();
       final keepAliveInterval = isKeepAliveEnabled
-          ? ClashPreferences.instance.getKeepAliveInterval()
+          ? prefs.getKeepAliveInterval()
           : null;
 
       // 读取 DNS 覆写
-      final isDnsOverrideEnabled = ClashPreferences.instance
-          .getDnsOverrideEnabled();
+      final isDnsOverrideEnabled = prefs.getDnsOverrideEnabled();
       String? dnsOverrideContent;
       if (isDnsOverrideEnabled && DnsService.instance.configExists()) {
         try {
@@ -102,7 +123,7 @@ class ConfigInjector {
         tunDevice: tunDevice,
         isTunAutoRouteEnabled: isTunAutoRouteEnabled,
         isTunAutoRedirectEnabled: isTunAutoRedirectEnabled,
-        isTunAutoDetectInterfaceEnabled: true, // 固定为 true
+        isTunAutoDetectInterfaceEnabled: isTunAutoDetectInterfaceEnabled,
         tunDnsHijacks: tunDnsHijacks,
         isTunStrictRouteEnabled: isTunStrictRouteEnabled,
         tunRouteExcludeAddresses: tunRouteExcludeAddresses,
@@ -144,17 +165,18 @@ class ConfigInjector {
       }
 
       // 4. 写入 runtime_config.yaml
+      final resultConfig = response.message.resultConfig;
       final geoDataDir = await GeoService.getGeoDataDir();
       final runtimeConfigPath = path.join(geoDataDir, 'runtime_config.yaml');
-      await File(
-        runtimeConfigPath,
-      ).writeAsString(response.message.resultConfig);
+      await File(runtimeConfigPath).writeAsString(resultConfig);
 
-      final sizeKb = (response.message.resultConfig.length / 1024)
-          .toStringAsFixed(1);
+      final sizeKb = (resultConfig.length / 1024).toStringAsFixed(1);
       Logger.info('运行时配置已生成（${sizeKb}KB）');
 
-      return runtimeConfigPath;
+      return GeneratedRuntimeConfig(
+        runtimeConfigPath: runtimeConfigPath,
+        configContent: resultConfig,
+      );
     } catch (e) {
       Logger.error('生成运行时配置失败：$e');
       return null;

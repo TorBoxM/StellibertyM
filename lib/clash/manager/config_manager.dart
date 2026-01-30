@@ -49,26 +49,30 @@ class ConfigManager {
       }
 
       // 第一次尝试：使用用户配置 + 覆写
-      String? runtimeConfigPath = await _generateConfig(configPath, overrides);
+      GeneratedRuntimeConfig? generatedConfig = await _generateConfig(
+        configPath,
+        overrides,
+      );
 
       // 如果配置生成失败且有覆写，尝试禁用覆写重新生成
-      if (runtimeConfigPath == null && overrides.isNotEmpty) {
+      if (generatedConfig == null && overrides.isNotEmpty) {
         Logger.error('配置生成失败（可能由覆写导致），尝试禁用覆写重新生成');
-        runtimeConfigPath = await _generateConfig(configPath, const []);
+        generatedConfig = await _generateConfig(configPath, const []);
 
-        if (runtimeConfigPath != null) {
+        if (generatedConfig != null) {
           Logger.info('禁用覆写后配置生成成功');
         }
       }
 
       // 如果仍然失败，直接返回 false（让上层 SubscriptionProvider 处理回退）
-      if (runtimeConfigPath == null) {
+      if (generatedConfig == null) {
         Logger.error('配置生成失败，原始配置存在错误：$configPath');
         return false;
       }
 
       final success = await _coreClient.reloadConfig(
-        configPath: runtimeConfigPath,
+        configPath: generatedConfig.runtimeConfigPath,
+        configContent: generatedConfig.configContent,
         force: true,
       );
 
@@ -84,14 +88,14 @@ class ConfigManager {
   }
 
   // 生成运行时配置文件（辅助方法，避免重复代码）
-  Future<String?> _generateConfig(
+  Future<GeneratedRuntimeConfig?> _generateConfig(
     String? configPath,
     List<OverrideConfig> overrides,
   ) async {
     // 从持久化读取配置参数
     final prefs = ClashPreferences.instance;
 
-    return await ConfigInjector.injectCustomConfigParams(
+    return await ConfigInjector.generateRuntimeConfig(
       configPath: configPath,
       overrides: overrides,
       mixedPort: prefs.getMixedPort(),

@@ -404,7 +404,7 @@ class ClashManager {
   // 调度配置重载（使用防抖机制）
   // 在指定时间内的多次配置修改只会触发一次重载
   void _scheduleConfigReload(String reason) {
-    if (!isCoreRunning || currentConfigPath == null) return;
+    if (!isCoreRunning) return;
 
     // 取消定时器
     _configReloadDebounceTimer?.cancel();
@@ -489,7 +489,12 @@ class ClashManager {
   }
 
   Future<bool> setTunEnabled(bool enabled) async {
-    return await _configManager.setTunEnabled(enabled);
+    final success = await _configManager.setTunEnabled(enabled);
+    if (success) {
+      _scheduleConfigReload('TUN 模式');
+      _onConfigChanged?.call();
+    }
+    return success;
   }
 
   // 通用的 TUN 子配置修改方法
@@ -499,6 +504,7 @@ class ClashManager {
   ) async {
     final success = await setter();
     if (success) {
+      _scheduleConfigReload('TUN 配置：$configName');
       _onConfigChanged?.call();
     }
     return success;

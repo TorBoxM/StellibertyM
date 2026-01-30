@@ -5,6 +5,7 @@ import 'package:stelliberty/clash/model/connection_model.dart';
 import 'package:stelliberty/clash/model/rule_model.dart';
 import 'package:stelliberty/clash/client/clash_core_client.dart';
 import 'package:stelliberty/clash/client/ipc_request_helper.dart';
+import 'package:stelliberty/storage/clash_preferences.dart';
 
 // 桌面端核心客户端实现
 // 通过 IPC（Named Pipe / Unix Socket）与 Rust 服务通信
@@ -38,6 +39,17 @@ class IpcCoreClient implements ClashCoreClient {
   Future<bool> _delete(String path) async {
     await IpcRequestHelper.instance.delete(path);
     return true;
+  }
+
+  // 注意：Mihomo 的 PATCH /configs 在接收 tun 对象时，会无条件使用 tun.enable。
+  // 因此发送 tun 子字段时必须同时带上当前 enable 值，避免意外关闭 TUN。
+  Map<String, dynamic> _buildTunPatch(Map<String, dynamic> tunConfig) {
+    return {
+      'tun': <String, dynamic>{
+        'enable': ClashPreferences.instance.getTunEnable(),
+        ...tunConfig,
+      },
+    };
   }
 
   @override
@@ -234,13 +246,22 @@ class IpcCoreClient implements ClashCoreClient {
   }
 
   @override
-  Future<bool> reloadConfig({String? configPath, bool force = true}) async {
+  Future<bool> reloadConfig({
+    String? configPath,
+    String? configContent,
+    bool force = true,
+  }) async {
     try {
       final path = force ? '/configs?force=true' : '/configs';
 
-      final body = configPath != null
-          ? <String, dynamic>{'path': configPath}
-          : <String, dynamic>{};
+      // 兼容两种重载方式：优先使用 payload，其次使用 path。
+      // 注：body 为空时等价于让核心使用默认配置路径。
+      final body = <String, dynamic>{};
+      if (configContent != null && configContent.isNotEmpty) {
+        body['payload'] = configContent;
+      } else if (configPath != null && configPath.isNotEmpty) {
+        body['path'] = configPath;
+      }
 
       await _put(path, body);
       Logger.info('配置文件重载成功');
@@ -434,9 +455,7 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunStack(String stack) async {
     try {
-      await _patch('/configs', {
-        'tun': {'stack': stack},
-      });
+      await _patch('/configs', _buildTunPatch({'stack': stack}));
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -448,9 +467,7 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunDevice(String device) async {
     try {
-      await _patch('/configs', {
-        'tun': {'device': device},
-      });
+      await _patch('/configs', _buildTunPatch({'device': device}));
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -462,9 +479,7 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunAutoRoute(bool enable) async {
     try {
-      await _patch('/configs', {
-        'tun': {'auto-route': enable},
-      });
+      await _patch('/configs', _buildTunPatch({'auto-route': enable}));
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -476,9 +491,10 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunAutoDetectInterface(bool enable) async {
     try {
-      await _patch('/configs', {
-        'tun': {'auto-detect-interface': enable},
-      });
+      await _patch(
+        '/configs',
+        _buildTunPatch({'auto-detect-interface': enable}),
+      );
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -490,9 +506,7 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunDnsHijack(List<String> hijackList) async {
     try {
-      await _patch('/configs', {
-        'tun': {'dns-hijack': hijackList},
-      });
+      await _patch('/configs', _buildTunPatch({'dns-hijack': hijackList}));
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -504,9 +518,7 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunMtu(int mtu) async {
     try {
-      await _patch('/configs', {
-        'tun': {'mtu': mtu},
-      });
+      await _patch('/configs', _buildTunPatch({'mtu': mtu}));
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -518,9 +530,7 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunStrictRoute(bool enable) async {
     try {
-      await _patch('/configs', {
-        'tun': {'strict-route': enable},
-      });
+      await _patch('/configs', _buildTunPatch({'strict-route': enable}));
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -532,9 +542,7 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunAutoRedirect(bool enable) async {
     try {
-      await _patch('/configs', {
-        'tun': {'auto-redirect': enable},
-      });
+      await _patch('/configs', _buildTunPatch({'auto-redirect': enable}));
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -546,9 +554,10 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunRouteExcludeAddress(List<String> addresses) async {
     try {
-      await _patch('/configs', {
-        'tun': {'route-exclude-address': addresses},
-      });
+      await _patch(
+        '/configs',
+        _buildTunPatch({'route-exclude-address': addresses}),
+      );
       _clearConfigCache();
       return true;
     } catch (e) {
@@ -560,9 +569,10 @@ class IpcCoreClient implements ClashCoreClient {
   @override
   Future<bool> setTunDisableIcmpForwarding(bool disabled) async {
     try {
-      await _patch('/configs', {
-        'tun': {'disable-icmp-forwarding': disabled},
-      });
+      await _patch(
+        '/configs',
+        _buildTunPatch({'disable-icmp-forwarding': disabled}),
+      );
       _clearConfigCache();
       return true;
     } catch (e) {

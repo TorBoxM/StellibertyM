@@ -72,7 +72,11 @@ abstract class ClashCoreClient {
   // 配置管理
   Future<Map<String, dynamic>> getConfig();
   Future<bool> updateConfig(Map<String, dynamic> config);
-  Future<bool> reloadConfig({String? configPath, bool force = true});
+  Future<bool> reloadConfig({
+    String? configPath,
+    String? configContent,
+    bool force = true,
+  });
 
   // 规则
   Future<List<RuleItem>> getRules();

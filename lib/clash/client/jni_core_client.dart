@@ -153,8 +153,16 @@ class JniCoreClient implements ClashCoreClient {
   }
 
   @override
-  Future<bool> reloadConfig({String? configPath, bool force = true}) async {
+  Future<bool> reloadConfig({
+    String? configPath,
+    String? configContent,
+    bool force = true,
+  }) async {
     // Android 端使用 setupConfig 重载配置
+    if (configContent != null && configContent.isNotEmpty) {
+      Logger.debug('Android 端不支持 payload 重载，将忽略 payload');
+    }
+
     final path = configPath ?? _configPath;
     if (path == null || path.isEmpty) {
       Logger.warning('Android 端未指定配置路径，无法重载配置');

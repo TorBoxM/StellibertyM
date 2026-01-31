@@ -4,6 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
+// 判断是否为移动端
+bool get _isMobile => Platform.isAndroid || Platform.isIOS;
+
 // 文件选择结果
 class FileSelectionResult {
   final File file;
@@ -67,6 +70,14 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = _isMobile;
+    final mainIconSize = isMobile ? 18.0 : 20.0;
+    final titleFontSize = isMobile ? 14.0 : 16.0;
+    final subtitleFontSize = isMobile ? 11.0 : 12.0;
+    final contentPadding = isMobile
+        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 16);
+
     return DropTarget(
       onDragEntered: (details) {
         setState(() {
@@ -112,7 +123,7 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: contentPadding,
               child: Row(
                 children: [
                   Icon(
@@ -121,7 +132,7 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
                         : (_selectedFile != null
                               ? Icons.check_circle
                               : Icons.upload_file),
-                    size: 20,
+                    size: mainIconSize,
                     color: _isDragging
                         ? Theme.of(context).colorScheme.primary
                         : (_selectedFile != null
@@ -130,7 +141,7 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
                                   context,
                                 ).colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: isMobile ? 12 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,13 +156,13 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurface.withValues(alpha: 0.7),
-                            fontSize: 16,
+                            fontSize: titleFontSize,
                             fontWeight: _selectedFile != null || _isDragging
                                 ? FontWeight.w600
                                 : FontWeight.normal,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: isMobile ? 2 : 4),
                         Text(
                           _isDragging
                               ? widget.dragHintText
@@ -165,7 +176,7 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
                                       ? Theme.of(context).colorScheme.primary
                                       : Theme.of(context).colorScheme.onSurface
                                             .withValues(alpha: 0.5)),
-                            fontSize: 12,
+                            fontSize: subtitleFontSize,
                             fontWeight: _selectedFile != null || _isDragging
                                 ? FontWeight.w500
                                 : FontWeight.normal,
@@ -181,6 +192,7 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
                               ? Icons.edit
                               : Icons.folder_open),
                     color: Theme.of(context).colorScheme.primary,
+                    size: isMobile ? 20 : 24,
                   ),
                 ],
               ),

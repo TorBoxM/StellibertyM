@@ -249,7 +249,7 @@ class _OverrideDialogState extends State<OverrideDialog> {
     return OptionSelectorWidget<OverrideAddMethod>(
       title: trans.kOverride.add_method_title,
       titleIcon: Icons.folder,
-      isHorizontal: true,
+      isHorizontal: !DialogConstants.isMobile,
       options: [
         OptionItem(
           value: OverrideAddMethod.remote,
@@ -280,7 +280,7 @@ class _OverrideDialogState extends State<OverrideDialog> {
     return OptionSelectorWidget<OverrideFormat>(
       title: trans.kOverride.format_title,
       titleIcon: Icons.code,
-      isHorizontal: true,
+      isHorizontal: !DialogConstants.isMobile,
       options: [
         OptionItem(
           value: OverrideFormat.yaml,

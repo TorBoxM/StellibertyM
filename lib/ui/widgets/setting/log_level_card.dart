@@ -73,29 +73,30 @@ class _LogLevelCardState extends State<LogLevelCard> {
       isHoverEnabled: false,
       isTapEnabled: false,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 左侧图标和标题
-          Row(
-            children: [
-              const Icon(Icons.article_outlined),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    trans.clash_features.log_level.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    trans.clash_features.log_level.subtitle,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ],
+          // 左侧图标
+          const Icon(Icons.article_outlined),
+          const SizedBox(width: 12),
+          // 中间标题和描述
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  trans.clash_features.log_level.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  trans.clash_features.log_level.subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 12),
           // 右侧下拉菜单
           MouseRegion(
             onEnter: (_) => setState(() => _isHoveringOnLogLevelMenu = true),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:stelliberty/clash/model/subscription_model.dart';
+import 'package:stelliberty/ui/common/modern_dialog.dart';
 import 'package:stelliberty/ui/common/modern_dialog_subs/option_selector.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 
@@ -22,7 +23,7 @@ class ProxyModeSelector extends StatelessWidget {
     return OptionSelectorWidget<SubscriptionProxyMode>(
       title: trans.subscription_dialog.proxy_mode_title,
       titleIcon: Icons.public,
-      isHorizontal: true,
+      isHorizontal: !DialogConstants.isMobile,
       options: [
         OptionItem(
           value: SubscriptionProxyMode.direct,

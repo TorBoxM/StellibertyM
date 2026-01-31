@@ -405,29 +405,30 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
         children: [
           // 标题行（包含 DNS 开关）
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.dns_outlined),
-                  const SizedBox(
-                    width: ModernFeatureCardSpacing.featureIconToTextSpacing,
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        trans.dns_settings.title,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(
-                        trans.dns_settings.description,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
+              const Icon(Icons.dns_outlined),
+              const SizedBox(
+                width: ModernFeatureCardSpacing.featureIconToTextSpacing,
               ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      trans.dns_settings.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      trans.dns_settings.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
               // DNS 开关直接显示在标题行
               ModernSwitch(
                 value: _enableDns,

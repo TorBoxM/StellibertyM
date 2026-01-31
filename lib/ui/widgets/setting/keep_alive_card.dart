@@ -94,30 +94,32 @@ class _KeepAliveCardState extends State<KeepAliveCard> {
         children: [
           // 开关行
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 左侧图标和标题
-              Row(
-                children: [
-                  const Icon(Icons.timer_outlined),
-                  const SizedBox(
-                    width: ModernFeatureCardSpacing.featureIconToTextSpacing,
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        trans.clash_features.keep_alive.title,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      Text(
-                        trans.clash_features.keep_alive.subtitle,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
+              // 左侧图标
+              const Icon(Icons.timer_outlined),
+              const SizedBox(
+                width: ModernFeatureCardSpacing.featureIconToTextSpacing,
               ),
+              // 中间标题和描述
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      trans.clash_features.keep_alive.title,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    Text(
+                      trans.clash_features.keep_alive.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
               // 右侧开关
               ModernSwitch(
                 value: _keepAliveEnabled,

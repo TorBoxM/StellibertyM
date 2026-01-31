@@ -601,7 +601,9 @@ class _ModernDialogState extends State<ModernDialog>
               final index = entry.key;
               final action = entry.value;
               return Padding(
-                padding: EdgeInsets.only(left: index > 0 ? (isMobile ? 8 : 12) : 0),
+                padding: EdgeInsets.only(
+                  left: index > 0 ? (isMobile ? 8 : 12) : 0,
+                ),
                 child: _buildActionButton(action, isDark),
               );
             }),
@@ -718,7 +720,10 @@ class _ModernDialogState extends State<ModernDialog>
                     ),
                   ),
                   SizedBox(width: loadingSpacing),
-                  Text(action.label, style: TextStyle(fontSize: buttonFontSize)),
+                  Text(
+                    action.label,
+                    style: TextStyle(fontSize: buttonFontSize),
+                  ),
                 ],
               )
             : Text(action.label, style: TextStyle(fontSize: buttonFontSize)),

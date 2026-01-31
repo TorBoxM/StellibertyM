@@ -117,29 +117,30 @@ class _ExternalControllerCardState extends State<ExternalControllerCard> {
         children: [
           // 标题区域
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.settings_remote_rounded),
-                  const SizedBox(
-                    width: ModernFeatureCardSpacing.featureIconToTextSpacing,
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        trans.external_controller.title,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(
-                        trans.external_controller.description,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ],
+              const Icon(Icons.settings_remote_rounded),
+              const SizedBox(
+                width: ModernFeatureCardSpacing.featureIconToTextSpacing,
               ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      trans.external_controller.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      trans.external_controller.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
               ModernSwitch(
                 value: _isEnabled,
                 onChanged: (value) async {

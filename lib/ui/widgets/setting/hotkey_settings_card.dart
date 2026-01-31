@@ -620,34 +620,34 @@ class _HotkeySettingsCardState extends State<HotkeySettingsCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.keyboard_rounded),
-                  const SizedBox(
-                    width: ModernFeatureCardSpacing.featureIconToTextSpacing,
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        context.translate.behavior.hotkey_title,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(
-                        context.translate.behavior.hotkey_description,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(153),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              const Icon(Icons.keyboard_rounded),
+              const SizedBox(
+                width: ModernFeatureCardSpacing.featureIconToTextSpacing,
               ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.translate.behavior.hotkey_title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      context.translate.behavior.hotkey_description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(153),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
               ModernSwitch(value: _isEnabled, onChanged: _toggleEnabled),
             ],
           ),

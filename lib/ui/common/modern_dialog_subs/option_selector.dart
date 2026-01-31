@@ -93,7 +93,11 @@ class OptionSelectorWidget<T> extends StatelessWidget {
             // 标题行
             Row(
               children: [
-                Icon(titleIcon, color: effectiveTitleColor, size: titleIconSize),
+                Icon(
+                  titleIcon,
+                  color: effectiveTitleColor,
+                  size: titleIconSize,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   title,
@@ -127,8 +131,12 @@ class OptionSelectorWidget<T> extends StatelessWidget {
     final isMobile = _isMobile;
     // 根据选项数量动态设置间距
     final spacing = options.length == 2
-        ? (isMobile ? _kHorizontalSpacingTwoOptionsMobile : _kHorizontalSpacingTwoOptions)
-        : (isMobile ? _kHorizontalSpacingThreeOptionsMobile : _kHorizontalSpacingThreeOptions);
+        ? (isMobile
+              ? _kHorizontalSpacingTwoOptionsMobile
+              : _kHorizontalSpacingTwoOptions)
+        : (isMobile
+              ? _kHorizontalSpacingThreeOptionsMobile
+              : _kHorizontalSpacingThreeOptions);
 
     return Row(
       children: List.generate(options.length, (index) {
@@ -225,7 +233,11 @@ class OptionSelectorWidget<T> extends StatelessWidget {
                     : colorScheme.onSurface.withValues(alpha: 0.4),
                 size: radioIconSize,
               ),
-              SizedBox(width: isMobile ? (isHorizontal ? 6 : 10) : (isHorizontal ? 8 : 12)),
+              SizedBox(
+                width: isMobile
+                    ? (isHorizontal ? 6 : 10)
+                    : (isHorizontal ? 8 : 12),
+              ),
 
               // 内容
               Expanded(

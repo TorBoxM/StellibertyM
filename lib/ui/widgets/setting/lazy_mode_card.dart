@@ -55,45 +55,46 @@ class _LazyModeCardState extends State<LazyModeCard> {
       isHoverEnabled: true,
       isTapEnabled: false, // 禁用点击交互，只允许开关本身触发
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 左侧图标和标题
-          Row(
-            children: [
-              const Icon(Icons.bedtime_rounded),
-              const SizedBox(
-                width: ModernFeatureCardSpacing.featureIconToTextSpacing,
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context
-                        .translate
-                        .clash_features
-                        .system_integration
-                        .lazy_mode
-                        .title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    context
-                        .translate
-                        .clash_features
-                        .system_integration
-                        .lazy_mode
-                        .subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(153),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          // 左侧图标
+          const Icon(Icons.bedtime_rounded),
+          const SizedBox(
+            width: ModernFeatureCardSpacing.featureIconToTextSpacing,
           ),
+          // 中间标题和描述（Expanded 确保自适应宽度）
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context
+                      .translate
+                      .clash_features
+                      .system_integration
+                      .lazy_mode
+                      .title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  context
+                      .translate
+                      .clash_features
+                      .system_integration
+                      .lazy_mode
+                      .subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withAlpha(153),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
           // 右侧开关
           ModernSwitch(value: _lazyMode, onChanged: _toggleLazyMode),
         ],

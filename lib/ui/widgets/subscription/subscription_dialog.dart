@@ -448,7 +448,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     return OptionSelectorWidget<SubscriptionImportMethod>(
       title: dialogTrans.import_method_title,
       titleIcon: Icons.import_export,
-      isHorizontal: true,
+      isHorizontal: !DialogConstants.isMobile,
       options: [
         OptionItem(
           value: SubscriptionImportMethod.link,

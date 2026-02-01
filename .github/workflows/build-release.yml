@@ -273,6 +273,12 @@ jobs:
           - platform: linux
             os: ubuntu-24.04-arm
             arch: arm64
+          - platform: android
+            os: ubuntu-latest
+            arch: x64
+          - platform: android
+            os: ubuntu-latest
+            arch: arm64
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -294,7 +300,14 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ (matrix.os == 'windows-11-arm' || matrix.os == 'ubuntu-24.04-arm') && 'master' || 'stable' }}
-          
+
+      - name: 配置 Java（Android）
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: 配置 Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -302,7 +315,7 @@ jobs:
         shell: bash
         run: |
           echo "📦 正在安装项目依赖..."
-          if [ "$RUNNER_OS" = "Linux" ]; then
+          if [ "$RUNNER_OS" = "Linux" ] && [ "${{ matrix.platform }}" != "android" ]; then
             echo "  ➤ 安装 Linux 构建依赖..."
             sudo apt-get update
             sudo apt-get install -y libgtk-3-dev libappindicator3-dev adwaita-icon-theme-full libkeybinder-3.0-dev
@@ -319,7 +332,15 @@ jobs:
         working-directory: scripts
 
       - name: 运行预构建脚本
-        run: dart run scripts/prebuild.dart --installer
+        shell: bash
+        run: |
+          ARGS=""
+          if [ "${{ matrix.platform }}" = "android" ]; then
+            ARGS="--android"
+          else
+            ARGS="--installer"
+          fi
+          dart run scripts/prebuild.dart $ARGS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -330,7 +351,14 @@ jobs:
         run: dart run slang
 
       - name: 运行构建脚本
-        run: dart run scripts/build.dart --with-installer
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "android" ]; then
+            ARGS="--android --android-arch=${{ matrix.arch }}"
+          else
+            ARGS="--with-installer"
+          fi
+          dart run scripts/build.dart $ARGS
 
       - name: 复制构建产物到 dist
         shell: bash
@@ -353,7 +381,7 @@ jobs:
                 exit 1
               }
             '
-          elif [ "$RUNNER_OS" = "Linux" ]; then
+          else
             mkdir -p dist
             if [ -d "build/packages" ]; then
               cp -r build/packages/* dist/
@@ -429,17 +457,25 @@ jobs:
           name: ${{ needs.prepare.outputs.pkg_capitalized }} ${{ needs.prepare.outputs.version }} 更新
           body: |
             ### 📦 构建信息
-            
+
             | 项目 | 内容 |
             |------|------|
             | **包名** | `${{ needs.prepare.outputs.pkg }}` |
             | **版本号** | `${{ needs.prepare.outputs.version }}` |
             | **Mihomo 核心** | `${{ needs.prepare.outputs.mihomo_version }}` |
-            
+
             ${{ steps.decode_changelog.outputs.changelog }}
-            
+
             ---
-            
+
+            ## 📱 Android 版本说明
+
+            > ⚠️ **注意**：Android 版本始终处于不稳定状态，建议仅用于体验和测试。
+            >
+            > 如遇问题，请在 [Issues](https://github.com/${{ github.repository }}/issues) 中反馈。
+
+            ---
+
             ## ❓ 故障排查
 
             ### Linux 启动问题

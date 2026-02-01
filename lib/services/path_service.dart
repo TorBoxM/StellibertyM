@@ -190,16 +190,13 @@ class PathService {
   }
 
   // 确定日志文件目录路径
-  // Android 使用外部 Documents 目录便于用户查看；其他平台使用应用数据目录
+  // Android 使用应用私有外部存储目录，无需额外权限；其他平台使用应用数据目录
   Future<String> _determineLogDirPath() async {
     if (Platform.isAndroid) {
-      final documentsDir = await getExternalStorageDirectory();
-      if (documentsDir != null) {
-        // 使用外部存储的 Documents 目录
-        final externalPath = documentsDir.path;
-        // /storage/emulated/0/Android/data/xxx/files -> /storage/emulated/0/Documents
-        final rootPath = externalPath.split('Android').first;
-        return path.join(rootPath, 'Documents', 'stelliberty');
+      final externalDir = await getExternalStorageDirectory();
+      if (externalDir != null) {
+        // 使用 /sdcard/Android/data/包名/files/logs/
+        return path.join(externalDir.path, 'logs');
       }
       // 回退到应用数据目录
       return appDataPath;

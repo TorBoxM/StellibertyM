@@ -44,8 +44,10 @@ class MainActivity : FlutterActivity() {
     private var pendingAccessControlMode: Int = VpnService.accessControlModeDisabled
     // 待处理的访问控制应用列表
     private var pendingAccessControlList: ArrayList<String> = arrayListOf()
-    // 核心初始化专用线程池
+    // 核心操作专用单线程池（配置加载、状态查询等需要串行）
     private val coreExecutor = Executors.newSingleThreadExecutor()
+    // 延迟测试专用多线程池（支持并发测试）
+    private val delayTestExecutor = Executors.newFixedThreadPool(16)
 
     companion object {
         private const val TAG = "MainActivity"
@@ -67,6 +69,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         coreExecutor.shutdownNow()
+        delayTestExecutor.shutdownNow()
         super.onDestroy()
     }
 
@@ -217,7 +220,9 @@ class MainActivity : FlutterActivity() {
                             result.error("CORE_NOT_INIT", "核心未初始化", null)
                             return@setMethodCallHandler
                         }
-                        coreExecutor.execute {
+                        // 延迟测试使用多线程执行器支持并发，其他操作使用单线程保证串行
+                        val executor = if (method == "asyncTestDelay") delayTestExecutor else coreExecutor
+                        executor.execute {
                             try {
                                 val dataObj: Any? =
                                     if (data.isNullOrBlank()) null

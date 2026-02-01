@@ -148,14 +148,14 @@ class VpnService {
     String? testUrl,
     int? timeoutMs,
   }) async {
-    final res = await invokeAction(
-      method: 'asyncTestDelay',
-      data: {
-        'proxy-name': proxyName,
-        'test-url': testUrl ?? ClashDefaults.defaultTestUrl,
-        'timeout': timeoutMs ?? ClashDefaults.proxyDelayTestTimeout,
-      },
-    );
+    // Go 端 asyncTestDelay 使用 decodeString，期望 data 是 JSON 字符串
+    // 因此需要先将参数 JSON 编码为字符串
+    final paramsJson = jsonEncode({
+      'proxy-name': proxyName,
+      'test-url': testUrl ?? ClashDefaults.defaultTestUrl,
+      'timeout': timeoutMs ?? ClashDefaults.proxyDelayTestTimeout,
+    });
+    final res = await invokeAction(method: 'asyncTestDelay', data: paramsJson);
     if (res == null) return -1;
     final data = res['data'];
     if (data == null) return -1;

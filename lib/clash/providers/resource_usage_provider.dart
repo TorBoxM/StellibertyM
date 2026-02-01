@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:rinf/rinf.dart';
+import 'package:stelliberty/atomic/platform_helper.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
+import 'package:stelliberty/clash/services/vpn_service.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
 
@@ -24,6 +27,7 @@ class ResourceUsageProvider extends ChangeNotifier {
 
   Timer? _appRefreshTimer;
   StreamSubscription<RustSignalPack<IpcMemoryData>>? _memorySubscription;
+  StreamSubscription<String>? _androidMemorySubscription;
   bool _isMemoryStreamActive = false;
 
   int? _appMemoryBytes;
@@ -55,11 +59,17 @@ class ResourceUsageProvider extends ChangeNotifier {
   }
 
   void _startMemoryStream() {
-    if (_isMemoryStreamActive) {
-      return;
-    }
-
+    if (_isMemoryStreamActive) return;
     _isMemoryStreamActive = true;
+
+    if (PlatformHelper.isMobile) {
+      _startAndroidMemoryStream();
+    } else {
+      _startDesktopMemoryStream();
+    }
+  }
+
+  void _startDesktopMemoryStream() {
     _memorySubscription?.cancel();
     _memorySubscription = IpcMemoryData.rustSignalStream.listen(
       _handleMemoryData,
@@ -67,31 +77,78 @@ class ResourceUsageProvider extends ChangeNotifier {
         Logger.warning('核心内存数据流错误：$error');
       },
     );
-
     const StartMemoryStream().sendSignalToRust();
   }
 
-  void _stopMemoryStream() {
-    if (!_isMemoryStreamActive) {
-      return;
-    }
+  void _startAndroidMemoryStream() {
+    _androidMemorySubscription?.cancel();
+    _androidMemorySubscription = VpnService.coreLogStream?.listen(
+      _handleAndroidEvent,
+      onError: (error) {
+        Logger.warning('Android 内存数据流错误：$error');
+      },
+    );
+    // 启动核心内存推送
+    VpnService.invokeAction(method: 'startMemory');
+  }
 
+  void _stopMemoryStream() {
+    if (!_isMemoryStreamActive) return;
     _isMemoryStreamActive = false;
-    const StopMemoryStream().sendSignalToRust();
-    _memorySubscription?.cancel();
-    _memorySubscription = null;
+
+    if (PlatformHelper.isMobile) {
+      VpnService.invokeAction(method: 'stopMemory');
+      _androidMemorySubscription?.cancel();
+      _androidMemorySubscription = null;
+    } else {
+      const StopMemoryStream().sendSignalToRust();
+      _memorySubscription?.cancel();
+      _memorySubscription = null;
+    }
+  }
+
+  void _handleAndroidEvent(String jsonString) {
+    try {
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final method = json['method'] as String?;
+      if (method != 'message') return;
+
+      final data = json['data'] as Map<String, dynamic>?;
+      if (data == null) return;
+
+      final messageType = data['type'] as String?;
+      if (messageType != 'memory') return;
+
+      final memoryData = data['data'] as Map<String, dynamic>?;
+      if (memoryData == null) return;
+
+      final inuse = memoryData['inuse'];
+      if (inuse == null) return;
+
+      final memoryBytes = (inuse is int)
+          ? inuse
+          : int.tryParse(inuse.toString());
+      if (memoryBytes == null) return;
+
+      _updateCoreMemory(memoryBytes);
+    } catch (e) {
+      Logger.warning('处理 Android 内存事件失败：$e');
+    }
   }
 
   void _handleMemoryData(RustSignalPack<IpcMemoryData> signal) {
-    final nextCoreMemoryBytes = signal.message.inuse.toInt();
+    _updateCoreMemory(signal.message.inuse.toInt());
+  }
+
+  void _updateCoreMemory(int memoryBytes) {
     final nextAppMemoryBytes = _readAppMemoryBytes();
     final resolvedAppMemoryBytes = nextAppMemoryBytes ?? _appMemoryBytes;
 
     final shouldNotify =
-        nextCoreMemoryBytes != _coreMemoryBytes ||
+        memoryBytes != _coreMemoryBytes ||
         resolvedAppMemoryBytes != _appMemoryBytes;
 
-    _coreMemoryBytes = nextCoreMemoryBytes;
+    _coreMemoryBytes = memoryBytes;
     if (nextAppMemoryBytes != null) {
       _appMemoryBytes = nextAppMemoryBytes;
     }
@@ -112,9 +169,7 @@ class ResourceUsageProvider extends ChangeNotifier {
 
   void _refreshAppMemory() {
     final nextAppMemoryBytes = _readAppMemoryBytes();
-    if (nextAppMemoryBytes == null) {
-      return;
-    }
+    if (nextAppMemoryBytes == null) return;
 
     if (nextAppMemoryBytes != _appMemoryBytes) {
       _appMemoryBytes = nextAppMemoryBytes;

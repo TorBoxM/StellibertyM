@@ -23,6 +23,9 @@ object ClashCoreRuntime {
 
     @Volatile private var startedAtMs: Long? = null
 
+    // 已打印过的事件类型集合，避免重复打印
+    private val loggedEventTypes = mutableSetOf<String>()
+
     // 核心事件监听器：转发日志到 Flutter 端
     private val coreEventListener = ClashCoreResultCallback { result ->
         if (result.isNullOrBlank()) {
@@ -41,8 +44,11 @@ object ClashCoreRuntime {
                     val level = logData?.optString("level") ?: "info"
                     val payload = logData?.optString("payload") ?: ""
                     Log.d(logTag, "[$level] $payload")
-                } else {
-                    Log.d(logTag, "事件: $type")
+                } else if (type != null) {
+                    // 只在首次收到该类型事件时打印
+                    if (loggedEventTypes.add(type)) {
+                        Log.d(logTag, "事件流已建立: $type")
+                    }
                 }
             }
         } catch (e: Exception) {

@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import '../state/access_control_states.dart';
+
 // VPN 通道封装：通过 MethodChannel 控制原生 VpnService。
 // 目前仅支持 Android，未来可扩展支持 iOS。
 class VpnService {
@@ -56,10 +58,15 @@ class VpnService {
     return await _channel.invokeMethod<int>('getCoreStartedAtMs');
   }
 
-  static Future<bool> startVpn({required String? configPath}) async {
+  static Future<bool> startVpn({
+    required String? configPath,
+    AccessControlConfig? accessControl,
+  }) async {
     if (!isSupported) return false;
     final res = await _channel.invokeMethod<bool>('startVpn', {
       'configPath': configPath,
+      'accessControlMode': accessControl?.mode.toAndroidValue() ?? 0,
+      'accessControlList': accessControl?.selectedPackages.toList() ?? [],
     });
     return res ?? false;
   }

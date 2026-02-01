@@ -76,6 +76,8 @@ class AppPreferences {
   static const String _kHotkeyToggleTun = 'hotkey_toggle_tun';
   static const String _kHotkeyShowWindow = 'hotkey_show_window';
   static const String _kHotkeyExitApp = 'hotkey_exit_app';
+  static const String _kAccessControlMode = 'access_control_mode';
+  static const String _kAccessControlPackages = 'access_control_packages';
 
   // ==================== 主题配置 ====================
 
@@ -561,5 +563,38 @@ class AppPreferences {
     final states = getProxyGroupExpandedStates();
     states[groupName] = isExpanded;
     await setProxyGroupExpandedStates(states);
+  }
+
+  // ==================== 访问控制配置（仅 Android） ====================
+
+  // 获取访问控制模式
+  // 0: 禁用, 1: 白名单, 2: 黑名单
+  int getAccessControlMode() {
+    _ensureInit();
+    return _prefs!.getInt(_kAccessControlMode) ?? 0;
+  }
+
+  // 保存访问控制模式
+  Future<void> setAccessControlMode(int mode) async {
+    _ensureInit();
+    await _prefs!.setInt(_kAccessControlMode, mode);
+  }
+
+  // 获取访问控制应用列表
+  Set<String> getAccessControlPackages() {
+    _ensureInit();
+    final packagesStr = _prefs!.getString(_kAccessControlPackages);
+    if (packagesStr == null || packagesStr.isEmpty) {
+      return {};
+    }
+    // 使用换行符分隔，避免包名中可能存在的特殊字符问题
+    return packagesStr.split('\n').where((s) => s.isNotEmpty).toSet();
+  }
+
+  // 保存访问控制应用列表
+  Future<void> setAccessControlPackages(Set<String> packages) async {
+    _ensureInit();
+    // 使用换行符分隔，避免包名中可能存在的特殊字符问题
+    await _prefs!.setString(_kAccessControlPackages, packages.join('\n'));
   }
 }

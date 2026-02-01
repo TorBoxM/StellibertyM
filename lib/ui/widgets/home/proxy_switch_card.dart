@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stelliberty/clash/providers/access_control_provider.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/providers/subscription_provider.dart';
 import 'package:stelliberty/ui/widgets/home/base_card.dart';
@@ -34,80 +35,94 @@ class ProxySwitchCard extends StatelessWidget {
     final trans = context.translate;
 
     if (Platform.isAndroid) {
-      return Consumer2<ClashProvider, SubscriptionProvider>(
-        builder: (context, clashProvider, subscriptionProvider, child) {
-          final isVpnEnabled = clashProvider.isAndroidVpnEnabled;
-          final configPath = subscriptionProvider.getSubscriptionConfigPath();
+      return Consumer3<
+        ClashProvider,
+        SubscriptionProvider,
+        AccessControlProvider
+      >(
+        builder:
+            (
+              context,
+              clashProvider,
+              subscriptionProvider,
+              accessControlProvider,
+              child,
+            ) {
+              final isVpnEnabled = clashProvider.isAndroidVpnEnabled;
+              final configPath = subscriptionProvider
+                  .getSubscriptionConfigPath();
+              final accessControl = accessControlProvider.config;
 
-          return BaseCard(
-            icon: Icons.vpn_lock,
-            title: trans.home.vpn_mode_switch,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isVpnEnabled ? Colors.green : Colors.grey,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    isVpnEnabled
-                        ? trans.home.vpn_enabled
-                        : trans.home.vpn_disabled,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isVpnEnabled ? Colors.green : Colors.grey,
-                      fontSize: 13,
+              return BaseCard(
+                icon: Icons.vpn_lock,
+                title: trans.home.vpn_mode_switch,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isVpnEnabled ? Colors.green : Colors.grey,
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    if (isVpnEnabled) {
-                      await clashProvider.stopAndroidVpn();
-                    } else {
-                      await clashProvider.startAndroidVpn(
-                        configPath: configPath,
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isVpnEnabled
-                        ? Colors.red.shade400
-                        : _getStartButtonColor(context),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        isVpnEnabled
+                            ? trans.home.vpn_enabled
+                            : trans.home.vpn_disabled,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: isVpnEnabled ? Colors.green : Colors.grey,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    minimumSize: const Size(double.infinity, 48),
-                  ),
-                  child: Text(
-                    isVpnEnabled
-                        ? trans.home.disable_vpn
-                        : trans.home.enable_vpn,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 15,
-                    ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (isVpnEnabled) {
+                          await clashProvider.stopAndroidVpn();
+                        } else {
+                          await clashProvider.startAndroidVpn(
+                            configPath: configPath,
+                            accessControl: accessControl,
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isVpnEnabled
+                            ? Colors.red.shade400
+                            : _getStartButtonColor(context),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      child: Text(
+                        isVpnEnabled
+                            ? trans.home.disable_vpn
+                            : trans.home.enable_vpn,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
       );
     }
 

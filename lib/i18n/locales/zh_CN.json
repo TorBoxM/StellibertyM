@@ -469,6 +469,28 @@
     "hotkey_set_success": "快捷键设置成功",
     "hotkey_set_failed": "快捷键设置失败"
   },
+  "access_control": {
+    "title": "应用访问控制",
+    "description": "配置哪些应用使用 VPN",
+    "mode_disabled": "禁用",
+    "mode_disabled_desc": "所有应用都使用 VPN",
+    "mode_whitelist": "白名单",
+    "mode_whitelist_desc": "仅选中的应用使用 VPN",
+    "mode_blacklist": "黑名单",
+    "mode_blacklist_desc": "选中的应用不使用 VPN",
+    "select_apps": "选择应用",
+    "search_apps": "搜索应用...",
+    "show_system_apps": "显示系统应用",
+    "select_all": "全选",
+    "deselect_all": "取消全选",
+    "selected_count": "已选择 ${count} 个应用",
+    "no_apps": "未找到应用",
+    "loading_apps": "正在加载应用列表...",
+    "has_internet": "需要网络权限",
+    "system_app": "系统应用",
+    "whitelist_empty_warning": "白名单为空",
+    "restart_vpn_hint": "重启 VPN 后生效"
+  },
   "clash_features": {
     "title": "Clash 特性",
     "description": "配置 Clash 核心的高级功能",

@@ -74,6 +74,7 @@ class MobileBottomNav extends StatelessWidget {
       case ContentView.settingsClashLogsDebug:
       case ContentView.settingsBackup:
       case ContentView.settingsAppUpdate:
+      case ContentView.settingsAccessControl:
         return 3;
     }
   }

@@ -30,6 +30,15 @@ class VpnService : android.net.VpnService() {
         const val actionStop = "io.github.stelliberty.action.STOP_VPN"
         // 配置文件路径的 Intent Extra Key
         const val extraConfigPath = "configPath"
+        // 访问控制模式的 Intent Extra Key
+        const val extraAccessControlMode = "accessControlMode"
+        // 访问控制应用列表的 Intent Extra Key
+        const val extraAccessControlList = "accessControlList"
+
+        // 访问控制模式常量
+        const val accessControlModeDisabled = 0
+        const val accessControlModeWhitelist = 1
+        const val accessControlModeBlacklist = 2
 
         private const val logTag = "vpn_service"
         private const val notificationChannelId = "stelliberty_vpn"
@@ -45,6 +54,10 @@ class VpnService : android.net.VpnService() {
     private val worker = Executors.newSingleThreadExecutor()
     private val stateLock = Any()
     private var isStarting: Boolean = false
+
+    // 访问控制配置
+    private var accessControlMode: Int = accessControlModeDisabled
+    private var accessControlList: List<String> = emptyList()
 
     // 核心事件监听器（用于接收并打印核心日志）
     private val coreEventListener = ClashCoreResultCallback { result ->
@@ -75,6 +88,8 @@ class VpnService : android.net.VpnService() {
         when (intent?.action) {
             actionStart -> {
                 val configPath = intent.getStringExtra(extraConfigPath)
+                accessControlMode = intent.getIntExtra(extraAccessControlMode, accessControlModeDisabled)
+                accessControlList = intent.getStringArrayListExtra(extraAccessControlList) ?: emptyList()
                 worker.execute { handleStart(configPath) }
             }
 
@@ -205,9 +220,55 @@ class VpnService : android.net.VpnService() {
             builder.setBlocking(false)
         }
 
+        // 应用访问控制
+        applyAccessControl(builder)
+
         val fd = builder.establish()?.detachFd() ?: throw IllegalStateException("系统拒绝建立 VPN")
 
         return TunParams(tunFd = fd, stack = stack, address = address, dns = dns)
+    }
+
+    // 应用访问控制规则
+    private fun applyAccessControl(builder: Builder) {
+        val myPackageName = packageName
+
+        when (accessControlMode) {
+            accessControlModeWhitelist -> {
+                // 白名单模式：只有列表中的应用走 VPN
+                Log.i(logTag, "应用白名单模式，应用数量: ${accessControlList.size}")
+                // 必须包含自身，否则无法控制 VPN
+                builder.addAllowedApplication(myPackageName)
+                accessControlList.forEach { pkg ->
+                    if (pkg != myPackageName) {
+                        try {
+                            builder.addAllowedApplication(pkg)
+                        } catch (e: Exception) {
+                            Log.w(logTag, "添加白名单应用失败: $pkg", e)
+                        }
+                    }
+                }
+            }
+
+            accessControlModeBlacklist -> {
+                // 黑名单模式：列表中的应用不走 VPN
+                Log.i(logTag, "应用黑名单模式，应用数量: ${accessControlList.size}")
+                accessControlList.forEach { pkg ->
+                    // 不能排除自身
+                    if (pkg != myPackageName) {
+                        try {
+                            builder.addDisallowedApplication(pkg)
+                        } catch (e: Exception) {
+                            Log.w(logTag, "添加黑名单应用失败: $pkg", e)
+                        }
+                    }
+                }
+            }
+
+            else -> {
+                // 禁用模式：所有应用都走 VPN
+                Log.i(logTag, "访问控制已禁用")
+            }
+        }
     }
 
     // 更新通知内容

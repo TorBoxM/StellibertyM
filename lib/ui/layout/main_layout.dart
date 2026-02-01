@@ -15,6 +15,7 @@ import 'package:stelliberty/ui/pages/settings/clash/system_integration_page.dart
 import 'package:stelliberty/ui/pages/settings/clash/dns_config_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash/performance_page.dart';
 import 'package:stelliberty/ui/pages/settings/clash/logs_debug_page.dart';
+import 'package:stelliberty/ui/pages/settings/access_control_settings_page.dart';
 import 'package:stelliberty/ui/pages/proxy_page.dart';
 import 'package:stelliberty/ui/pages/subscription_page.dart';
 import 'package:stelliberty/ui/pages/override_page.dart';
@@ -136,6 +137,10 @@ class _DynamicContentArea extends StatelessWidget {
       case ContentView.settingsAppUpdate:
         return const AppUpdateSettingsPage(
           key: ValueKey('settings_app_update'),
+        );
+      case ContentView.settingsAccessControl:
+        return const AccessControlSettingsPage(
+          key: ValueKey('settings_access_control'),
         );
     }
   }

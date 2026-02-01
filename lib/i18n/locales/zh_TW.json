@@ -469,6 +469,28 @@
     "hotkey_set_success": "快捷鍵設定成功",
     "hotkey_set_failed": "快捷鍵設定失敗"
   },
+  "access_control": {
+    "title": "應用存取控制",
+    "description": "設定哪些應用使用 VPN",
+    "mode_disabled": "停用",
+    "mode_disabled_desc": "所有應用都使用 VPN",
+    "mode_whitelist": "白名單",
+    "mode_whitelist_desc": "僅選取的應用使用 VPN",
+    "mode_blacklist": "黑名單",
+    "mode_blacklist_desc": "選取的應用不使用 VPN",
+    "select_apps": "選擇應用",
+    "search_apps": "搜尋應用...",
+    "show_system_apps": "顯示系統應用",
+    "select_all": "全選",
+    "deselect_all": "取消全選",
+    "selected_count": "已選擇 ${count} 個應用",
+    "no_apps": "未找到應用",
+    "loading_apps": "正在載入應用列表...",
+    "has_internet": "需要網路權限",
+    "system_app": "系統應用",
+    "whitelist_empty_warning": "白名單為空",
+    "restart_vpn_hint": "重啟 VPN 後生效"
+  },
   "clash_features": {
     "title": "Clash 特性",
     "description": "設定 Clash 核心的進階功能",

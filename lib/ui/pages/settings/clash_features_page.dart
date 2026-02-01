@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:stelliberty/atomic/platform_helper.dart';
 import 'package:stelliberty/providers/content_provider.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/services/log_print_service.dart';
@@ -222,6 +223,20 @@ class _ClashFeaturesPageState extends State<ClashFeaturesPage> {
                         provider.switchView(ContentView.settingsClashLogsDebug),
                     splashColor: Colors.transparent,
                   ),
+                  // 应用访问控制（仅 Android）
+                  if (PlatformHelper.isMobile)
+                    ListTile(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      leading: const Icon(Icons.app_blocking_outlined),
+                      title: Text(trans.access_control.title),
+                      subtitle: Text(trans.access_control.description),
+                      onTap: () => provider.switchView(
+                        ContentView.settingsAccessControl,
+                      ),
+                      splashColor: Colors.transparent,
+                    ),
                 ],
               ),
             ),

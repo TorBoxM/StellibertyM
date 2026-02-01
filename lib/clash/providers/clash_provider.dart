@@ -12,6 +12,7 @@ import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/clash/services/vpn_service.dart';
 import 'package:stelliberty/clash/services/config_watcher.dart';
+import 'package:stelliberty/clash/state/access_control_states.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart' as signals;
 
 // Clash 状态管理：通过 ClashManager 单例维护全局核心状态。
@@ -421,12 +422,18 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   // 启动 Android VPN（可选传入订阅配置路径，空则使用内置最小配置）
-  Future<bool> startAndroidVpn({required String? configPath}) async {
+  Future<bool> startAndroidVpn({
+    required String? configPath,
+    AccessControlConfig? accessControl,
+  }) async {
     if (!Platform.isAndroid) return false;
 
     try {
       Logger.info('启动 Android VPN');
-      final requested = await VpnService.startVpn(configPath: configPath);
+      final requested = await VpnService.startVpn(
+        configPath: configPath,
+        accessControl: accessControl,
+      );
       if (!requested) {
         _updateAndroidVpnState(false);
         return false;

@@ -469,6 +469,28 @@
     "hotkey_set_success": "Hotkey set successfully",
     "hotkey_set_failed": "Failed to set hotkey"
   },
+  "access_control": {
+    "title": "App Access Control",
+    "description": "Configure which apps use VPN",
+    "mode_disabled": "Disabled",
+    "mode_disabled_desc": "All apps use VPN",
+    "mode_whitelist": "Whitelist",
+    "mode_whitelist_desc": "Only selected apps use VPN",
+    "mode_blacklist": "Blacklist",
+    "mode_blacklist_desc": "Selected apps bypass VPN",
+    "select_apps": "Select Apps",
+    "search_apps": "Search apps...",
+    "show_system_apps": "Show system apps",
+    "select_all": "Select All",
+    "deselect_all": "Deselect All",
+    "selected_count": "${count} apps selected",
+    "no_apps": "No apps found",
+    "loading_apps": "Loading apps...",
+    "has_internet": "Requires internet permission",
+    "system_app": "System app",
+    "whitelist_empty_warning": "Whitelist is empty",
+    "restart_vpn_hint": "Restart VPN to apply"
+  },
   "clash_features": {
     "title": "Clash Features",
     "description": "Configure advanced Clash core features",

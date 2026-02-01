@@ -410,7 +410,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
     outputs:
       mihomo_version: ${{ steps.get_mihomo_version.outputs.version }}
-o
+
     steps:
       - name: 检出代码
         uses: actions/checkout@v6

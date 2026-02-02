@@ -354,7 +354,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.platform }}" = "android" ]; then
-            ARGS="--android --android-arch=${{ matrix.arch }}"
+            ARGS="--android --split-per-abi --android-arch=${{ matrix.arch }}"
           else
             ARGS="--with-installer"
           fi

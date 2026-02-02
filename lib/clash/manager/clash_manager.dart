@@ -42,9 +42,6 @@ class ClashManager {
   // 配置重载防抖定时器
   Timer? _configReloadDebounceTimer;
 
-  // 首次启动标记
-  static bool _isFirstStartAfterAppLaunch = true;
-
   // 核心运行状态回调（由 Provider 注入，统一两端状态来源）
   bool Function()? _coreRunningProvider;
 
@@ -256,16 +253,6 @@ class ClashManager {
       socksPort: prefs.getSocksPort(),
       httpPort: prefs.getHttpPort(),
     );
-
-    // 懒惰模式：仅在应用首次启动核心时自动开启系统代理
-    if (success && _isFirstStartAfterAppLaunch) {
-      final prefs = ClashPreferences.instance;
-      if (prefs.getLazyMode()) {
-        Logger.info('懒惰模式已启用，自动开启系统代理（应用首次启动）');
-        unawaited(enableSystemProxy());
-      }
-      _isFirstStartAfterAppLaunch = false;
-    }
 
     return success;
   }

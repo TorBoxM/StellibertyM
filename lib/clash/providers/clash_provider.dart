@@ -23,6 +23,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   // ClashManager 实例
   ClashManager get clashManager => _clashManager;
 
+  // 应用首次启动标记（用于懒惰模式）
+  bool _isFirstStartAfterAppLaunch = true;
+
   // 核心状态
   CoreState _coreState = CoreState.stopped;
   CoreState get coreState => _coreState;
@@ -551,6 +554,15 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
       );
 
       if (success) {
+        // 懒惰模式：仅在应用首次启动核心时自动开启系统代理
+        if (_isFirstStartAfterAppLaunch) {
+          if (ClashPreferences.instance.getLazyMode()) {
+            Logger.info('懒惰模式已启用，自动开启系统代理（应用首次启动）');
+            unawaited(_clashManager.enableSystemProxy());
+          }
+          _isFirstStartAfterAppLaunch = false;
+        }
+
         // 启动后必须从 API 重新加载代理列表
         Logger.info('Clash 已启动，从 API 重新加载代理列表');
         await loadProxies();

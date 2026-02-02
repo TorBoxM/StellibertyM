@@ -5,7 +5,6 @@ import 'package:stelliberty/clash/manager/process_manager.dart';
 import 'package:stelliberty/clash/config/config_injector.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/clash/services/traffic_monitor.dart';
-import 'package:stelliberty/clash/services/core_log_service.dart';
 import 'package:stelliberty/clash/services/geo_service.dart';
 import 'package:stelliberty/clash/manager/service_manager.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
@@ -21,8 +20,11 @@ class LifecycleManager {
   late final ProcessManager _processManager;
   final ClashCoreClient _coreClient;
   final TrafficMonitor _trafficMonitor;
-  final ClashLogService _logService;
   final Function() _notifyListeners;
+
+  // 日志监控回调（由 ClashManager 注入，统一管理）
+  Future<void> Function()? _onStartLogMonitoring;
+  Future<void> Function()? _onStopLogMonitoring;
 
   // 状态变化回调
   Function(CoreState)? _onCoreStateChanged;
@@ -45,6 +47,15 @@ class LifecycleManager {
 
   void setOnStartModeChanged(Function(ClashStartMode?)? handler) {
     _onStartModeChanged = handler;
+  }
+
+  // 设置日志监控回调
+  void setLogMonitoringCallbacks({
+    Future<void> Function()? onStart,
+    Future<void> Function()? onStop,
+  }) {
+    _onStartLogMonitoring = onStart;
+    _onStopLogMonitoring = onStop;
   }
 
   // 核心状态（由 Manager 直接管理）
@@ -102,12 +113,10 @@ class LifecycleManager {
     required ProcessService processService,
     required ClashCoreClient coreClient,
     required TrafficMonitor trafficMonitor,
-    required ClashLogService logService,
     Function()? notifyListeners,
   }) : _processService = processService,
        _coreClient = coreClient,
        _trafficMonitor = trafficMonitor,
-       _logService = logService,
        _notifyListeners = notifyListeners ?? (() {}) {
     _processManager = ProcessManager(service: _processService);
   }
@@ -592,7 +601,7 @@ class LifecycleManager {
       }
 
       try {
-        await _logService.startMonitoring(baseUrl);
+        await _onStartLogMonitoring?.call();
       } catch (e) {
         Logger.error('启动日志服务失败：$e');
       }
@@ -808,7 +817,7 @@ class LifecycleManager {
       }
 
       try {
-        await _logService.stopMonitoring();
+        await _onStopLogMonitoring?.call();
       } catch (e) {
         Logger.error('停止日志服务失败：$e');
       }

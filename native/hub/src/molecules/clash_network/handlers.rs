@@ -117,6 +117,20 @@ pub struct IpcMemoryData {
     pub oslimit: u64,
 }
 
+// Dart → Rust：开始监听连接数据
+#[derive(Deserialize, DartSignal)]
+pub struct StartConnectionStream;
+
+// Dart → Rust：停止监听连接数据
+#[derive(Deserialize, DartSignal)]
+pub struct StopConnectionStream;
+
+// Rust → Dart：连接数据（JSON 字符串，包含完整的连接列表）
+#[derive(Serialize, RustSignal)]
+pub struct IpcConnectionData {
+    pub connections_json: String,
+}
+
 // Rust → Dart：流操作结果
 #[derive(Serialize, RustSignal)]
 pub struct StreamResult {
@@ -471,6 +485,10 @@ static LOG_CONNECTION_ID: Lazy<Arc<RwLock<Option<u32>>>> =
 static MEMORY_CONNECTION_ID: Lazy<Arc<RwLock<Option<u32>>>> =
     Lazy::new(|| Arc::new(RwLock::new(None)));
 
+// 连接流 WebSocket 连接 ID
+static CONNECTION_STREAM_ID: Lazy<Arc<RwLock<Option<u32>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(None)));
+
 // 确保 WebSocket 客户端已初始化（统一入口）
 async fn ensure_ws_client_initialized() {
     let mut client_guard = WS_CLIENT.write().await;
@@ -680,6 +698,20 @@ pub fn init_rest_api_listeners() {
         let receiver = StopMemoryStream::get_dart_signal_receiver();
         while let Some(_dart_signal) = receiver.recv().await {
             StopMemoryStream::handle_stop().await;
+        }
+    });
+
+    tokio::spawn(async {
+        let receiver = StartConnectionStream::get_dart_signal_receiver();
+        while let Some(_dart_signal) = receiver.recv().await {
+            StartConnectionStream::handle_start().await;
+        }
+    });
+
+    tokio::spawn(async {
+        let receiver = StopConnectionStream::get_dart_signal_receiver();
+        while let Some(_dart_signal) = receiver.recv().await {
+            StopConnectionStream::handle_stop().await;
         }
     });
 }
@@ -898,6 +930,75 @@ impl StopMemoryStream {
         // 获取并清除连接 ID
         let connection_id = {
             let mut id_guard = MEMORY_CONNECTION_ID.write().await;
+            id_guard.take()
+        };
+
+        if let Some(id) = connection_id {
+            let client = WS_CLIENT.read().await;
+            if let Some(ws_client) = client.as_ref() {
+                ws_client.disconnect(id).await;
+            }
+        }
+
+        StreamResult {
+            is_successful: true,
+            error_message: None,
+        }
+        .send_signal_to_dart();
+    }
+}
+
+impl StartConnectionStream {
+    async fn handle_start() {
+        log::info!("开始监听连接数据");
+
+        // 确保 WebSocket 客户端已初始化
+        ensure_ws_client_initialized().await;
+
+        // 建立 WebSocket 连接
+        let client = WS_CLIENT.read().await;
+        if let Some(ws_client) = client.as_ref() {
+            match ws_client
+                .connect("/connections", |json_value| {
+                    // 将整个 JSON 作为字符串发送到 Dart
+                    let connections_json = json_value.to_string();
+                    IpcConnectionData { connections_json }.send_signal_to_dart();
+                })
+                .await
+            {
+                Ok(connection_id) => {
+                    log::info!("连接监控 WebSocket 连接已建立：{}", connection_id);
+
+                    // 保存连接 ID
+                    let mut id_guard = CONNECTION_STREAM_ID.write().await;
+                    *id_guard = Some(connection_id);
+
+                    StreamResult {
+                        is_successful: true,
+                        error_message: None,
+                    }
+                    .send_signal_to_dart();
+                }
+                Err(e) => {
+                    log::error!("连接监控 WebSocket 连接失败：{}", e);
+                    StreamResult {
+                        is_successful: false,
+                        error_message: Some(e),
+                    }
+                    .send_signal_to_dart();
+                }
+            }
+        }
+    }
+}
+
+impl StopConnectionStream {
+    async fn handle_stop() {
+        log::info!("停止监听连接数据");
+
+        // 获取并清除连接 ID
+        let connection_id = {
+            let mut id_guard = CONNECTION_STREAM_ID.write().await;
             id_guard.take()
         };
 

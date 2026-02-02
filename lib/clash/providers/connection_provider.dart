@@ -1,13 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:stelliberty/clash/model/connection_model.dart';
 import 'package:stelliberty/clash/state/connection_states.dart' as state;
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/manager/clash_manager.dart';
+import 'package:stelliberty/clash/services/vpn_service.dart';
 import 'package:stelliberty/services/log_print_service.dart';
+import 'package:stelliberty/src/bindings/signals/signals.dart';
 
 // 连接管理 Provider
-// 负责定时获取和管理 Clash 连接信息
+// 桌面端：通过 WebSocket 流获取连接信息
+// Android：通过事件流推送获取连接信息
 class ConnectionProvider extends ChangeNotifier {
   final ClashProvider _clashProvider;
 
@@ -33,11 +38,11 @@ class ConnectionProvider extends ChangeNotifier {
   state.ConnectionFilterLevel get filterLevel => _state.filterLevel;
   String get searchKeyword => _state.searchKeyword;
 
-  // 定时器（用于自动刷新）
-  Timer? _refreshTimer;
+  // Android 事件流订阅
+  StreamSubscription<String>? _androidStreamSubscription;
 
-  // 刷新间隔（秒）
-  static const int _refreshIntervalSeconds = 1;
+  // 桌面端 WebSocket 流订阅
+  StreamSubscription? _desktopStreamSubscription;
 
   ConnectionProvider(this._clashProvider) {
     // 监听 Clash 运行状态
@@ -67,38 +72,138 @@ class ConnectionProvider extends ChangeNotifier {
 
   // 开始自动刷新
   void startAutoRefresh() {
-    // 如果已经在运行，不重复启动
-    if (_refreshTimer != null && _refreshTimer!.isActive) {
+    if (Platform.isAndroid) {
+      _startAndroidStream();
+    } else {
+      _startDesktopStream();
+    }
+  }
+
+  // Android：启动事件流监听
+  void _startAndroidStream() {
+    if (_androidStreamSubscription != null) {
       return;
     }
 
-    // 停止定时器
-    stopAutoRefresh(silent: true);
+    // 调用 Go 核心启动连接推送
+    VpnService.invokeAction(method: 'startConnections');
 
-    // 立即刷新一次
-    refreshConnections();
-
-    // 启动定时器
-    _refreshTimer = Timer.periodic(
-      const Duration(seconds: _refreshIntervalSeconds),
-      (_) {
-        // 只有在未暂停时才刷新
-        if (!_state.isMonitoringPaused) {
-          refreshConnections();
-        }
+    // 订阅事件流
+    _androidStreamSubscription = VpnService.coreLogStream?.listen(
+      _handleAndroidEvent,
+      onError: (error) {
+        Logger.error('Android 连接流错误：$error');
       },
     );
 
-    Logger.info('连接列表自动刷新已启动（间隔：$_refreshIntervalSeconds 秒）');
+    Logger.info('连接监控已启动 (Android 推送模式)');
+  }
+
+  // 桌面端：启动 WebSocket 流监听
+  void _startDesktopStream() {
+    if (_desktopStreamSubscription != null) {
+      return;
+    }
+
+    // 发送启动信号到 Rust
+    const StartConnectionStream().sendSignalToRust();
+
+    // 订阅 Rust 推送的连接数据
+    _desktopStreamSubscription = IpcConnectionData.rustSignalStream.listen(
+      (signal) {
+        if (_state.isMonitoringPaused) return;
+        _handleConnectionsData(signal.message.connectionsJson);
+      },
+      onError: (error) {
+        Logger.error('桌面端连接流错误：$error');
+      },
+    );
+
+    Logger.info('连接监控已启动 (WebSocket 模式)');
+  }
+
+  // Android：处理事件
+  void _handleAndroidEvent(String jsonString) {
+    if (_state.isMonitoringPaused) return;
+
+    try {
+      final json = jsonDecode(jsonString) as Map<String, dynamic>;
+      final method = json['method'] as String?;
+
+      if (method == 'message') {
+        final data = json['data'] as Map<String, dynamic>?;
+        if (data == null) return;
+
+        final messageType = data['type'] as String?;
+        if (messageType == 'connections') {
+          final connectionsData = data['data'];
+          if (connectionsData != null) {
+            _handleConnectionsData(connectionsData);
+          }
+        }
+      }
+    } catch (e) {
+      // 忽略非连接事件的解析错误
+    }
+  }
+
+  // 处理连接数据
+  void _handleConnectionsData(dynamic rawData) {
+    try {
+      Map<String, dynamic> snapshot;
+      if (rawData is String) {
+        snapshot = jsonDecode(rawData) as Map<String, dynamic>;
+      } else {
+        snapshot = rawData as Map<String, dynamic>;
+      }
+
+      final connectionsList = snapshot['connections'] as List<dynamic>? ?? [];
+      final connections = connectionsList
+          .map((item) => ConnectionInfo.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+      // 检查数据是否真正发生了变化
+      final hasChanged = _hasConnectionsChanged(
+        _state.connections,
+        connections,
+      );
+
+      _state = _state.copyWith(
+        connections: connections,
+        isLoading: false,
+        errorMessage: null,
+      );
+
+      if (hasChanged || connections.isNotEmpty) {
+        _cachedFilteredConnections = null;
+        notifyListeners();
+      }
+    } catch (e) {
+      Logger.error('解析连接数据失败：$e');
+    }
   }
 
   // 停止自动刷新
   void stopAutoRefresh({bool silent = false}) {
-    if (_refreshTimer != null) {
-      _refreshTimer?.cancel();
-      _refreshTimer = null;
+    // 停止 Android 事件流
+    if (_androidStreamSubscription != null) {
+      _androidStreamSubscription?.cancel();
+      _androidStreamSubscription = null;
+      // 调用 Go 核心停止连接推送
+      VpnService.invokeAction(method: 'stopConnections');
       if (!silent) {
-        Logger.info('连接列表自动刷新已停止');
+        Logger.info('连接监控已停止 (Android 推送模式)');
+      }
+    }
+
+    // 停止桌面端 WebSocket 流
+    if (_desktopStreamSubscription != null) {
+      _desktopStreamSubscription?.cancel();
+      _desktopStreamSubscription = null;
+      // 发送停止信号到 Rust
+      const StopConnectionStream().sendSignalToRust();
+      if (!silent) {
+        Logger.info('连接监控已停止 (WebSocket 模式)');
       }
     }
   }
@@ -147,11 +252,10 @@ class ConnectionProvider extends ChangeNotifier {
         break;
     }
 
-    // 2. 按关键字筛选（优化：避免每个连接都重复调用 toLowerCase）
+    // 2. 按关键字筛选
     if (_state.searchKeyword.isNotEmpty) {
       final keyword = _state.searchKeyword.toLowerCase();
       filteredConnections = filteredConnections.where((conn) {
-        // 缓存 toLowerCase 结果，避免重复计算
         final descLower = conn.metadata.description.toLowerCase();
         final proxyLower = conn.proxyNode.toLowerCase();
         final ruleLower = conn.rule.toLowerCase();
@@ -165,46 +269,6 @@ class ConnectionProvider extends ChangeNotifier {
     }
 
     return filteredConnections;
-  }
-
-  // 刷新连接列表
-  Future<void> refreshConnections() async {
-    if (!_clashProvider.isCoreRunning) {
-      return;
-    }
-
-    try {
-      final connections = await ClashManager.instance.getConnections();
-
-      // 检查数据是否真正发生了变化
-      final hasChanged = _hasConnectionsChanged(
-        _state.connections,
-        connections,
-      );
-
-      _state = _state.copyWith(
-        connections: connections,
-        isLoading: false,
-        errorMessage: null,
-      );
-
-      // 如果数据变化或有连接存在，都需要通知更新
-      // 数据变化时需要更新列表，有连接时需要更新计时显示
-      if (hasChanged || connections.isNotEmpty) {
-        _cachedFilteredConnections = null;
-        notifyListeners();
-        if (hasChanged) {
-          final filteredCount = _getFilteredConnections().length;
-          Logger.debug(
-            '连接列表已更新：原始 ${connections.length} 个，过滤后 $filteredCount 个（过滤级别：${_state.filterLevel.name}，搜索关键字：${_state.searchKeyword.isEmpty ? "无" : _state.searchKeyword}）',
-          );
-        }
-      }
-    } catch (e) {
-      _state = _state.copyWith(isLoading: false, errorMessage: '刷新连接列表失败: $e');
-      Logger.error(_state.errorMessage!);
-      notifyListeners();
-    }
   }
 
   // 检查连接列表是否发生变化
@@ -265,8 +329,7 @@ class ConnectionProvider extends ChangeNotifier {
 
       if (success) {
         Logger.info(successMessage);
-        // 立即刷新连接列表
-        await refreshConnections();
+        // 连接关闭后，WebSocket 流会自动推送更新
       }
 
       return success;

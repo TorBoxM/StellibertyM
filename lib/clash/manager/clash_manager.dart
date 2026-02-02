@@ -57,6 +57,15 @@ class ClashManager {
   Stream<TrafficData>? get trafficStream => _trafficMonitor.trafficStream;
   Stream<ClashLogMessage> get logStream => _logService.logStream;
 
+  // Android 端日志监控管理（桌面端由 LifecycleManager 管理）
+  Future<void> startLogMonitoring() async {
+    await _logService.startMonitoring();
+  }
+
+  Future<void> stopLogMonitoring() async {
+    await _logService.stopMonitoring();
+  }
+
   bool get isCoreRunning =>
       _coreRunningProvider?.call() ?? _lifecycleManager.isCoreRunning;
   bool get isCoreRestarting => _lifecycleManager.isCoreRestarting;
@@ -123,7 +132,12 @@ class ClashManager {
       processService: _processService,
       coreClient: _coreClient,
       trafficMonitor: _trafficMonitor,
-      logService: _logService,
+    );
+
+    // 设置日志监控回调，由 ClashManager 统一管理
+    _lifecycleManager.setLogMonitoringCallbacks(
+      onStart: () => _logService.startMonitoring(),
+      onStop: () => _logService.stopMonitoring(),
     );
 
     _proxyManager = ProxyManager(

@@ -401,9 +401,14 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         startedAt: startedAt,
       );
 
-      // 设置 JniCoreClient 的配置路径（用于 getConfig 等方法）
-      if (isSuccessful && configPath != null) {
-        ClashCoreClient.setConfigPath(configPath);
+      if (isSuccessful) {
+        // 启动日志监控（通过 Manager 协调）
+        await _clashManager.startLogMonitoring();
+
+        // 设置 JniCoreClient 的配置路径（用于 getConfig 等方法）
+        if (configPath != null) {
+          ClashCoreClient.setConfigPath(configPath);
+        }
         // 从核心加载代理列表
         await loadProxies();
       }
@@ -463,6 +468,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       Logger.info('停止 Android VPN');
+
       final requested = await VpnService.stopVpn();
       if (!requested) {
         return false;
@@ -1772,6 +1778,11 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     // 移除应用生命周期监听
     WidgetsBinding.instance.removeObserver(this);
+
+    // 停止日志监控（Android，通过 Manager 协调）
+    if (Platform.isAndroid) {
+      _clashManager.stopLogMonitoring();
+    }
 
     // 清理所有延迟过期定时器
     for (final timer in _delayExpireTimers.values) {

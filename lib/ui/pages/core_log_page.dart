@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stelliberty/clash/manager/clash_manager.dart';
 import 'package:stelliberty/clash/model/log_message_model.dart';
+import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/clash/providers/core_log_provider.dart';
 import 'package:stelliberty/i18n/i18n.dart';
 import 'package:stelliberty/ui/widgets/core_log/core_log_card.dart';
@@ -66,7 +66,8 @@ class _LogPageState extends State<LogPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isRunning = ClashManager.instance.isCoreRunning;
+    final clashProvider = context.watch<ClashProvider>();
+    final isRunning = clashProvider.isCoreRunning;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

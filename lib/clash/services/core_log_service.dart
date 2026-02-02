@@ -53,6 +53,8 @@ class ClashLogService {
     if (Platform.isAndroid) {
       // Android 平台：通过 EventChannel 获取日志
       Logger.info('开始 Clash 日志监控 (Android EventChannel 模式)');
+      // 调用 Go 核心启动日志订阅
+      await VpnService.invokeAction(method: 'startLog');
       _logSubscription = VpnService.coreLogStream?.listen(
         _handleAndroidLogEvent,
         onError: (error) {
@@ -82,7 +84,10 @@ class ClashLogService {
     Logger.info('停止 Clash 日志监控');
     _isMonitoring = false;
 
-    if (!Platform.isAndroid) {
+    if (Platform.isAndroid) {
+      // Android 平台：调用 Go 核心停止日志订阅
+      await VpnService.invokeAction(method: 'stopLog');
+    } else {
       // 桌面平台：发送停止信号到 Rust
       const StopLogStream().sendSignalToRust();
     }

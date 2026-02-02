@@ -102,8 +102,7 @@ flutter:
 
   assets:
     - assets/icons/
-    - assets/clash-core/
-    - assets/clash-core/data/
+    - assets/clash/
     - assets/service/
 
 rinf:

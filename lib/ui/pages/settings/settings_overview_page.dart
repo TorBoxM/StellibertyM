@@ -95,11 +95,10 @@ class _SettingsOverviewPageState extends State<SettingsOverviewPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              leading: const Icon(Icons.settings_suggest_outlined),
-              title: Text(trans.clash_features.title),
-              subtitle: Text(trans.clash_features.description),
-              onTap: () =>
-                  provider.switchView(ContentView.settingsClashFeatures),
+              leading: const Icon(Icons.apps_outlined),
+              title: Text(trans.behavior.title),
+              subtitle: Text(trans.behavior.description),
+              onTap: () => provider.switchView(ContentView.settingsBehavior),
               // 只移除点击时的水波纹扩散效果，保留悬停效果
               splashColor: Colors.transparent,
             ),
@@ -107,10 +106,11 @@ class _SettingsOverviewPageState extends State<SettingsOverviewPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              leading: const Icon(Icons.apps_outlined),
-              title: Text(trans.behavior.title),
-              subtitle: Text(trans.behavior.description),
-              onTap: () => provider.switchView(ContentView.settingsBehavior),
+              leading: const Icon(Icons.settings_suggest_outlined),
+              title: Text(trans.clash_features.title),
+              subtitle: Text(trans.clash_features.description),
+              onTap: () =>
+                  provider.switchView(ContentView.settingsClashFeatures),
               // 只移除点击时的水波纹扩散效果，保留悬停效果
               splashColor: Colors.transparent,
             ),

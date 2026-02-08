@@ -1,0 +1,277 @@
+name: 正式版构建
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '发布版本号 (例如: 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # ------------ 提前准备（读取包名 & 版本号） ------------
+  prepare:
+    name: 准备构建信息
+    runs-on: ubuntu-latest
+    outputs:
+      pkg: ${{ steps.pkg.outputs.pkg }}
+      pkg_capitalized: ${{ steps.pkg_capitalized.outputs.pkg_capitalized }}
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.tag.outputs.tag }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      mihomo_version: ${{ steps.get_mihomo_version.outputs.version }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 读取 pubspec.yaml 包名
+        id: pkg
+        run: |
+          pkg=$(grep '^name:' pubspec.yaml | awk '{print $2}')
+          echo "🔍 检测到包名: $pkg"
+          if [ -z "$pkg" ]; then
+            echo "::error::无法从 pubspec.yaml 找到包名"
+            exit 1
+          fi
+          echo "pkg=$pkg" >> $GITHUB_OUTPUT
+
+      - name: 生成首字母大写的包名
+        id: pkg_capitalized
+        run: |
+          pkg="${{ steps.pkg.outputs.pkg }}"
+          # 将首字母转换为大写
+          first_char=$(echo "${pkg:0:1}" | tr '[:lower:]' '[:upper:]')
+          rest="${pkg:1}"
+          pkg_capitalized="${first_char}${rest}"
+          echo "✨ 首字母大写包名: $pkg_capitalized"
+          echo "pkg_capitalized=$pkg_capitalized" >> $GITHUB_OUTPUT
+
+      - name: 读取或生成版本号
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            version="${{ github.event.inputs.version }}"
+            echo "📝 手动指定版本: $version"
+          else
+            raw=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+            version="${raw%%+*}"
+            echo "📦 从 pubspec.yaml 读取版本: $version"
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: 确定 Tag 名称
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            tag="v${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            tag="${{ github.ref_name }}"
+          else
+            tag="v${{ steps.ver.outputs.version }}"
+          fi
+          echo "🏷️ Tag 名称: $tag"
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+
+      - name: 获取 Mihomo 核心版本号
+        id: get_mihomo_version
+        shell: pwsh
+        run: |
+          Write-Host "📡 正在获取 Mihomo 最新版本号..."
+          try {
+            $headers = @{
+              "Accept" = "application/vnd.github+json"
+              "X-GitHub-Api-Version" = "2022-11-28"
+              "Authorization" = "Bearer ${{ secrets.GITHUB_TOKEN }}"
+            }
+            $response = Invoke-RestMethod -Uri "https://api.github.com/repos/MetaCubeX/mihomo/releases/latest" -Headers $headers
+            $version = $response.tag_name -replace '^v', ''
+            Write-Host "✅ Mihomo 最新版本: $version"
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+          } catch {
+            Write-Host "⚠️ 未能获取 Mihomo 版本号，将使用 '未知'"
+            echo "version=未知" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: 验证版本一致性
+        run: |
+          tag_version="${{ steps.tag.outputs.tag }}"
+          
+          # 移除 tag 中的 'v' 前缀
+          tag_version_clean="${tag_version#v}"
+          
+          # 始终从 pubspec.yaml 读取实际版本号（不使用缓存的输出）
+          actual_pubspec_version=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+          
+          echo "🔍 版本对比："
+          echo "  Tag 版本:           $tag_version_clean"
+          echo "  pubspec.yaml 版本:  $actual_pubspec_version"
+          
+          if [ "$tag_version_clean" != "$actual_pubspec_version" ]; then
+            echo ""
+            echo "❌ 错误：版本号不一致！"
+            echo ""
+            echo "推送的 tag 版本 ($tag_version) 与 pubspec.yaml 中的实际版本 ($actual_pubspec_version) 不匹配。"
+            echo ""
+            echo "请执行以下操作之一："
+            echo "  1. 更新 pubspec.yaml 中的版本号为 $tag_version_clean"
+            echo "  2. 删除当前 tag 并推送正确的 tag: v$actual_pubspec_version"
+            echo ""
+            exit 1
+          fi
+          
+          echo "✅ 版本号验证通过"
+
+  # ------------ 构建 job（依赖 prepare） ------------
+  build:
+    name: 构建 ${{ matrix.platform }}-${{ matrix.arch }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-latest
+            arch: x64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v6
+
+      - name: 输出构建信息
+        shell: bash
+        run: |
+          echo "============================================"
+          echo "📦 包名:        ${{ needs.prepare.outputs.pkg }}"
+          echo "⏫ 版本号:      ${{ needs.prepare.outputs.version }}"
+          echo "🏷️ Tag:         ${{ needs.prepare.outputs.tag }}"
+          echo "🖥️ 平台:        ${{ matrix.platform }}"
+          echo "⚙️ 架构:        ${{ matrix.arch }}"
+          echo "============================================"
+
+      - name: 配置 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ (matrix.os == 'windows-11-arm' || matrix.os == 'ubuntu-24.04-arm') && 'master' || 'stable' }}
+
+      - name: 配置 Java（Android）
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 配置 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 安装项目依赖
+        shell: bash
+        run: |
+          echo "📦 正在安装项目依赖..."
+          if [ "$RUNNER_OS" = "Linux" ] && [ "${{ matrix.platform }}" != "android" ]; then
+            echo "  ➤ 安装 Linux 构建依赖..."
+            sudo apt-get update
+            sudo apt-get install -y libgtk-3-dev libappindicator3-dev adwaita-icon-theme-full libkeybinder-3.0-dev
+            echo "  ✅ Linux 依赖安装完成"
+          fi
+          echo "  ➤ 安装 Flutter 主项目依赖"
+          flutter pub get
+          echo "  ➤ 安装 rinf_cli"
+          cargo install rinf_cli
+          echo "✅ 所有依赖安装完成"
+
+      - name: 安装预构建脚本依赖
+        run: dart pub get
+        working-directory: scripts
+
+      - name: 运行预构建脚本
+        shell: bash
+        run: |
+          ARGS=""
+          if [ "${{ matrix.platform }}" = "android" ]; then
+            ARGS="--android"
+          else
+            ARGS="--installer"
+          fi
+          dart run scripts/prebuild.dart $ARGS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 生成 Rust 桥接代码
+        run: rinf gen
+
+      - name: 生成多语言文件
+        run: dart run slang
+
+      - name: 配置 Android 签名
+        if: matrix.platform == 'android' && env.ANDROID_KEYSTORE_BASE64 != ''
+        shell: bash
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ runner.temp }}/release.jks
+          echo "ANDROID_KEYSTORE_PATH=${{ runner.temp }}/release.jks" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: 运行构建脚本
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "android" ]; then
+            ARGS="--android --android-arch=${{ matrix.arch }}"
+          else
+            ARGS="--with-installer"
+          fi
+          dart run scripts/build.dart $ARGS
+
+      - name: 复制构建产物到 dist
+        shell: bash
+        run: |
+          echo "📦 正在复制构建产物..."
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            pwsh -c '
+              New-Item -ItemType Directory -Force -Path dist | Out-Null
+              if (Test-Path "build/packages") {
+                Copy-Item -Path "build/packages/*" -Destination "dist/" -Recurse -Force
+                Write-Host "✅ 构建产物已复制到 dist/"
+                Write-Host ""
+                Write-Host "📦 产物列表:"
+                Get-ChildItem -Path "dist/" | ForEach-Object {
+                  $size = if ($_.PSIsContainer) { "目录" } else { "$([math]::Round($_.Length / 1MB, 2)) MB" }
+                  Write-Host "  - $($_.Name) ($size)"
+                }
+              } else {
+                Write-Host "❌ 错误: build/packages 目录不存在"
+                exit 1
+              }
+            '
+          else
+            mkdir -p dist
+            if [ -d "build/packages" ]; then
+              cp -r build/packages/* dist/
+              echo "✅ 构建产物已复制到 dist/"
+              echo ""
+              echo "📦 产物列表:"
+              ls -lh dist/
+            else
+              echo "❌ 错误: build/packages 目录不存在"
+              exit 1
+            fi
+          fi
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.prepare.outputs.pkg }}-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/*
+          retention-days: 90

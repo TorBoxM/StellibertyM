@@ -124,19 +124,6 @@ class _SettingsOverviewPageState extends State<SettingsOverviewPage> {
               onTap: () => provider.switchView(ContentView.settingsBackup),
               splashColor: Colors.transparent,
             ),
-            // 应用更新选项只在 Windows 平台显示
-            if (Platform.isWindows)
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                leading: const Icon(Icons.new_releases_outlined),
-                title: Text(trans.app_update.title),
-                subtitle: Text(trans.app_update.description),
-                onTap: () => provider.switchView(ContentView.settingsAppUpdate),
-                // 只移除点击时的水波纹扩散效果，保留悬停效果
-                splashColor: Colors.transparent,
-              ),
             ListTile(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -144,11 +131,6 @@ class _SettingsOverviewPageState extends State<SettingsOverviewPage> {
               leading: const Icon(Icons.info_outline),
               title: Text(trans.about.title),
               subtitle: Text(_version.isEmpty ? '…' : _version),
-              trailing: IconButton(
-                icon: const FaIcon(FontAwesomeIcons.github, size: 20),
-                tooltip: 'GitHub',
-                onPressed: () => OpenUrl(url: _githubUrl).sendSignalToRust(),
-              ),
               onTap: null,
               splashColor: Colors.transparent,
             ),

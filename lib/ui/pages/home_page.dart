@@ -63,55 +63,41 @@ class _HomePageContentState extends State<HomePageContent> {
                       SpacingConstants.scrollbarPaddingTop,
                   horizontalPadding -
                       SpacingConstants.scrollbarRightCompensation,
-                  2.0, // 距底2px
+                  8.0, // 距底2px
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    // 第一行：代理控制卡片 + TUN 模式卡片
-                    if (isCompactLayout) ...[
-                      ProxySwitchCard(),
-                      if (shouldShowTunCard) ...[
-                        SizedBox(height: sectionSpacing),
-                        TunModeCard(),
-                      ],
-                    ] else ...[
-                      if (shouldShowTunCard)
-                        IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(child: ProxySwitchCard()),
-                              SizedBox(width: cardSpacing),
-                              Expanded(child: TunModeCard()),
-                            ],
+                    // 第一行：左侧(代理+TUN) + 右侧(出站模式)
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // 左侧两块垂直排列
+                          Expanded(
+                            child: Column(
+                              children: [
+                                // 左侧(代理+TUN)
+                                Expanded(child: ProxySwitchCard()),
+                                const SizedBox(height: 4), // 垂直间距
+                                // 右侧(出站模式)
+                                Expanded(child: TunModeCard()),
+                              ],
+                            ),
                           ),
-                        )
-                      else
-                        ProxySwitchCard(),
-                    ],
-                    SizedBox(height: sectionSpacing),
-                    // 第二行：运行状态卡片 + 出站模式卡片
-                    if (isCompactLayout) ...[
-                      const RunningStatusCard(),
-                      SizedBox(height: sectionSpacing),
-                      const OutboundModeCard(),
-                    ] else ...[
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Expanded(child: RunningStatusCard()),
-                            SizedBox(width: cardSpacing),
-                            const Expanded(child: OutboundModeCard()),
-                          ],
-                        ),
+                          const SizedBox(width: 18), // 左右间距
+                          // 右侧出站模式
+                          Expanded(child: OutboundModeCard()),
+                        ],
                       ),
-                    ],
-                    SizedBox(height: sectionSpacing),
-                    // 第三行：网速显示卡片
+                    ),
+                    const SizedBox(height: 18),
+                    // 第二行：网速流量卡片（占据整行）
                     _buildTrafficSection(context),
+                    const SizedBox(height: 20),
+                    // 第三行：运行状态卡片（占据整行）
+                    Expanded(child: RunningStatusCard()),
                   ],
                 ),
               ),

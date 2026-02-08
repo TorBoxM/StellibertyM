@@ -22,9 +22,8 @@ fun findRustlsPlatformVerifierProject(): String {
     return File(manifestPath.parentFile, "maven").path
 }
 
-val shouldSplitPerAbi: Boolean =
-    (project.findProperty("split-per-abi")?.toString() == "true") ||
-        (project.findProperty("splitPerAbi")?.toString() == "true")
+// 目标架构（由构建脚本通过 gradle.properties 传入）
+val targetAbi = project.findProperty("targetAbi")?.toString()
 
 android {
     namespace = "io.github.stelliberty"
@@ -49,37 +48,14 @@ android {
 
     defaultConfig {
         applicationId = "io.github.stelliberty"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // 根据构建参数设置 ABI 过滤器
-        // 优先级：目标架构环境变量 > split-per-abi > 默认双架构
-        val targetAbi = project.findProperty("targetAbi")?.toString()
-        if (targetAbi != null) {
-            // 构建脚本指定了目标架构，只包含该架构
-            ndk {
-                abiFilters.clear()
-                when (targetAbi) {
-                    "x86_64" -> abiFilters += listOf("x86_64")
-                    "arm64-v8a" -> abiFilters += listOf("arm64-v8a")
-                    else -> abiFilters += listOf("x86_64", "arm64-v8a")
-                }
-            }
-        } else if (!shouldSplitPerAbi) {
-            // 未指定目标架构且未启用 split-per-abi 时，默认包含双架构
-            ndk {
-                abiFilters.clear()
-                abiFilters += listOf("x86_64", "arm64-v8a")
-            }
-        }
-
+        // CMake 编译 JNI 桥接库
         externalNativeBuild {
             cmake {
-                // 编译 JNI 桥接库（clash_core_bridge），用于加载预编译核心 so 并注入回调。
                 cppFlags += "-std=c++17"
             }
         }
@@ -88,15 +64,6 @@ android {
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
-        }
-    }
-
-    splits {
-        abi {
-            isEnable = shouldSplitPerAbi
-            reset()
-            include("x86_64", "arm64-v8a")
-            isUniversalApk = false
         }
     }
 
@@ -109,7 +76,6 @@ android {
     }
 
     // 根据 targetAbi 排除不需要的架构 SO 文件
-    val targetAbi = project.findProperty("targetAbi")?.toString()
     if (targetAbi != null) {
         packagingOptions {
             jniLibs {

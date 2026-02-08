@@ -107,7 +107,7 @@ class DnsConfig {
     List<String>? fakeIpFilter,
 
     // Fallback 过滤器
-    this.fallbackGeoip = true,
+    this.fallbackGeoip = false,
     this.fallbackGeoipCode = 'CN',
     List<String>? fallbackIpcidr,
     List<String>? fallbackDomain,

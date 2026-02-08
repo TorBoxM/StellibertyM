@@ -10,9 +10,9 @@ class ClashDefaults {
   static int get apiPort => kDebugMode || kProfileMode ? 19090 : 9090;
 
   // ==================== 端口配置 ====================
-  static const int mixedPort = 7777; // 混合端口（HTTP + SOCKS5）
-  static const int httpPort = 7778; // 单独 HTTP 端口（可选）
-  static const int socksPort = 7779; // 单独 SOCKS5 端口（可选）
+  static const int mixedPort = 8088; // 混合端口（HTTP + SOCKS5）
+  static const int httpPort = 8083; // 单独 HTTP 端口（可选）
+  static const int socksPort = 8085; // 单独 SOCKS5 端口（可选）
 
   // ==================== 超时配置 ====================
   static const int apiReadyMaxRetries = 30; // API 就绪重试次数（总超时 6s）
@@ -33,7 +33,7 @@ class ClashDefaults {
 
   // ==================== 其他配置 ====================
   static const String defaultTestUrl = 'https://www.gstatic.com/generate_204';
-  static const String defaultLogLevel = 'silent';
+  static const String defaultLogLevel = 'info';
   static const String defaultOutboundMode =
       'rule'; // 默认出站模式（rule/global/direct）
   static const int defaultKeepAliveInterval = 30; // TCP Keep-Alive 间隔（s）

@@ -32,7 +32,7 @@ class ClashDefaults {
   static const int subscriptionUpdateConcurrency = 3; // 订阅更新并发数
 
   // ==================== 其他配置 ====================
-  static const String defaultTestUrl = 'https://www.gstatic.com/generate_204';
+  static const String defaultTestUrl = 'http://www.gstatic.com/generate_204';
   static const String defaultLogLevel = 'info';
   static const String defaultOutboundMode =
       'rule'; // 默认出站模式（rule/global/direct）

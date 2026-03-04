@@ -86,8 +86,8 @@ class DnsConfig {
     // 基础配置
     this.enable = true,
     this.listen = ':53',
-    this.enhancedMode = 'fake-ip',
-    this.fakeIpRange = '198.18.0.1/16',
+    this.enhancedMode = 'normal',
+    this.fakeIpRange = '',
     this.fakeIpFilterMode = 'blacklist',
     this.ipv6 = true,
 

@@ -87,7 +87,7 @@ class DnsConfig {
     this.enable = true,
     this.listen = ':53',
     this.enhancedMode = 'normal',
-    this.fakeIpRange = '',
+    this.fakeIpRange = '198.18.0.1/16',
     this.fakeIpFilterMode = 'blacklist',
     this.ipv6 = true,
 

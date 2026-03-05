@@ -86,7 +86,7 @@ class DnsConfig {
     // 基础配置
     this.enable = true,
     this.listen = ':53',
-    this.enhancedMode = 'normal',
+    this.enhancedMode = 'fake-ip',
     this.fakeIpRange = '198.18.0.1/16',
     this.fakeIpFilterMode = 'blacklist',
     this.ipv6 = true,
@@ -159,7 +159,7 @@ class DnsConfig {
       // 基础配置
       enable: dnsMap['enable'] as bool? ?? true,
       listen: dnsMap['listen'] as String? ?? ':53',
-      enhancedMode: dnsMap['enhanced-mode'] as String? ?? 'normal',
+      enhancedMode: dnsMap['enhanced-mode'] as String? ?? 'fake-ip',
       fakeIpRange: dnsMap['fake-ip-range'] as String? ?? '198.18.0.1/16',
       fakeIpFilterMode: dnsMap['fake-ip-filter-mode'] as String? ?? 'blacklist',
       ipv6: dnsMap['ipv6'] as bool? ?? true,

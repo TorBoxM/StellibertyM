@@ -26,7 +26,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
   bool _enableDns = false;
 
   // 基础配置状态
-  String _enhancedMode = 'normal'; // fake-ip 或 redir-host
+  String _enhancedMode = 'fake-ip'; // fake-ip 或 redir-host
   String _fakeIpFilterMode = 'blacklist'; // blacklist 或 whitelist
   bool _ipv6 = true;
 

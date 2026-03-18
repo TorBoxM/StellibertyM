@@ -90,7 +90,6 @@ Source: "$sourceDir\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs c
 
 [Icons]
 Name: "{group}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"
-Name: "{group}\\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]

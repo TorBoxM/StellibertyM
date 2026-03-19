@@ -263,9 +263,47 @@ pub struct AppContainer {
 }
 
 #[cfg(windows)]
-const APP_CONTAINER_ENUM_FLAGS: u32 = 1;
-#[cfg(windows)]
 const APP_CONTAINER_DEBUG_LOG_LIMIT: usize = 10;
+
+// 检查 Windows 防火墙（mpssvc）和基础筛选引擎（BFE）服务状态
+#[cfg(windows)]
+fn diagnose_firewall_services() -> String {
+    use std::process::Command;
+
+    let mut diagnostics = Vec::new();
+
+    for (service, display) in [("mpssvc", "Windows 防火墙"), ("BFE", "基础筛选引擎")] {
+        match Command::new("sc")
+            .args(["query", service])
+            .output()
+        {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let is_running = stdout.contains("RUNNING");
+                let is_stopped = stdout.contains("STOPPED");
+                let state = if is_running {
+                    "运行中"
+                } else if is_stopped {
+                    "已停止"
+                } else {
+                    "未知"
+                };
+                diagnostics.push(format!("{}（{}）：{}", display, service, state));
+                if !is_running {
+                    diagnostics.push(format!(
+                        "  → 请以管理员身份运行：net start {}",
+                        service
+                    ));
+                }
+            }
+            Err(e) => {
+                diagnostics.push(format!("{}（{}）：查询失败（{}）", display, service, e));
+            }
+        }
+    }
+
+    diagnostics.join("\n")
+}
 
 #[cfg(windows)]
 fn explain_network_isolation_error(error_code: u32) -> &'static str {
@@ -442,6 +480,69 @@ unsafe fn sid_to_string(sid: *mut SID) -> String {
     sid_string
 }
 
+// 尝试调用 NetworkIsolationEnumAppContainers，flags=1 被拒绝时降级到 flags=0
+#[cfg(windows)]
+unsafe fn try_enum_app_containers(
+    count: &mut u32,
+    containers: &mut *mut INET_FIREWALL_APP_CONTAINER,
+) -> Result<(), String> {
+    // flags=1 (NETISO_FLAG_FORCE_COMPUTE_BINARIES) 数据更完整但在 Win11 新版中可能被拒绝
+    // flags=0 基础枚举，兼容性最好
+    for flags in [1u32, 0] {
+        *count = 0;
+        *containers = ptr::null_mut();
+
+        log::info!("调用 NetworkIsolationEnumAppContainers（flags={}）", flags);
+        let result = NetworkIsolationEnumAppContainers(flags, count, containers);
+
+        if result == 0 {
+            log::info!(
+                "NetworkIsolationEnumAppContainers 成功（flags={}）：count={}",
+                flags,
+                *count
+            );
+            return Ok(());
+        }
+
+        let error_code = result as u32;
+        let is_access_denied = error_code == 5 || error_code == 0x80070005;
+
+        // flags=1 被拒绝时降级到 flags=0 重试；flags=0 失败或非权限错误则直接返回
+        if flags == 0 || !is_access_denied {
+            let error_message = build_network_isolation_error_message(
+                "NetworkIsolationEnumAppContainers",
+                error_code,
+            );
+            log::error!(
+                "{}，flags={}，returned_count={}，containers_is_null={}，{}",
+                error_message,
+                flags,
+                *count,
+                containers.is_null(),
+                current_process_context()
+            );
+
+            if is_access_denied {
+                let diag = diagnose_firewall_services();
+                log::error!("防火墙服务诊断：\n{}", diag);
+                return Err(format!(
+                    "{}。\n\n诊断信息：\n{}",
+                    error_message, diag
+                ));
+            }
+
+            return Err(error_message);
+        }
+
+        log::warn!(
+            "flags=1 被拒绝（0x{:08X}），降级到 flags=0 重试",
+            error_code
+        );
+    }
+
+    unreachable!()
+}
+
 // 枚举 UWP 应用容器并返回回环状态。
 #[cfg(windows)]
 pub fn enumerate_app_containers() -> Result<Vec<AppContainer>, String> {
@@ -452,53 +553,8 @@ pub fn enumerate_app_containers() -> Result<Vec<AppContainer>, String> {
         let mut count: u32 = 0;
         let mut containers: *mut INET_FIREWALL_APP_CONTAINER = ptr::null_mut();
 
-        log::info!(
-            "调用 NetworkIsolationEnumAppContainers：flags={}，initial_count={}，initial_containers_is_null={}",
-            APP_CONTAINER_ENUM_FLAGS,
-            count,
-            containers.is_null()
-        );
-        let result = NetworkIsolationEnumAppContainers(
-            APP_CONTAINER_ENUM_FLAGS,
-            &mut count,
-            &mut containers,
-        );
+        try_enum_app_containers(&mut count, &mut containers)?;
 
-        if result != 0 {
-            let error_code = result as u32;
-            let error_message = build_network_isolation_error_message(
-                "NetworkIsolationEnumAppContainers",
-                error_code,
-            );
-            log::error!(
-                "{}，flags={}，returned_count={}，containers_is_null={}，{}",
-                error_message,
-                APP_CONTAINER_ENUM_FLAGS,
-                count,
-                containers.is_null(),
-                current_process_context()
-            );
-            return Err(error_message);
-        }
-
-        log::debug!(
-            "NetworkIsolationEnumAppContainers 成功：count={}，containers_is_null={}",
-            count,
-            containers.is_null()
-        );
-
-        if count == 0 {
-            log::debug!(
-                "NetworkIsolationEnumAppContainers 返回成功但 count=0，containers_is_null={}",
-                containers.is_null()
-            );
-        }
-        if containers.is_null() {
-            log::debug!(
-                "NetworkIsolationEnumAppContainers 返回成功但 containers_is_null=true，count={}",
-                count
-            );
-        }
         if count == 0 || containers.is_null() {
             if !containers.is_null() {
                 NetworkIsolationFreeAppContainers(containers);
@@ -747,43 +803,11 @@ pub fn set_loopback_exemption(package_family_name: &str, enabled: bool) -> Resul
         let mut containers: *mut INET_FIREWALL_APP_CONTAINER = ptr::null_mut();
 
         log::info!(
-            "set_loopback_exemption 调用枚举：package_family_name={}，enabled={}，flags={}，initial_count={}，initial_containers_is_null={}",
+            "set_loopback_exemption 调用枚举：package_family_name={}，enabled={}",
             package_family_name,
             enabled,
-            APP_CONTAINER_ENUM_FLAGS,
-            count,
-            containers.is_null()
         );
-        let result = NetworkIsolationEnumAppContainers(
-            APP_CONTAINER_ENUM_FLAGS,
-            &mut count,
-            &mut containers,
-        );
-
-        if result != 0 {
-            let error_code = result as u32;
-            let error_message = build_network_isolation_error_message(
-                "NetworkIsolationEnumAppContainers",
-                error_code,
-            );
-            log::error!(
-                "{}，package_family_name={}，flags={}，returned_count={}，containers_is_null={}，{}",
-                error_message,
-                package_family_name,
-                APP_CONTAINER_ENUM_FLAGS,
-                count,
-                containers.is_null(),
-                current_process_context()
-            );
-            return Err(error_message);
-        }
-
-        log::debug!(
-            "set_loopback_exemption 枚举成功：package_family_name={}，count={}，containers_is_null={}",
-            package_family_name,
-            count,
-            containers.is_null()
-        );
+        try_enum_app_containers(&mut count, &mut containers)?;
 
         if count == 0 {
             log::debug!(

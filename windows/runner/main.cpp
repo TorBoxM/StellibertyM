@@ -26,9 +26,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize Flutter project
   flutter::DartProject project(L"data");
   
-  // Set UI thread policy: run UI on separate thread
-  project.set_ui_thread_policy(flutter::UIThreadPolicy::RunOnSeparateThread);
-  
   // Performance optimization: basic GC optimization configuration
   std::vector<std::string> dart_args = {
     "--concurrent_gc",      // Enable concurrent garbage collection

@@ -493,7 +493,7 @@ unsafe fn try_enum_app_containers(
         *containers = ptr::null_mut();
 
         log::info!("调用 NetworkIsolationEnumAppContainers（flags={}）", flags);
-        let result = NetworkIsolationEnumAppContainers(flags, count, containers);
+        let result = unsafe { NetworkIsolationEnumAppContainers(flags, count, containers) };
 
         if result == 0 {
             log::info!(
@@ -504,7 +504,7 @@ unsafe fn try_enum_app_containers(
             return Ok(());
         }
 
-        let error_code = result as u32;
+        let error_code = result;
         let is_access_denied = error_code == 5 || error_code == 0x80070005;
 
         // flags=1 被拒绝时降级到 flags=0 重试；flags=0 失败或非权限错误则直接返回
@@ -773,7 +773,7 @@ pub fn set_loopback_exemption_by_sid(sid_bytes: &[u8], enabled: bool) -> Result<
             );
             Ok(())
         } else {
-            let error_code = result as u32;
+            let error_code = result;
             let error_message = build_network_isolation_error_message(
                 "NetworkIsolationSetAppContainerConfig",
                 error_code,
@@ -963,7 +963,7 @@ pub fn set_loopback_exemption(package_family_name: &str, enabled: bool) -> Resul
             );
             Ok(())
         } else {
-            let error_code = result as u32;
+            let error_code = result;
             let error_message = build_network_isolation_error_message(
                 "NetworkIsolationSetAppContainerConfig",
                 error_code,

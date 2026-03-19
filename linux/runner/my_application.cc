@@ -53,12 +53,37 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+static gboolean has_dart_entrypoint_argument(MyApplication* self,
+                                             const gchar* target) {
+  if (self->dart_entrypoint_arguments == nullptr || target == nullptr) {
+    return FALSE;
+  }
+
+  for (char** arg = self->dart_entrypoint_arguments; *arg != nullptr; ++arg) {
+    if (g_strcmp0(*arg, target) == 0) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
 // 等待首帧后再显示窗口，避免视图未就绪时抢占输入焦点。
 static void first_frame_cb(MyApplication* self, FlView* view) {
   GtkWidget* window = gtk_widget_get_toplevel(GTK_WIDGET(view));
-  if (window != nullptr) {
-    gtk_widget_show(window);
+  const gboolean is_silent_start =
+      has_dart_entrypoint_argument(self, "--silent-start");
+
+  if (window == nullptr) {
+    return;
   }
+
+  if (is_silent_start) {
+    gtk_widget_hide(window);
+    return;
+  }
+
+  gtk_widget_show(window);
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
 

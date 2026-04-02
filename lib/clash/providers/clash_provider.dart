@@ -1704,6 +1704,33 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     return success;
   }
 
+  Future<bool> setLanAllowedIps(List<String> ips) async {
+    final success = await _clashManager.setLanAllowedIps(ips);
+    if (success) {
+      _syncConfigFromManager();
+      notifyListeners();
+    }
+    return success;
+  }
+
+  Future<bool> setLanDisallowedIps(List<String> ips) async {
+    final success = await _clashManager.setLanDisallowedIps(ips);
+    if (success) {
+      _syncConfigFromManager();
+      notifyListeners();
+    }
+    return success;
+  }
+
+  Future<bool> setSkipAuthPrefixes(List<String> prefixes) async {
+    final success = await _clashManager.setSkipAuthPrefixes(prefixes);
+    if (success) {
+      _syncConfigFromManager();
+      notifyListeners();
+    }
+    return success;
+  }
+
   Future<bool> setIpv6(bool enabled) async {
     final success = await _clashManager.setIpv6(enabled);
     if (success) {

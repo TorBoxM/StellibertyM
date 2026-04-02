@@ -125,6 +125,9 @@ class ConfigManager {
       isUnifiedDelayEnabled: prefs.getUnifiedDelayEnabled(),
       outboundMode: prefs.getOutboundMode(),
       lanAuthentication: _buildLanAuthentication(prefs),
+      lanAllowedIps: prefs.getLanAllowedIps(),
+      lanDisallowedIps: prefs.getLanDisallowedIps(),
+      skipAuthPrefixes: prefs.getSkipAuthPrefixes(),
     );
   }
 
@@ -145,10 +148,14 @@ class ConfigManager {
         final success = await _coreClient.setAllowLan(enabled);
         if (!success) return false;
 
-        // 开启时同步 patch 认证，避免无认证窗口
+        // 开启时同步 patch 认证与 IP 控制，避免无认证窗口
         if (enabled) {
-          final auth = _buildLanAuthentication(ClashPreferences.instance);
+          final prefs = ClashPreferences.instance;
+          final auth = _buildLanAuthentication(prefs);
           await _coreClient.setLanAuthentication(auth);
+          await _coreClient.setLanAllowedIps(prefs.getLanAllowedIps());
+          await _coreClient.setLanDisallowedIps(prefs.getLanDisallowedIps());
+          await _coreClient.setSkipAuthPrefixes(prefs.getSkipAuthPrefixes());
         }
 
         Logger.info('局域网代理（支持重载）：${enabled ? "启用" : "禁用"}');
@@ -185,7 +192,72 @@ class ConfigManager {
     }
   }
 
-  // 设置 IPv6 状态
+  // 设置局域网允许 IP 列表
+  Future<bool> setLanAllowedIps(List<String> ips) async {
+    try {
+      await ClashPreferences.instance.setLanAllowedIps(ips);
+
+      if (_isCoreRunning()) {
+        final success = await _coreClient.setLanAllowedIps(ips);
+        if (success) {
+          Logger.info(
+            '局域网允许 IP（支持重载）：${ips.isEmpty ? "已清除" : "${ips.length}条"}',
+          );
+        }
+        return success;
+      }
+
+      return true;
+    } catch (e) {
+      Logger.error('设置局域网允许 IP 失败：$e');
+      return false;
+    }
+  }
+
+  // 设置局域网禁止 IP 列表
+  Future<bool> setLanDisallowedIps(List<String> ips) async {
+    try {
+      await ClashPreferences.instance.setLanDisallowedIps(ips);
+
+      if (_isCoreRunning()) {
+        final success = await _coreClient.setLanDisallowedIps(ips);
+        if (success) {
+          Logger.info(
+            '局域网禁止 IP（支持重载）：${ips.isEmpty ? "已清除" : "${ips.length}条"}',
+          );
+        }
+        return success;
+      }
+
+      return true;
+    } catch (e) {
+      Logger.error('设置局域网禁止 IP 失败：$e');
+      return false;
+    }
+  }
+
+  // 设置跳过认证 IP 前缀
+  Future<bool> setSkipAuthPrefixes(List<String> prefixes) async {
+    try {
+      await ClashPreferences.instance.setSkipAuthPrefixes(prefixes);
+
+      if (_isCoreRunning()) {
+        final success = await _coreClient.setSkipAuthPrefixes(prefixes);
+        if (success) {
+          Logger.info(
+            '跳过认证前缀（支持重载）：${prefixes.isEmpty ? "已清除" : "${prefixes.length}条"}',
+          );
+        }
+        return success;
+      }
+
+      return true;
+    } catch (e) {
+      Logger.error('设置跳过认证前缀失败：$e');
+      return false;
+    }
+  }
+
   Future<bool> setIpv6(bool enabled) async {
     try {
       // 先保存到持久化

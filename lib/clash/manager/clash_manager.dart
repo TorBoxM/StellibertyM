@@ -406,6 +406,30 @@ class ClashManager {
     return success;
   }
 
+  Future<bool> setLanAllowedIps(List<String> ips) async {
+    final success = await _configManager.setLanAllowedIps(ips);
+    if (success) {
+      _scheduleConfigReload('局域网允许 IP');
+    }
+    return success;
+  }
+
+  Future<bool> setLanDisallowedIps(List<String> ips) async {
+    final success = await _configManager.setLanDisallowedIps(ips);
+    if (success) {
+      _scheduleConfigReload('局域网禁止 IP');
+    }
+    return success;
+  }
+
+  Future<bool> setSkipAuthPrefixes(List<String> prefixes) async {
+    final success = await _configManager.setSkipAuthPrefixes(prefixes);
+    if (success) {
+      _scheduleConfigReload('跳过认证前缀');
+    }
+    return success;
+  }
+
   Future<bool> setIpv6(bool enabled) async {
     final success = await _configManager.setIpv6(enabled);
     if (success) {

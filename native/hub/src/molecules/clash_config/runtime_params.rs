@@ -47,4 +47,11 @@ pub struct RuntimeConfigParams {
 
     // 局域网认证（格式：["user:pass"]）
     pub lan_authentication: Vec<String>,
+
+    // 局域网 IP 访问控制
+    pub lan_allowed_ips: Vec<String>,
+    pub lan_disallowed_ips: Vec<String>,
+
+    // 跳过认证的 IP 前缀
+    pub skip_auth_prefixes: Vec<String>,
 }

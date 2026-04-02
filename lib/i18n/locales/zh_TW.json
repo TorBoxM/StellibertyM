@@ -626,6 +626,21 @@
         "username": "使用者名稱",
         "password": "密碼"
       },
+      "lan_allowed_ips": {
+        "title": "允許連線的 IP",
+        "subtitle": "僅允許指定 IP/CIDR 存取代理，每行一個",
+        "hint": "例如：192.168.1.0/24"
+      },
+      "lan_disallowed_ips": {
+        "title": "禁止連線的 IP",
+        "subtitle": "禁止指定 IP/CIDR 存取代理，每行一個",
+        "hint": "例如：192.168.1.100/32"
+      },
+      "skip_auth_prefixes": {
+        "title": "跳過驗證的 IP",
+        "subtitle": "指定 IP/CIDR 無需驗證即可使用代理，每行一個",
+        "hint": "例如：127.0.0.1/8"
+      },
       "ipv6": {
         "title": "IPv6 支援",
         "subtitle": "啟用 IPv6 網路支援"

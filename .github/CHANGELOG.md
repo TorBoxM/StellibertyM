@@ -1,8 +1,8 @@
-- 不再使用 Windows 上 Flutter run UI on separate thread 策略
+- 新增局域网允许/禁止连接 IP 和跳过认证 IP 配置项
 
 <details>
 <summary>English Version</summary>
 
-- Drop the Flutter run UI on separate thread strategy on Windows
+- Add LAN allowed/disallowed IPs and skip-auth IP prefix settings
 
 </details>

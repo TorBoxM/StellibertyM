@@ -298,6 +298,42 @@ class IpcCoreClient implements ClashCoreClient {
   }
 
   @override
+  Future<bool> setLanAllowedIps(List<String> ips) async {
+    try {
+      await _patch('/configs', {'lan-allowed-ips': ips});
+      _clearConfigCache();
+      return true;
+    } catch (e) {
+      Logger.error('设置局域网允许 IP 出错：$e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> setLanDisallowedIps(List<String> ips) async {
+    try {
+      await _patch('/configs', {'lan-disallowed-ips': ips});
+      _clearConfigCache();
+      return true;
+    } catch (e) {
+      Logger.error('设置局域网禁止 IP 出错：$e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> setSkipAuthPrefixes(List<String> prefixes) async {
+    try {
+      await _patch('/configs', {'skip-auth-prefixes': prefixes});
+      _clearConfigCache();
+      return true;
+    } catch (e) {
+      Logger.error('设置跳过认证前缀出错：$e');
+      rethrow;
+    }
+  }
+
+  @override
   Future<bool> setIpv6(bool enable) async {
     try {
       await _patch('/configs', {'ipv6': enable});

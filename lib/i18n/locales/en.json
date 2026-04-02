@@ -627,6 +627,21 @@
         "username": "Username",
         "password": "Password"
       },
+      "lan_allowed_ips": {
+        "title": "Allowed IPs",
+        "subtitle": "Only allow specified IP/CIDR to access proxy, one per line",
+        "hint": "e.g. 192.168.1.0/24"
+      },
+      "lan_disallowed_ips": {
+        "title": "Disallowed IPs",
+        "subtitle": "Block specified IP/CIDR from accessing proxy, one per line",
+        "hint": "e.g. 192.168.1.100/32"
+      },
+      "skip_auth_prefixes": {
+        "title": "Skip Auth IPs",
+        "subtitle": "Specified IP/CIDR can use proxy without authentication, one per line",
+        "hint": "e.g. 127.0.0.1/8"
+      },
       "ipv6": {
         "title": "IPv6 Support",
         "subtitle": "Enable IPv6 network support"

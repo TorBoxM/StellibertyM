@@ -626,6 +626,21 @@
         "username": "用户名",
         "password": "密码"
       },
+      "lan_allowed_ips": {
+        "title": "允许连接的 IP",
+        "subtitle": "仅允许指定 IP/CIDR 访问代理，每行一个",
+        "hint": "例如：192.168.1.0/24"
+      },
+      "lan_disallowed_ips": {
+        "title": "禁止连接的 IP",
+        "subtitle": "禁止指定 IP/CIDR 访问代理，每行一个",
+        "hint": "例如：192.168.1.100/32"
+      },
+      "skip_auth_prefixes": {
+        "title": "跳过认证的 IP",
+        "subtitle": "指定 IP/CIDR 无需认证即可使用代理，每行一个",
+        "hint": "例如：127.0.0.1/8"
+      },
       "ipv6": {
         "title": "IPv6 支持",
         "subtitle": "启用 IPv6 网络支持"

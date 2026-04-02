@@ -190,6 +190,11 @@ class ClashPreferences {
   static const String _kLanAuthUsername = 'clash_lan_auth_username';
   static const String _kLanAuthPassword = 'clash_lan_auth_password';
 
+  // 局域网 IP 访问控制配置键
+  static const String _kLanAllowedIps = 'clash_lan_allowed_ips';
+  static const String _kLanDisallowedIps = 'clash_lan_disallowed_ips';
+  static const String _kSkipAuthPrefixes = 'clash_skip_auth_prefixes';
+
   // 懒惰模式配置键
   static const String _kLazyMode = 'clash_lazy_mode';
 
@@ -216,6 +221,31 @@ class ClashPreferences {
   // 保存局域网认证密码
   Future<void> setLanAuthPassword(String password) =>
       _setString(_kLanAuthPassword, password);
+
+  // ==================== 局域网 IP 访问控制 ====================
+
+  // 获取局域网允许 IP 列表
+  List<String> getLanAllowedIps() => _getStringList(_kLanAllowedIps, const []);
+
+  // 保存局域网允许 IP 列表
+  Future<void> setLanAllowedIps(List<String> ips) =>
+      _setStringList(_kLanAllowedIps, ips);
+
+  // 获取局域网禁止 IP 列表
+  List<String> getLanDisallowedIps() =>
+      _getStringList(_kLanDisallowedIps, const []);
+
+  // 保存局域网禁止 IP 列表
+  Future<void> setLanDisallowedIps(List<String> ips) =>
+      _setStringList(_kLanDisallowedIps, ips);
+
+  // 获取跳过认证 IP 前缀列表
+  List<String> getSkipAuthPrefixes() =>
+      _getStringList(_kSkipAuthPrefixes, const []);
+
+  // 保存跳过认证 IP 前缀列表
+  Future<void> setSkipAuthPrefixes(List<String> prefixes) =>
+      _setStringList(_kSkipAuthPrefixes, prefixes);
 
   // ==================== IPv6 ====================
 

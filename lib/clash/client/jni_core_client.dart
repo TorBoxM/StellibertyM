@@ -233,6 +233,21 @@ class JniCoreClient implements ClashCoreClient {
   }
 
   @override
+  Future<bool> setLanAllowedIps(List<String> ips) async {
+    return await updateConfig({'lan-allowed-ips': ips});
+  }
+
+  @override
+  Future<bool> setLanDisallowedIps(List<String> ips) async {
+    return await updateConfig({'lan-disallowed-ips': ips});
+  }
+
+  @override
+  Future<bool> setSkipAuthPrefixes(List<String> prefixes) async {
+    return await updateConfig({'skip-auth-prefixes': prefixes});
+  }
+
+  @override
   Future<bool> setIpv6(bool enable) async {
     return await updateConfig({'ipv6': enable});
   }

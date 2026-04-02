@@ -251,6 +251,51 @@ pub fn inject_runtime_params(
         config_map.remove(YamlValue::String("authentication".to_string()));
     }
 
+    // 注入局域网允许 IP
+    if !params.lan_allowed_ips.is_empty() {
+        let list: Vec<YamlValue> = params
+            .lan_allowed_ips
+            .iter()
+            .map(|s| YamlValue::String(s.clone()))
+            .collect();
+        config_map.insert(
+            YamlValue::String("lan-allowed-ips".to_string()),
+            YamlValue::Sequence(list),
+        );
+    } else {
+        config_map.remove(YamlValue::String("lan-allowed-ips".to_string()));
+    }
+
+    // 注入局域网禁止 IP
+    if !params.lan_disallowed_ips.is_empty() {
+        let list: Vec<YamlValue> = params
+            .lan_disallowed_ips
+            .iter()
+            .map(|s| YamlValue::String(s.clone()))
+            .collect();
+        config_map.insert(
+            YamlValue::String("lan-disallowed-ips".to_string()),
+            YamlValue::Sequence(list),
+        );
+    } else {
+        config_map.remove(YamlValue::String("lan-disallowed-ips".to_string()));
+    }
+
+    // 注入跳过认证前缀
+    if !params.skip_auth_prefixes.is_empty() {
+        let list: Vec<YamlValue> = params
+            .skip_auth_prefixes
+            .iter()
+            .map(|s| YamlValue::String(s.clone()))
+            .collect();
+        config_map.insert(
+            YamlValue::String("skip-auth-prefixes".to_string()),
+            YamlValue::Sequence(list),
+        );
+    } else {
+        config_map.remove(YamlValue::String("skip-auth-prefixes".to_string()));
+    }
+
     // 注入 DNS（优先级：用户覆写 > TUN 默认 > 不注入）
     if params.is_dns_override_enabled {
         inject_user_dns_override(config_map, params)?;

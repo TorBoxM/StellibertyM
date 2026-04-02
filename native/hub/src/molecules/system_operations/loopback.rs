@@ -273,10 +273,7 @@ fn diagnose_firewall_services() -> String {
     let mut diagnostics = Vec::new();
 
     for (service, display) in [("mpssvc", "Windows 防火墙"), ("BFE", "基础筛选引擎")] {
-        match Command::new("sc")
-            .args(["query", service])
-            .output()
-        {
+        match Command::new("sc").args(["query", service]).output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let is_running = stdout.contains("RUNNING");
@@ -290,10 +287,7 @@ fn diagnose_firewall_services() -> String {
                 };
                 diagnostics.push(format!("{}（{}）：{}", display, service, state));
                 if !is_running {
-                    diagnostics.push(format!(
-                        "  → 请以管理员身份运行：net start {}",
-                        service
-                    ));
+                    diagnostics.push(format!("  → 请以管理员身份运行：net start {}", service));
                 }
             }
             Err(e) => {
@@ -525,10 +519,7 @@ unsafe fn try_enum_app_containers(
             if is_access_denied {
                 let diag = diagnose_firewall_services();
                 log::error!("防火墙服务诊断：\n{}", diag);
-                return Err(format!(
-                    "{}。\n\n诊断信息：\n{}",
-                    error_message, diag
-                ));
+                return Err(format!("{}。\n\n诊断信息：\n{}", error_message, diag));
             }
 
             return Err(error_message);

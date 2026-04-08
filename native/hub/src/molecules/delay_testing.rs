@@ -3,8 +3,8 @@
 pub mod tester;
 
 pub use tester::{
-    BatchDelayTestComplete, BatchDelayTestRequest, DelayTestProgress, SingleDelayTestRequest,
-    SingleDelayTestResult,
+    BatchDelayTestComplete, BatchDelayTestRequest, CancelDelayTestsRequest, DelayTestProgress,
+    SingleDelayTestRequest, SingleDelayTestResult,
 };
 
 pub fn init_listeners() {

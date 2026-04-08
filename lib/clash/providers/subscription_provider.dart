@@ -405,8 +405,15 @@ class SubscriptionProvider extends ChangeNotifier {
     return SubscriptionErrorState.unknown;
   }
 
+  Future<void> _cancelDelayTestsBeforeUpdate() async {
+    await _clashProvider?.cancelAllDelayTests();
+  }
+
   // 更新订阅
-  Future<bool> updateSubscription(String subscriptionId) async {
+  Future<bool> updateSubscription(
+    String subscriptionId, {
+    bool cancelDelayTests = true,
+  }) async {
     // 不清除全局错误，单个订阅更新不影响全局状态
     final index = _subscriptions.indexWhere((s) => s.id == subscriptionId);
 
@@ -416,6 +423,10 @@ class SubscriptionProvider extends ChangeNotifier {
     }
 
     final subscription = _subscriptions[index];
+
+    if (cancelDelayTests) {
+      await _cancelDelayTestsBeforeUpdate();
+    }
 
     try {
       if (subscription.isLocalFile) {
@@ -529,6 +540,8 @@ class SubscriptionProvider extends ChangeNotifier {
       return errors;
     }
 
+    await _cancelDelayTestsBeforeUpdate();
+
     Logger.info('开始并发更新 ${_subscriptions.length} 个订阅');
 
     // 使用并发限制，避免过载
@@ -550,7 +563,10 @@ class SubscriptionProvider extends ChangeNotifier {
           return null;
         }
 
-        final success = await updateSubscription(subscription.id);
+        final success = await updateSubscription(
+          subscription.id,
+          cancelDelayTests: false,
+        );
 
         // 更新进度
         _updateState(_state.copyWith(updateCurrent: _state.updateCurrent + 1));
@@ -708,6 +724,8 @@ class SubscriptionProvider extends ChangeNotifier {
       return;
     }
 
+    await _cancelDelayTestsBeforeUpdate();
+
     Logger.info('发现 ${needUpdateSubscriptions.length} 个订阅需要更新');
 
     // 使用并发更新，限制并发数
@@ -718,7 +736,10 @@ class SubscriptionProvider extends ChangeNotifier {
 
       // 并发更新一批订阅
       await Future.wait(
-        batch.map((subscription) => updateSubscription(subscription.id)),
+        batch.map(
+          (subscription) =>
+              updateSubscription(subscription.id, cancelDelayTests: false),
+        ),
       );
     }
 
@@ -746,6 +767,8 @@ class SubscriptionProvider extends ChangeNotifier {
       return;
     }
 
+    await _cancelDelayTestsBeforeUpdate();
+
     Logger.info('发现 ${startupUpdateSubscriptions.length} 个启用启动时更新的订阅');
 
     // 使用并发更新提升性能，限制并发数为 3
@@ -757,7 +780,7 @@ class SubscriptionProvider extends ChangeNotifier {
       // 并发更新一批订阅
       final batchFutures = batch.map((subscription) async {
         Logger.info('启动时更新订阅：${subscription.name}');
-        await updateSubscription(subscription.id);
+        await updateSubscription(subscription.id, cancelDelayTests: false);
       });
 
       // 等待当前批次完成后再处理下一批
@@ -1003,6 +1026,8 @@ class SubscriptionProvider extends ChangeNotifier {
       return;
     }
 
+    await _cancelDelayTestsBeforeUpdate();
+
     Logger.info('当前订阅使用了更新的覆写，重新加载配置');
     _clashProvider?.pauseConfigWatcher();
     try {
@@ -1077,6 +1102,8 @@ class SubscriptionProvider extends ChangeNotifier {
       return false;
     }
 
+    await _cancelDelayTestsBeforeUpdate();
+
     try {
       final subscription = _subscriptions[subscriptionIndex];
       final previousOverrideIds = subscription.overrideIds;
@@ -1131,6 +1158,8 @@ class SubscriptionProvider extends ChangeNotifier {
       orElse: () => throw Exception('订阅不存在'),
     );
 
+    await _cancelDelayTestsBeforeUpdate();
+
     try {
       // 保存文件到订阅目录
       await _manager.saveLocalSubscription(subscription, content);
@@ -1179,6 +1208,8 @@ class SubscriptionProvider extends ChangeNotifier {
     // 保存选择到持久化存储
     await ClashPreferences.instance.setCurrentSubscriptionId(subscriptionId);
     Logger.info('选择订阅：$subscriptionId');
+
+    await _cancelDelayTestsBeforeUpdate();
 
     try {
       // 重新加载配置文件
@@ -1555,6 +1586,11 @@ class SubscriptionProvider extends ChangeNotifier {
     overrideProvider.setOnOverrideDeleted((overrideId) async {
       Logger.debug('覆写被删除，清理订阅引用：$overrideId');
       await removeOverrideFromAllSubscriptions(overrideId);
+    });
+
+    // 2.25 设置覆写更新前取消测速回调。
+    overrideProvider.setOnCancelDelayTests(() async {
+      await _cancelDelayTestsBeforeUpdate();
     });
 
     // 2.5 设置覆写内容更新回调（重载使用该覆写的当前订阅）

@@ -258,6 +258,10 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   int _proxyNodesUpdateCount = 0;
   int get proxyNodesUpdateCount => _proxyNodesUpdateCount;
 
+  // 代理节点快照版本。
+  // 每次重新加载或刷新代理列表时递增，用于丢弃旧测速结果。
+  int _proxyNodesVersion = 0;
+
   // 正在测试延迟的节点集合
   final Set<String> _testingNodes = {};
 
@@ -279,6 +283,14 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, Timer> _delayExpireTimers = {};
   // 延迟值保留时长（5 分钟）
   static const Duration _delayRetentionDuration = Duration(minutes: 5);
+
+  // 当前活动的单节点测速请求 ID 集合。
+  // 用于过滤旧请求结果并在更新时统一取消。
+  final Set<int> _activeSingleDelayTestRequestIds = {};
+
+  // 当前活动的批量测速请求 ID。
+  // 同一时刻仅允许一个批量测速会话。
+  int? _activeBatchDelayTestRequestId;
 
   // 批量延迟测试信号订阅（防止泄漏）
   StreamSubscription? _progressSubscription;
@@ -833,6 +845,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         final node = ProxyNode.fromJson(name, data);
         _proxyNodes[name] = node;
       });
+      _proxyNodesVersion++;
       _proxyNodesUpdateCount++;
       parseStopwatch.stop();
       Logger.debug(
@@ -994,6 +1007,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
           _proxyNodes[name] = node;
         }
       });
+      _proxyNodesVersion++;
       _proxyNodesUpdateCount++;
       parseStopwatch.stop();
       Logger.debug(
@@ -1271,12 +1285,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         );
 
         if (reloadSuccess) {
-          // 取消正在进行的延迟测试
-          cancelBatchDelayTest();
-
-          // 清空所有延迟结果
-          clearAllDelayResults();
-
+          await cancelAllDelayTests(clearResults: true);
           Logger.info('配置已重载，延迟测试已取消并清空结果');
 
           // 2. 重新加载代理列表（显示新节点）
@@ -1317,6 +1326,36 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // ========== 延迟测试方法 ==========
 
+  Future<void> cancelAllDelayTests({bool clearResults = true}) async {
+    final singleRequestIds = _activeSingleDelayTestRequestIds.toList();
+    final batchRequestId = _activeBatchDelayTestRequestId;
+    _activeSingleDelayTestRequestIds.clear();
+    _activeBatchDelayTestRequestId = null;
+
+    for (final requestId in singleRequestIds) {
+      _clashManager.cancelDelayTests(requestId);
+    }
+    if (batchRequestId != null) {
+      _clashManager.cancelDelayTests(batchRequestId);
+    }
+
+    await _progressSubscription?.cancel();
+    await _completeSubscription?.cancel();
+    _progressSubscription = null;
+    _completeSubscription = null;
+
+    _testingNodes.clear();
+    _isBatchTestingDelay = false;
+    _lastNotifiedAt = null;
+
+    if (clearResults) {
+      clearAllDelayResults();
+      return;
+    }
+
+    notifyListeners();
+  }
+
   // 测试代理延迟（支持代理组）
   Future<int> testProxyDelay(
     String proxyName, [
@@ -1329,19 +1368,40 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
       return -1;
     }
 
-    final delay = await _clashManager.testProxyDelayViaRust(
-      proxyName,
-      testUrl: testUrl,
-    );
+    final requestId = _clashManager.generateDelayTestRequestId();
+    final proxyNodesVersionAtStart = _proxyNodesVersion;
+    _activeSingleDelayTestRequestIds.add(requestId);
 
-    if (notify) {
-      _proxyNodes[proxyName] = node.copyWith(delay: delay);
-      _proxyNodes = Map<String, ProxyNode>.from(_proxyNodes);
-      _proxyNodesUpdateCount++;
-      notifyListeners();
+    try {
+      final delay = await _clashManager.testProxyDelayViaRust(
+        proxyName,
+        requestId: requestId,
+        testUrl: testUrl,
+      );
+
+      if (!_activeSingleDelayTestRequestIds.contains(requestId)) {
+        return -1;
+      }
+      if (_proxyNodesVersion != proxyNodesVersionAtStart) {
+        return -1;
+      }
+
+      final currentNode = _proxyNodes[proxyName];
+      if (currentNode == null) {
+        return -1;
+      }
+
+      if (notify) {
+        _proxyNodes[proxyName] = currentNode.copyWith(delay: delay);
+        _proxyNodes = Map<String, ProxyNode>.from(_proxyNodes);
+        _proxyNodesUpdateCount++;
+        notifyListeners();
+      }
+
+      return delay;
+    } finally {
+      _activeSingleDelayTestRequestIds.remove(requestId);
     }
-
-    return delay;
   }
 
   // 批量测试代理组中所有节点的延迟
@@ -1371,16 +1431,24 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     // 标记是否有待通知的更新
     bool hasPendingUpdates = false;
+    final requestId = _clashManager.generateDelayTestRequestId();
 
     try {
+      _activeBatchDelayTestRequestId = requestId;
+
       await _clashManager.testGroupDelays(
         proxyNames,
+        requestId: requestId,
         testUrl: testUrl,
         onNodeStart: (nodeName) {
           // 节点开始测试时保持在 testingNodes 中
           // 无需额外操作，因为已经在集合中了
         },
         onNodeComplete: (nodeName, delay) {
+          if (_activeBatchDelayTestRequestId != requestId) {
+            return;
+          }
+
           // 节点测试完成，立即更新延迟值
           final node = _proxyNodes[nodeName];
           if (node != null) {
@@ -1411,6 +1479,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
       if (hasPendingUpdates) {
         _proxyNodes = Map<String, ProxyNode>.from(_proxyNodes);
         _proxyNodesUpdateCount++;
+      }
+      if (_activeBatchDelayTestRequestId == requestId) {
+        _activeBatchDelayTestRequestId = null;
       }
       _testingNodes.clear();
       _isBatchTestingDelay = false;
@@ -1451,10 +1522,12 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     // 标记是否有待通知的更新
     bool hasPendingUpdates = false;
+    final requestId = _clashManager.generateDelayTestRequestId();
 
     try {
       // 使用 Rust 层批量测试
       final proxyNames = allProxyNames.toList();
+      _activeBatchDelayTestRequestId = requestId;
 
       // 使用延迟测试并发数
       final concurrency = ClashDefaults.delayTestConcurrency;
@@ -1473,8 +1546,14 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         // 订阅进度信号（流式更新）
         _progressSubscription = signals.DelayTestProgress.rustSignalStream
             .listen((result) {
-              final nodeName = result.message.nodeName;
-              final delayMs = result.message.delayMs;
+              final message = result.message;
+              if (message.requestId != requestId ||
+                  _activeBatchDelayTestRequestId != requestId) {
+                return;
+              }
+
+              final nodeName = message.nodeName;
+              final delayMs = message.delayMs;
 
               // 更新节点延迟
               final node = _proxyNodes[nodeName];
@@ -1529,6 +1608,14 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         _completeSubscription = signals.BatchDelayTestComplete.rustSignalStream
             .listen((result) {
               final message = result.message;
+              if (message.requestId != requestId ||
+                  _activeBatchDelayTestRequestId != requestId) {
+                return;
+              }
+              if (message.isCancelled) {
+                completer.complete();
+                return;
+              }
               if (message.isSuccessful) {
                 Logger.info(
                   '所有节点延迟测试完成，成功：${message.successCount}/${message.totalCount}',
@@ -1546,6 +1633,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
         // 发送批量测试请求到 Rust 层
         signals.BatchDelayTestRequest(
+          requestId: requestId,
           nodeNames: proxyNames,
           testUrl: url,
           timeoutMs: timeoutMs,
@@ -1575,6 +1663,9 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
         _proxyNodes = Map<String, ProxyNode>.from(_proxyNodes);
         _proxyNodesUpdateCount++;
       }
+      if (_activeBatchDelayTestRequestId == requestId) {
+        _activeBatchDelayTestRequestId = null;
+      }
       _testingNodes.clear();
       _isBatchTestingDelay = false;
       _lastNotifiedAt = null;
@@ -1594,12 +1685,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // 取消批量延迟测试
   void cancelBatchDelayTest() {
-    if (_isBatchTestingDelay) {
-      Logger.info('取消批量延迟测试');
-      _isBatchTestingDelay = false;
-      _testingNodes.clear();
-      notifyListeners();
-    }
+    unawaited(cancelAllDelayTests(clearResults: false));
   }
 
   // 清空所有延迟测试结果

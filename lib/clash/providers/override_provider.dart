@@ -34,6 +34,9 @@ class OverrideProvider extends ChangeNotifier {
   // 覆写内容更新回调（通知订阅系统重载配置）
   Future<void> Function(String overrideId)? _onOverrideContentUpdated;
 
+  // 覆写更新前取消测速回调。
+  Future<void> Function()? _onCancelDelayTests;
+
   // 设置覆写删除回调
   void setOnOverrideDeleted(Future<void> Function(String) handler) {
     _onOverrideDeleted = handler;
@@ -44,6 +47,12 @@ class OverrideProvider extends ChangeNotifier {
   void setOnOverrideContentUpdated(Future<void> Function(String) handler) {
     _onOverrideContentUpdated = handler;
     Logger.debug('已设置覆写内容更新回调');
+  }
+
+  // 设置覆写更新前取消测速回调。
+  void setOnCancelDelayTests(Future<void> Function() handler) {
+    _onCancelDelayTests = handler;
+    Logger.debug('已设置取消测速回调');
   }
 
   bool get isLoading => _state.isLoading;
@@ -213,7 +222,10 @@ class OverrideProvider extends ChangeNotifier {
   }
 
   // 更新远程覆写内容
-  Future<bool> updateRemoteOverride(String overrideId) async {
+  Future<bool> updateRemoteOverride(
+    String overrideId, {
+    bool cancelDelayTests = true,
+  }) async {
     final index = _overrides.indexWhere((o) => o.id == overrideId);
     if (index == -1) {
       Logger.error('更新失败：覆写不存在 (ID：$overrideId)');
@@ -232,6 +244,10 @@ class OverrideProvider extends ChangeNotifier {
       _state.copyWith(updatingIds: {..._state.updatingIds, overrideId}),
     ); // '开始更新远程覆写');
     notifyListeners();
+
+    if (cancelDelayTests) {
+      await _onCancelDelayTests?.call();
+    }
 
     try {
       Logger.info('开始更新远程覆写：${override.name}');
@@ -432,13 +448,18 @@ class OverrideProvider extends ChangeNotifier {
     );
     notifyListeners();
 
+    await _onCancelDelayTests?.call();
+
     Logger.info('开始批量更新 ${remoteOverrides.length} 个远程覆写');
 
     try {
       // 并发更新所有远程覆写
       final results = await Future.wait(
         remoteOverrides.map((override) async {
-          final success = await updateRemoteOverride(override.id);
+          final success = await updateRemoteOverride(
+            override.id,
+            cancelDelayTests: false,
+          );
           if (!success) {
             return '${override.name}: 更新失败';
           }
@@ -484,6 +505,8 @@ class OverrideProvider extends ChangeNotifier {
     OverrideConfig override,
     String content,
   ) async {
+    await _onCancelDelayTests?.call();
+
     try {
       Logger.info('保存覆写文件内容：${override.name}');
       await _manager.saveOverrideContent(override, content);
@@ -518,6 +541,7 @@ class OverrideProvider extends ChangeNotifier {
     // 清理回调，避免内存泄漏
     _onOverrideDeleted = null;
     _onOverrideContentUpdated = null;
+    _onCancelDelayTests = null;
     super.dispose();
   }
 }

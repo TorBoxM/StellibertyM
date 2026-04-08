@@ -51,8 +51,10 @@ class DelayTestStream {
       var completedCount = 0;
       var successCount = 0;
 
+      final requestId = DelayTestService.generateRequestId();
       final results = await DelayTestService.testGroupDelays(
         proxyNames,
+        requestId: requestId,
         onNodeComplete: (nodeName, delay) {
           completedCount++;
           if (delay > 0) {

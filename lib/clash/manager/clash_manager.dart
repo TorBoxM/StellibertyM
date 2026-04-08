@@ -320,10 +320,23 @@ class ClashManager {
     return await _proxyManager.testProxyDelay(proxyName, testUrl: testUrl);
   }
 
+  int generateDelayTestRequestId() {
+    return _proxyManager.generateDelayTestRequestId();
+  }
+
+  void cancelDelayTests(int requestId) {
+    _proxyManager.cancelDelayTests(requestId);
+  }
+
   // 测试单个代理节点延迟
-  Future<int> testProxyDelayViaRust(String proxyName, {String? testUrl}) async {
+  Future<int> testProxyDelayViaRust(
+    String proxyName, {
+    required int requestId,
+    String? testUrl,
+  }) async {
     return await _proxyManager.testProxyDelayViaRust(
       proxyName,
+      requestId: requestId,
       testUrl: testUrl,
     );
   }
@@ -331,12 +344,14 @@ class ClashManager {
   // 批量测试代理节点延迟
   Future<Map<String, int>> testGroupDelays(
     List<String> proxyNames, {
+    required int requestId,
     String? testUrl,
     Function(String nodeName)? onNodeStart,
     Function(String nodeName, int delay)? onNodeComplete,
   }) async {
     return await _proxyManager.testGroupDelays(
       proxyNames,
+      requestId: requestId,
       testUrl: testUrl,
       onNodeStart: onNodeStart,
       onNodeComplete: onNodeComplete,

@@ -1,8 +1,8 @@
-- 新增局域网允许/禁止连接 IP 和跳过认证 IP 配置项
+- 避免更新订阅或覆写后旧的测速结果重新显示，列表中的延迟信息会与当前配置保持一致
 
 <details>
 <summary>English Version</summary>
 
-- Add LAN allowed/disallowed IPs and skip-auth IP prefix settings
+- Prevent outdated speed test results from reappearing after updating subscriptions or overrides, so latency information stays consistent with the current configuration
 
 </details>

@@ -278,12 +278,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   DateTime? _lastNotifiedAt;
   // UI 更新节流间隔（毫秒）
   static const int _notifyThrottleMs = 100;
-
-  // 延迟值过期定时器（节点名 → Timer）
-  final Map<String, Timer> _delayExpireTimers = {};
-  // 延迟值保留时长（5 分钟）
-  static const Duration _delayRetentionDuration = Duration(minutes: 5);
-
   // 当前活动的单节点测速请求 ID 集合。
   // 用于过滤旧请求结果并在更新时统一取消。
   final Set<int> _activeSingleDelayTestRequestIds = {};
@@ -1002,7 +996,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
             previousNode.delay != null &&
             previousNode.delay! != 0) {
           _proxyNodes[name] = node.copyWith(delay: previousNode.delay);
-          // 注意：定时器中使用节点名查找，因此不需要重新创建定时器
         } else {
           _proxyNodes[name] = node;
         }
@@ -1565,29 +1558,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
                 _proxyNodes[nodeName] = node.copyWith(delay: delayMs);
                 hasPendingUpdates = true;
 
-                // 如果延迟测试完成（无论成功或超时），设置 5 分钟过期定时器
-                if (delayMs != 0) {
-                  // 取消过期定时器
-                  _delayExpireTimers[nodeName]?.cancel();
-
-                  // 设置过期定时器（5 分钟后清空延迟值）
-                  _delayExpireTimers[nodeName] = Timer(
-                    _delayRetentionDuration,
-                    () {
-                      final node = _proxyNodes[nodeName];
-                      if (node != null &&
-                          node.delay != null &&
-                          node.delay! != 0) {
-                        _proxyNodes[nodeName] = node.copyWith(delay: 0);
-                        _proxyNodes = Map<String, ProxyNode>.from(_proxyNodes);
-                        _proxyNodesUpdateCount++;
-                        notifyListeners();
-                        Logger.debug('节点 $nodeName 延迟值已过期（5 分钟）');
-                      }
-                      _delayExpireTimers.remove(nodeName);
-                    },
-                  );
-                }
               }
 
               // 从测试集合中移除
@@ -1695,12 +1665,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   // 清空所有延迟测试结果
   void clearAllDelayResults() {
     Logger.info('清空所有延迟测试结果');
-
-    // 取消所有过期定时器
-    for (final timer in _delayExpireTimers.values) {
-      timer.cancel();
-    }
-    _delayExpireTimers.clear();
 
     // 清空延迟值（包括成功和超时的延迟值）
     for (final nodeName in _proxyNodes.keys.toList()) {
@@ -1935,12 +1899,6 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (Platform.isAndroid) {
       _clashManager.stopLogMonitoring();
     }
-
-    // 清理所有延迟过期定时器
-    for (final timer in _delayExpireTimers.values) {
-      timer.cancel();
-    }
-    _delayExpireTimers.clear();
 
     _progressSubscription?.cancel();
     _completeSubscription?.cancel();

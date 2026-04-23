@@ -39,6 +39,9 @@ class SubscriptionCard extends StatelessWidget {
   // 管理规则覆写的回调
   final VoidCallback? onManageOverride;
 
+  // 管理链式代理的回调
+  final VoidCallback? onManageChainProxy;
+
   // 查看运行配置的回调
   final VoidCallback? onViewConfig;
 
@@ -55,6 +58,7 @@ class SubscriptionCard extends StatelessWidget {
     this.onEditFile,
     this.onDelete,
     this.onManageOverride,
+    this.onManageChainProxy,
     this.onViewConfig,
     this.onViewProvider,
   });
@@ -321,6 +325,11 @@ class SubscriptionCard extends StatelessWidget {
     Translations trans,
   ) {
     final items = <PopupMenuItemData>[
+      PopupMenuItemData(
+        icon: Icons.account_tree_outlined,
+        label: trans.subscription.menu.chain_proxy_manage,
+        onPressed: onManageChainProxy,
+      ),
       PopupMenuItemData(
         icon: Icons.edit,
         label: trans.subscription.menu.config_edit,

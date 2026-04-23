@@ -259,6 +259,11 @@ class ProviderSetup {
       providers.overrideProvider,
     );
 
+    ClashManager.instance.setEffectiveConfigContentGetter((configPath) async {
+      return await providers.subscriptionProvider
+          .getEffectiveSubscriptionConfigContent(configPath);
+    });
+
     // 覆写获取回调
     ClashManager.instance.setOverridesGetter(() {
       final currentSub = providers.subscriptionProvider.currentSubscription;

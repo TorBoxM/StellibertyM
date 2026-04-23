@@ -107,6 +107,7 @@ class LifecycleManager {
   // 支持传入配置路径、覆写回调与 TUN 相关参数。
   Future<bool> startCore({
     String? configPath,
+    String? configContent,
     List<OverrideConfig> overrides = const [],
     bool enableFallback = true,
     Future<void> Function()? onOverridesFailed,
@@ -165,6 +166,7 @@ class LifecycleManager {
       // 生成运行时配置（支持无配置路径时使用默认配置）
       final generatedConfig = await ConfigInjector.generateRuntimeConfig(
         configPath: configPath,
+        configContent: configContent,
         overrides: overrides,
         mixedPort: mixedPort,
         socksPort: socksPort,
@@ -275,6 +277,7 @@ class LifecycleManager {
           Logger.info('使用无覆写配置重新启动核心');
           isStartSuccessful = await startCore(
             configPath: configPath,
+            configContent: configContent,
             overrides: const [], // 不使用覆写
             mixedPort: mixedPort, // 混合端口
             isIpv6Enabled: isIpv6Enabled,

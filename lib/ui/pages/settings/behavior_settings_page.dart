@@ -230,7 +230,7 @@ class _BehaviorSettingsPageState extends State<BehaviorSettingsPage> {
       return;
     }
 
-    final savePath = await FilePicker.platform.saveFile(
+    final savePath = await FilePicker.saveFile(
       dialogTitle: trans.behavior.export_log,
       fileName: 'running.logs',
     );

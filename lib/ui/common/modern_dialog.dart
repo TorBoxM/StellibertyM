@@ -307,7 +307,12 @@ class _ModernDialogState extends State<ModernDialog>
                   _buildHeader(),
                   if (widget.searchController != null) _buildSearchBox(),
                   if (widget.headerWidget != null) _buildHeaderWidget(),
-                  Flexible(child: widget.content),
+                  Flexible(
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: widget.content,
+                    ),
+                  ),
                   _buildActions(),
                 ],
               ),
@@ -630,6 +635,7 @@ class _ModernDialogState extends State<ModernDialog>
         : DialogConstants.loadingIndicatorSpacing;
 
     return OutlinedButton.icon(
+      key: action.key,
       onPressed: action.isLoading ? null : action.onPressed,
       icon: action.icon != null
           ? Icon(action.icon, size: isMobile ? 16 : 18)
@@ -696,6 +702,7 @@ class _ModernDialogState extends State<ModernDialog>
           : Theme.of(context).colorScheme.primary;
 
       return ElevatedButton(
+        key: action.key,
         onPressed: action.isLoading ? null : action.onPressed,
         style: ElevatedButton.styleFrom(
           padding: buttonPadding,
@@ -735,6 +742,7 @@ class _ModernDialogState extends State<ModernDialog>
     } else {
       // 次要按钮 (OutlinedButton)
       return OutlinedButton(
+        key: action.key,
         onPressed: action.isLoading ? null : action.onPressed,
         style: OutlinedButton.styleFrom(
           padding: buttonPadding,
@@ -800,6 +808,9 @@ class _ModernDialogState extends State<ModernDialog>
 
 // 对话框按钮配置类
 class DialogActionButton {
+  // 按钮 Key
+  final Key? key;
+
   // 按钮文本
   final String label;
 
@@ -819,6 +830,7 @@ class DialogActionButton {
   final bool isDanger;
 
   const DialogActionButton({
+    this.key,
     required this.label,
     this.onPressed,
     this.isPrimary = false,

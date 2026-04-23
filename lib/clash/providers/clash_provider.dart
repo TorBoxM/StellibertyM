@@ -550,7 +550,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // 启动 Clash 核心（不触碰系统代理）
   // 调用者需要自行决定是否启用系统代理
-  Future<bool> start({String? configPath}) async {
+  Future<bool> start({String? configPath, String? configContent}) async {
     _errorMessage = null;
 
     try {
@@ -559,6 +559,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       final success = await _clashManager.startCore(
         configPath: configPath,
+        configContent: configContent,
         overrides: overrides,
       );
 

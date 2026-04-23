@@ -21,6 +21,7 @@ class AutoUpdateModeSelector extends StatelessWidget {
     final trans = context.translate.subscription_dialog;
 
     return OptionSelectorWidget<AutoUpdateMode>(
+      itemKeyPrefix: 'subscription_dialog_auto_update_mode',
       title: trans.auto_update_title,
       titleIcon: Icons.update,
       isHorizontal: !DialogConstants.isMobile,

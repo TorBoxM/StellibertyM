@@ -82,6 +82,9 @@ class ClashManager {
   // 覆写获取回调（从 SubscriptionProvider 注入）
   List<OverrideConfig> Function()? _getOverrides;
 
+  // 有效配置内容获取回调（用于在启动/重启/重载前注入链式代理）
+  Future<String?> Function(String? configPath)? _getEffectiveConfigContent;
+
   // 覆写失败回调（启动失败时禁用当前订阅的所有覆写）
   Future<void> Function()? _onOverridesFailed;
 
@@ -94,6 +97,12 @@ class ClashManager {
   // 获取覆写配置
   List<OverrideConfig> getOverrides() {
     return _getOverrides?.call() ?? [];
+  }
+
+  void setEffectiveConfigContentGetter(
+    Future<String?> Function(String? configPath) getter,
+  ) {
+    _getEffectiveConfigContent = getter;
   }
 
   // 覆写失败处理
@@ -217,13 +226,17 @@ class ClashManager {
 
   Future<bool> startCore({
     String? configPath,
+    String? configContent,
     List<OverrideConfig> overrides = const [],
   }) async {
     // 从持久化存储读取配置参数
     final prefs = ClashPreferences.instance;
+    final effectiveConfigContent =
+        configContent ?? await _getEffectiveConfigContent?.call(configPath);
 
     final success = await _lifecycleManager.startCore(
       configPath: configPath,
+      configContent: effectiveConfigContent,
       overrides: overrides,
       onOverridesFailed: handleOverridesFailed,
       onThirdLevelFallback: _onThirdLevelFallback,
@@ -368,10 +381,15 @@ class ClashManager {
 
   Future<bool> reloadConfig({
     String? configPath,
+    String? configContent,
     List<OverrideConfig> overrides = const [],
   }) async {
+    final effectiveConfigContent =
+        configContent ?? await _getEffectiveConfigContent?.call(configPath);
+
     final success = await _configManager.reloadConfig(
       configPath: configPath,
+      configContent: effectiveConfigContent,
       overrides: overrides,
     );
 

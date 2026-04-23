@@ -21,6 +21,7 @@ class ProxyModeSelector extends StatelessWidget {
     final trans = context.translate;
 
     return OptionSelectorWidget<SubscriptionProxyMode>(
+      itemKeyPrefix: 'subscription_dialog_proxy_mode',
       title: trans.subscription_dialog.proxy_mode_title,
       titleIcon: Icons.public,
       isHorizontal: !DialogConstants.isMobile,

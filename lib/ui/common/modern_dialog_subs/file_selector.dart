@@ -16,6 +16,9 @@ class FileSelectionResult {
 // 文件选择器：支持拖拽与点击选择，并校验文件存在性。
 // 用于导入本地文件并展示当前状态。
 class FileSelectorWidget extends StatefulWidget {
+  // 拖拽区域 Key
+  final Key? dropZoneKey;
+
   // 选择文件后的回调
   final ValueChanged<FileSelectionResult> onFileSelected;
 
@@ -42,6 +45,7 @@ class FileSelectorWidget extends StatefulWidget {
 
   const FileSelectorWidget({
     super.key,
+    this.dropZoneKey,
     required this.onFileSelected,
     this.initialFile,
     required this.hintText,
@@ -95,6 +99,7 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
         await _handleDroppedFiles(paths);
       },
       child: Material(
+        key: widget.dropZoneKey,
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -204,7 +209,7 @@ class _FileSelectorWidgetState extends State<FileSelectorWidget> {
   // 选择文件
   Future<void> _selectFile() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: widget.fileType,
         allowedExtensions: widget.allowedExtensions,
         allowMultiple: false,

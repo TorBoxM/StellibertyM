@@ -8,6 +8,7 @@ import 'package:stelliberty/clash/model/subscription_model.dart';
 import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/ui/widgets/subscription/subscription_card.dart';
 import 'package:stelliberty/ui/widgets/subscription/subscription_dialog.dart';
+import 'package:stelliberty/ui/widgets/subscription/chain_proxy_dialog.dart';
 import 'package:stelliberty/ui/widgets/override/override_selector_dialog.dart';
 import 'package:stelliberty/ui/widgets/subscription/provider_viewer_dialog.dart';
 import 'package:stelliberty/ui/widgets/file_editor_dialog.dart';
@@ -301,6 +302,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                 onViewConfig: null,
                 onDelete: null,
                 onManageOverride: null,
+                onManageChainProxy: null,
                 onViewProvider: null,
               ),
             );
@@ -333,6 +335,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                   provider,
                   subscription,
                 ),
+                onManageChainProxy: () =>
+                    _showChainProxyDialog(context, provider, subscription),
                 onViewProvider: () => _showProviderViewerDialog(context),
               ),
             );
@@ -371,8 +375,54 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           autoTestAllDelaysEnabled: result.autoTestAllDelaysEnabled,
           autoTestAllDelaysIntervalMinutes:
               result.autoTestAllDelaysIntervalMinutes,
+          disabledBuiltinChainProxyNames: result.disabledBuiltinChainProxyNames,
+          customChainProxies: result.customChainProxies,
         );
       },
+    );
+  }
+
+  Future<void> _showChainProxyDialog(
+    BuildContext context,
+    SubscriptionProvider provider,
+    Subscription subscription,
+  ) async {
+    await WidgetsBinding.instance.endOfFrame;
+    if (!context.mounted) return;
+
+    final latestSubscription = provider.subscriptions.firstWhere(
+      (s) => s.id == subscription.id,
+      orElse: () => subscription,
+    );
+
+    final result = await ChainProxyDialog.show(
+      context,
+      profileName: latestSubscription.name,
+      builtinChainProxyNames: latestSubscription.builtinChainProxyNames,
+      disabledBuiltinChainProxyNames:
+          latestSubscription.disabledBuiltinChainProxyNames,
+      customChainProxies: latestSubscription.customChainProxies,
+      isLocalImport: latestSubscription.isLocalFile,
+      localFilePath: latestSubscription.isLocalFile
+          ? PathService.instance.getSubscriptionConfigPath(
+              latestSubscription.id,
+            )
+          : null,
+      existingRemoteUrl: latestSubscription.isLocalFile
+          ? null
+          : latestSubscription.url,
+      isEditMode: true,
+      existingProfileName: latestSubscription.name,
+    );
+
+    if (result == null || !context.mounted) {
+      return;
+    }
+
+    await provider.updateSubscriptionInfo(
+      subscriptionId: latestSubscription.id,
+      disabledBuiltinChainProxyNames: result.disabledBuiltinChainProxyNames,
+      customChainProxies: result.customChainProxies,
     );
   }
 
@@ -419,6 +469,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         autoTestAllDelaysEnabled: result.autoTestAllDelaysEnabled,
         autoTestAllDelaysIntervalMinutes:
             result.autoTestAllDelaysIntervalMinutes,
+        disabledBuiltinChainProxyNames: result.disabledBuiltinChainProxyNames,
+        customChainProxies: result.customChainProxies,
       );
     }
   }
@@ -694,6 +746,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       filePath: result.localFilePath!,
       autoTestAllDelaysEnabled: result.autoTestAllDelaysEnabled,
       autoTestAllDelaysIntervalMinutes: result.autoTestAllDelaysIntervalMinutes,
+      disabledBuiltinChainProxyNames: result.disabledBuiltinChainProxyNames,
+      customChainProxies: result.customChainProxies,
     );
   }
 }

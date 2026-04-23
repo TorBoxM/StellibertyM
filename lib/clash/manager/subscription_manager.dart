@@ -2,6 +2,7 @@ import 'package:stelliberty/clash/model/subscription_model.dart';
 import 'package:stelliberty/clash/model/override_model.dart';
 import 'package:stelliberty/clash/services/subscription_service.dart';
 import 'package:stelliberty/clash/services/override_service.dart';
+import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 
 // 订阅管理器
@@ -47,11 +48,11 @@ class SubscriptionManager {
   }
 
   // 保存本地订阅
-  Future<void> saveLocalSubscription(
+  Future<List<String>> saveLocalSubscription(
     Subscription subscription,
     String content,
   ) async {
-    await _service.saveLocalSubscription(subscription, content);
+    return await _service.saveLocalSubscription(subscription, content);
   }
 
   // 删除订阅
@@ -67,6 +68,31 @@ class SubscriptionManager {
   // 读取订阅配置文件
   Future<String> readSubscriptionConfig(Subscription subscription) async {
     return await _service.readSubscriptionConfig(subscription);
+  }
+
+  Future<String> buildChainProxyConfigContent(Subscription subscription) async {
+    return await _service.buildChainProxyConfigContent(subscription);
+  }
+
+  Future<List<String>> loadChainProxyCandidateNamesFromSubscription(
+    Subscription subscription,
+  ) async {
+    return await _service.loadChainProxyCandidateNamesFromSubscription(
+      subscription,
+    );
+  }
+
+  Future<String> parseRemoteSubscriptionContent(
+    String url, {
+    SubscriptionProxyMode proxyMode = SubscriptionProxyMode.direct,
+    String userAgent = ClashDefaults.defaultUserAgent,
+  }) async {
+    return await _service.parseRemoteSubscriptionContent(
+      url,
+      proxyMode: proxyMode,
+      userAgent: userAgent,
+      mixedPort: _getMixedPort(),
+    );
   }
 
   // 导入本地文件

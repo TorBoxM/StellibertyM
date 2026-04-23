@@ -39,6 +39,9 @@ class SubscriptionDialog extends StatefulWidget {
   final String? initialUserAgent;
   final bool? initialAutoTestAllDelaysEnabled;
   final int? initialAutoTestAllDelaysIntervalMinutes;
+  final List<String> initialBuiltinChainProxyNames;
+  final List<String> initialDisabledBuiltinChainProxyNames;
+  final List<CustomChainProxy> initialCustomChainProxies;
   final String confirmText;
   final IconData titleIcon;
   final bool isAddMode;
@@ -57,6 +60,9 @@ class SubscriptionDialog extends StatefulWidget {
     this.initialUserAgent,
     this.initialAutoTestAllDelaysEnabled,
     this.initialAutoTestAllDelaysIntervalMinutes,
+    this.initialBuiltinChainProxyNames = const [],
+    this.initialDisabledBuiltinChainProxyNames = const [],
+    this.initialCustomChainProxies = const [],
     this.confirmText = 'Confirm',
     this.titleIcon = Icons.rss_feed,
     this.isAddMode = false,
@@ -106,6 +112,10 @@ class SubscriptionDialog extends StatefulWidget {
         initialAutoTestAllDelaysEnabled: subscription.autoTestAllDelaysEnabled,
         initialAutoTestAllDelaysIntervalMinutes:
             subscription.autoTestAllDelaysIntervalMinutes,
+        initialBuiltinChainProxyNames: subscription.builtinChainProxyNames,
+        initialDisabledBuiltinChainProxyNames:
+            subscription.disabledBuiltinChainProxyNames,
+        initialCustomChainProxies: subscription.customChainProxies,
         confirmText: trans.subscription_dialog.save_button,
         titleIcon: Icons.edit_outlined,
         isLocalFile: subscription.isLocalFile,
@@ -127,6 +137,9 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
   late int _autoDelayTestIntervalMinutes;
   late AutoUpdateMode _autoUpdateMode;
   late SubscriptionProxyMode _proxyMode;
+  late List<String> _builtinChainProxyNames;
+  late List<String> _disabledBuiltinChainProxyNames;
+  late List<CustomChainProxy> _customChainProxies;
 
   // 缓存的全局默认 UA，避免重复调用
   late final String _defaultUserAgent;
@@ -173,6 +186,15 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     // 初始化自动更新模式和代理模式
     _autoUpdateMode = widget.initialAutoUpdateMode ?? AutoUpdateMode.disabled;
     _proxyMode = widget.initialProxyMode ?? SubscriptionProxyMode.direct;
+    _builtinChainProxyNames = List<String>.from(
+      widget.initialBuiltinChainProxyNames,
+    );
+    _disabledBuiltinChainProxyNames = List<String>.from(
+      widget.initialDisabledBuiltinChainProxyNames,
+    );
+    _customChainProxies = List<CustomChainProxy>.from(
+      widget.initialCustomChainProxies,
+    );
 
     // 添加监听器以检测内容变化
     _nameController.addListener(_checkForChanges);
@@ -238,6 +260,38 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
         : 0;
     if (_autoDelayTestIntervalMinutes != initialAutoDelayTestIntervalMinutes) {
       return true;
+    }
+
+    if (_builtinChainProxyNames.length !=
+        widget.initialBuiltinChainProxyNames.length) {
+      return true;
+    }
+    if (_disabledBuiltinChainProxyNames.length !=
+        widget.initialDisabledBuiltinChainProxyNames.length) {
+      return true;
+    }
+    for (var i = 0; i < _disabledBuiltinChainProxyNames.length; i++) {
+      if (_disabledBuiltinChainProxyNames[i] !=
+          widget.initialDisabledBuiltinChainProxyNames[i]) {
+        return true;
+      }
+    }
+    if (_customChainProxies.length != widget.initialCustomChainProxies.length) {
+      return true;
+    }
+    for (var i = 0; i < _customChainProxies.length; i++) {
+      final current = _customChainProxies[i];
+      final initial = widget.initialCustomChainProxies[i];
+      if (current.id != initial.id ||
+          current.displayName != initial.displayName ||
+          current.nodeNames.length != initial.nodeNames.length) {
+        return true;
+      }
+      for (var i = 0; i < current.nodeNames.length; i++) {
+        if (current.nodeNames[i] != initial.nodeNames[i]) {
+          return true;
+        }
+      }
     }
 
     return false;
@@ -358,11 +412,13 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
       ),
       actionsRight: [
         DialogActionButton(
+          key: const ValueKey('subscription_dialog_cancel_button'),
           label: trans.subscription_dialog.cancel_button,
           isPrimary: false,
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
         ),
         DialogActionButton(
+          key: const ValueKey('subscription_dialog_confirm_button'),
           label: widget.confirmText,
           isPrimary: true,
           isLoading: _isLoading,
@@ -396,6 +452,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
             ],
 
             TextInputField(
+              key: const ValueKey('subscription_dialog_name_field'),
               controller: _nameController,
               label: trans.subscription_dialog.config_name_label,
               hint: trans.subscription_dialog.config_name_hint,
@@ -413,6 +470,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
             if (shouldShowRemoteFields) ...[
               const SizedBox(height: _dialogItemSpacing),
               TextInputField(
+                key: const ValueKey('subscription_dialog_url_field'),
                 controller: _urlController,
                 label: trans.subscription_dialog.subscription_link_label,
                 hint: trans.subscription_dialog.subscription_link_hint,
@@ -503,6 +561,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
         if (_autoUpdateMode == AutoUpdateMode.interval) ...[
           const SizedBox(height: 16),
           TextInputField(
+            key: const ValueKey('subscription_dialog_update_interval_field'),
             controller: _intervalController,
             label: dialogTrans.update_interval_label,
             hint: dialogTrans.update_interval_hint,
@@ -581,6 +640,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     final dialogTrans = context.translate.subscription_dialog;
 
     return OptionSelectorWidget<SubscriptionImportMethod>(
+      itemKeyPrefix: 'subscription_dialog_import_method',
       title: dialogTrans.import_method_title,
       titleIcon: Icons.import_export,
       isHorizontal: !DialogConstants.isMobile,
@@ -615,6 +675,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     final dialogTrans = context.translate.subscription_dialog;
 
     return FileSelectorWidget(
+      dropZoneKey: const ValueKey('subscription_dialog_file_selector'),
       onFileSelected: (result) {
         setState(() {
           _selectedFile = result;
@@ -661,6 +722,9 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
         userAgent: userAgent.isEmpty ? _defaultUserAgent : userAgent,
         autoTestAllDelaysIntervalMinutes: _autoDelayTestIntervalMinutes,
         autoTestAllDelaysEnabled: _autoDelayTestIntervalMinutes > 0,
+        builtinChainProxyNames: _builtinChainProxyNames,
+        disabledBuiltinChainProxyNames: _disabledBuiltinChainProxyNames,
+        customChainProxies: _customChainProxies,
       );
 
       // 如果有确认回调，调用它并等待结果
@@ -733,6 +797,9 @@ class SubscriptionDialogResult {
   final String userAgent;
   final bool autoTestAllDelaysEnabled;
   final int autoTestAllDelaysIntervalMinutes;
+  final List<String> builtinChainProxyNames;
+  final List<String> disabledBuiltinChainProxyNames;
+  final List<CustomChainProxy> customChainProxies;
 
   const SubscriptionDialogResult({
     required this.name,
@@ -746,5 +813,8 @@ class SubscriptionDialogResult {
     String? userAgent,
     this.autoTestAllDelaysEnabled = false,
     this.autoTestAllDelaysIntervalMinutes = 10,
+    this.builtinChainProxyNames = const [],
+    this.disabledBuiltinChainProxyNames = const [],
+    this.customChainProxies = const [],
   }) : userAgent = userAgent ?? ClashDefaults.defaultUserAgent;
 }

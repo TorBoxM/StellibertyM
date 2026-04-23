@@ -122,6 +122,47 @@ class SubscriptionProvider extends ChangeNotifier {
     return await _manager.readSubscriptionConfig(subscription);
   }
 
+  Future<List<String>>
+  loadChainProxyCandidateNamesForCurrentSubscription() async {
+    final subscription = currentSubscription;
+    if (subscription == null) {
+      throw Exception('当前没有选中的订阅');
+    }
+    return await _manager.loadChainProxyCandidateNamesFromSubscription(
+      subscription,
+    );
+  }
+
+  Future<String> parseRemoteSubscriptionContent(
+    String url, {
+    SubscriptionProxyMode proxyMode = SubscriptionProxyMode.direct,
+    String userAgent = ClashDefaults.defaultUserAgent,
+  }) async {
+    return await _manager.parseRemoteSubscriptionContent(
+      url,
+      proxyMode: proxyMode,
+      userAgent: userAgent,
+    );
+  }
+
+  Future<String?> getEffectiveSubscriptionConfigContent(
+    String? configPath,
+  ) async {
+    final subscription = currentSubscription;
+    if (subscription == null) {
+      return null;
+    }
+
+    final currentPath = PathService.instance.getSubscriptionConfigPath(
+      subscription.id,
+    );
+    if (configPath != null && configPath != currentPath) {
+      return null;
+    }
+
+    return await _manager.buildChainProxyConfigContent(subscription);
+  }
+
   // 处理当前订阅的覆写失败
   // 当启动失败时调用，禁用当前订阅的所有覆写并记录失败 ID
   Future<void> handleOverridesFailed() async {
@@ -282,6 +323,8 @@ class SubscriptionProvider extends ChangeNotifier {
     String? userAgent,
     bool autoTestAllDelaysEnabled = false,
     int autoTestAllDelaysIntervalMinutes = 10,
+    List<String> disabledBuiltinChainProxyNames = const [],
+    List<CustomChainProxy> customChainProxies = const [],
   }) async {
     // 不清除全局错误，单个订阅操作不影响全局状态
 
@@ -309,6 +352,8 @@ class SubscriptionProvider extends ChangeNotifier {
         userAgent: effectiveUserAgent,
         autoTestAllDelaysEnabled: autoTestAllDelaysEnabled,
         autoTestAllDelaysIntervalMinutes: autoTestAllDelaysIntervalMinutes,
+        disabledBuiltinChainProxyNames: disabledBuiltinChainProxyNames,
+        customChainProxies: customChainProxies,
       );
 
       // 如果需要立即下载
@@ -336,25 +381,10 @@ class SubscriptionProvider extends ChangeNotifier {
         final clashProvider = _clashProvider;
         if (clashProvider != null && clashProvider.isCoreRunning) {
           Logger.info('首个订阅已添加，准备应用配置...');
-          final configPath = getSubscriptionConfigPath();
-          if (configPath != null) {
-            try {
-              // 订阅切换，使用重载（避免连接中断）
-              Logger.info('订阅切换，尝试重载配置');
-              final reloadSuccess = await clashProvider.clashManager
-                  .reloadConfig(configPath: configPath);
-
-              if (!reloadSuccess) {
-                Logger.warning('重载失败，降级为重启核心');
-                await clashProvider.clashManager.restartCore();
-              } else {
-                // 重载成功后，从 Clash API 重新加载代理列表
-                await clashProvider.loadProxies();
-              }
-            } catch (e) {
-              Logger.error('应用配置失败：$e');
-              // 配置应用失败不影响订阅添加的成功状态
-            }
+          try {
+            await _reloadCurrentSubscriptionConfig(reason: '首个远程订阅添加');
+          } catch (e) {
+            Logger.error('应用配置失败：$e');
           }
         }
       }
@@ -959,6 +989,8 @@ class SubscriptionProvider extends ChangeNotifier {
     required String filePath,
     bool autoTestAllDelaysEnabled = false,
     int autoTestAllDelaysIntervalMinutes = 10,
+    List<String> disabledBuiltinChainProxyNames = const [],
+    List<CustomChainProxy> customChainProxies = const [],
   }) async {
     try {
       // 调用 Manager 解析文件
@@ -971,6 +1003,8 @@ class SubscriptionProvider extends ChangeNotifier {
         content: parsedConfig,
         autoTestAllDelaysEnabled: autoTestAllDelaysEnabled,
         autoTestAllDelaysIntervalMinutes: autoTestAllDelaysIntervalMinutes,
+        disabledBuiltinChainProxyNames: disabledBuiltinChainProxyNames,
+        customChainProxies: customChainProxies,
       );
     } catch (e) {
       Logger.error('导入本地文件失败：$e');
@@ -985,12 +1019,14 @@ class SubscriptionProvider extends ChangeNotifier {
     required String content,
     bool autoTestAllDelaysEnabled = false,
     int autoTestAllDelaysIntervalMinutes = 10,
+    List<String> disabledBuiltinChainProxyNames = const [],
+    List<CustomChainProxy> customChainProxies = const [],
   }) async {
     // 不清除全局错误，单个操作不影响全局状态
 
     try {
       // 创建本地订阅对象（url 为空，表示本地文件）
-      final subscription =
+      var subscription =
           Subscription.create(
             name: name,
             url: '', // 本地文件无 URL
@@ -999,10 +1035,18 @@ class SubscriptionProvider extends ChangeNotifier {
             isLocalFile: true, // 标记为本地文件
             autoTestAllDelaysEnabled: autoTestAllDelaysEnabled,
             autoTestAllDelaysIntervalMinutes: autoTestAllDelaysIntervalMinutes,
+            disabledBuiltinChainProxyNames: disabledBuiltinChainProxyNames,
+            customChainProxies: customChainProxies,
           );
 
       // 保存配置文件内容到订阅目录
-      await _manager.saveLocalSubscription(subscription, content);
+      final builtinChainProxyNames = await _manager.saveLocalSubscription(
+        subscription,
+        content,
+      );
+      subscription = subscription.copyWith(
+        builtinChainProxyNames: builtinChainProxyNames,
+      );
 
       // 添加到订阅列表
       _subscriptions.add(subscription);
@@ -1021,24 +1065,10 @@ class SubscriptionProvider extends ChangeNotifier {
         final clashProvider = _clashProvider;
         if (clashProvider != null && clashProvider.isCoreRunning) {
           Logger.info('首个本地订阅已添加，准备应用配置...');
-          final configPath = getSubscriptionConfigPath();
-          if (configPath != null) {
-            try {
-              // 订阅切换，使用重载（避免连接中断）
-              Logger.info('订阅切换，尝试重载配置（本地订阅）');
-              final reloadSuccess = await clashProvider.clashManager
-                  .reloadConfig(configPath: configPath);
-
-              if (!reloadSuccess) {
-                Logger.warning('重载失败，降级为重启核心');
-                await clashProvider.clashManager.restartCore();
-              } else {
-                // 重载成功后，从 Clash API 重新加载代理列表
-                await clashProvider.loadProxies();
-              }
-            } catch (e) {
-              Logger.error('应用配置失败：$e');
-            }
+          try {
+            await _reloadCurrentSubscriptionConfig(reason: '首个本地订阅添加');
+          } catch (e) {
+            Logger.error('应用配置失败：$e');
           }
         }
       }
@@ -1098,17 +1128,17 @@ class SubscriptionProvider extends ChangeNotifier {
           final clashProvider = _clashProvider;
           if (clashProvider != null) {
             try {
-              // 获取新的配置路径（如果有剩余订阅）或使用 null（默认配置）
-              final configPath = getSubscriptionConfigPath();
-              final reloadSuccess = await clashProvider.clashManager
-                  .reloadConfig(configPath: configPath);
-
-              if (!reloadSuccess) {
-                Logger.warning('重载失败，降级为重启核心');
-                await ClashManager.instance.restartCore();
+              if (_currentSubscriptionId == null) {
+                final reloadSuccess = await clashProvider.clashManager
+                    .reloadConfig(configPath: null);
+                if (!reloadSuccess) {
+                  Logger.warning('重载失败，降级为重启核心');
+                  await ClashManager.instance.restartCore();
+                } else {
+                  await clashProvider.loadProxies();
+                }
               } else {
-                // 重载成功后，从 Clash API 重新加载代理列表
-                await clashProvider.loadProxies();
+                await _reloadCurrentSubscriptionConfig(reason: '删除当前订阅后切换');
               }
             } catch (e) {
               Logger.error('重载配置失败，尝试重启核心：$e');
@@ -1254,6 +1284,8 @@ class SubscriptionProvider extends ChangeNotifier {
     String? userAgent,
     bool? autoTestAllDelaysEnabled,
     int? autoTestAllDelaysIntervalMinutes,
+    List<String>? disabledBuiltinChainProxyNames,
+    List<CustomChainProxy>? customChainProxies,
   }) async {
     // 不清除全局错误，单个操作不影响全局状态
     final index = _subscriptions.indexWhere((s) => s.id == subscriptionId);
@@ -1279,6 +1311,11 @@ class SubscriptionProvider extends ChangeNotifier {
         autoTestAllDelaysIntervalMinutes:
             autoTestAllDelaysIntervalMinutes ??
             subscription.autoTestAllDelaysIntervalMinutes,
+        disabledBuiltinChainProxyNames:
+            disabledBuiltinChainProxyNames ??
+            subscription.disabledBuiltinChainProxyNames,
+        customChainProxies:
+            customChainProxies ?? subscription.customChainProxies,
       );
 
       await _manager.saveSubscriptionList(_subscriptions);
@@ -1291,6 +1328,7 @@ class SubscriptionProvider extends ChangeNotifier {
         _restartAutoUpdateTimer();
       }
       if (subscriptionId == _currentSubscriptionId) {
+        await _reloadCurrentSubscriptionConfig(reason: '订阅信息编辑');
         await _restartAutoDelayTestTimer();
       }
 
@@ -1391,18 +1429,22 @@ class SubscriptionProvider extends ChangeNotifier {
 
     try {
       // 保存文件到订阅目录
-      await _manager.saveLocalSubscription(subscription, content);
+      final builtinChainProxyNames = await _manager.saveLocalSubscription(
+        subscription,
+        content,
+      );
       Logger.info('订阅文件已保存：${subscription.name}');
 
       // 清除配置失败标记（无论是否当前选中）
       final index = _subscriptions.indexWhere((s) => s.id == subscriptionId);
-      if (index != -1 && _subscriptions[index].hasConfigLoadFailed) {
+      if (index != -1) {
         _subscriptions[index] = _subscriptions[index].copyWith(
           hasConfigLoadFailed: false,
+          builtinChainProxyNames: builtinChainProxyNames,
         );
         await _manager.saveSubscriptionList(_subscriptions);
         notifyListeners();
-        Logger.info('已清除订阅 ${subscription.name} 的配置失败标记');
+        Logger.info('已同步订阅 ${subscription.name} 的链式代理解析结果');
       }
 
       // 如果是当前选中的订阅，重新加载配置
@@ -1483,6 +1525,12 @@ class SubscriptionProvider extends ChangeNotifier {
       return;
     }
 
+    final subscription = currentSubscription;
+    if (subscription == null) {
+      Logger.warning('当前没有选中的订阅，跳过重载');
+      return;
+    }
+
     final clashProvider = _clashProvider;
     if (clashProvider == null) {
       Logger.warning('ClashProvider 未设置，跳过重载');
@@ -1490,19 +1538,19 @@ class SubscriptionProvider extends ChangeNotifier {
     }
     Logger.info('$reason，重新加载配置文件：$configPath');
 
-    // 【性能优化】读取原始订阅文件，使用 Stopwatch 监控
+    // 先生成链式代理生效后的基础配置，再交给运行时配置注入。
     final readStopwatch = Stopwatch()..start();
-    String? originalConfigContent;
     try {
-      originalConfigContent = await File(configPath).readAsString();
+      final previewConfigContent = await _manager.buildChainProxyConfigContent(
+        subscription,
+      );
       readStopwatch.stop();
       Logger.debug(
-        '读取配置文件完成: ${originalConfigContent.length} 字符 (耗时: ${readStopwatch.elapsedMilliseconds}ms)',
+        '生成链式基础配置完成: ${previewConfigContent.length} 字符 (耗时: ${readStopwatch.elapsedMilliseconds}ms)',
       );
     } catch (e) {
       readStopwatch.stop();
-      Logger.error('读取配置文件失败 (耗时：${readStopwatch.elapsedMilliseconds}ms)：$e');
-      originalConfigContent = null;
+      Logger.error('生成链式基础配置失败 (耗时：${readStopwatch.elapsedMilliseconds}ms)：$e');
     }
 
     // 【新架构】获取覆写列表并转换为 Rust 类型

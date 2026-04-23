@@ -40,6 +40,7 @@ class ConfigManager {
   // 重载配置文件
   Future<bool> reloadConfig({
     String? configPath,
+    String? configContent,
     List<OverrideConfig> overrides = const [],
   }) async {
     try {
@@ -51,13 +52,18 @@ class ConfigManager {
       // 第一次尝试：使用用户配置 + 覆写
       GeneratedRuntimeConfig? generatedConfig = await _generateConfig(
         configPath,
+        configContent,
         overrides,
       );
 
       // 如果配置生成失败且有覆写，尝试禁用覆写重新生成
       if (generatedConfig == null && overrides.isNotEmpty) {
         Logger.error('配置生成失败（可能由覆写导致），尝试禁用覆写重新生成');
-        generatedConfig = await _generateConfig(configPath, const []);
+        generatedConfig = await _generateConfig(
+          configPath,
+          configContent,
+          const [],
+        );
 
         if (generatedConfig != null) {
           Logger.info('禁用覆写后配置生成成功');
@@ -90,6 +96,7 @@ class ConfigManager {
   // 生成运行时配置文件（辅助方法，避免重复代码）
   Future<GeneratedRuntimeConfig?> _generateConfig(
     String? configPath,
+    String? configContent,
     List<OverrideConfig> overrides,
   ) async {
     // 从持久化读取配置参数
@@ -97,6 +104,7 @@ class ConfigManager {
 
     return await ConfigInjector.generateRuntimeConfig(
       configPath: configPath,
+      configContent: configContent,
       overrides: overrides,
       mixedPort: prefs.getMixedPort(),
       socksPort: prefs.getSocksPort(),

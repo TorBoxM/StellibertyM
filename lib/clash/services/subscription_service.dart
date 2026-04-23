@@ -5,16 +5,19 @@ import 'package:stelliberty/clash/model/subscription_model.dart';
 import 'package:stelliberty/clash/model/override_model.dart' as app_override;
 import 'package:stelliberty/clash/services/override_service.dart';
 import 'package:stelliberty/clash/services/dns_service.dart';
+import 'package:stelliberty/clash/services/chain_proxy_service.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/clash/config/clash_defaults.dart';
 import 'package:stelliberty/services/log_print_service.dart';
 import 'package:stelliberty/services/path_service.dart';
 import 'package:stelliberty/src/bindings/signals/signals.dart';
+import 'package:yaml/yaml.dart';
 
 // 订阅服务
 // 负责订阅的下载、保存、验证等操作
 class SubscriptionService {
-  static int _parseRequestSequence = 0;
+  static int _requestSequence = 0;
+  final ChainProxyService _chainProxyService = const ChainProxyService();
 
   // 覆写服务
   OverrideService? _overrideService;
@@ -103,10 +106,14 @@ class SubscriptionService {
     }
   }
 
-  String _buildParseRequestId() {
-    _parseRequestSequence = (_parseRequestSequence + 1) & 0x7fffffff;
+  String _buildRequestId(String prefix) {
+    _requestSequence = (_requestSequence + 1) & 0x7fffffff;
     final timestamp = DateTime.now().microsecondsSinceEpoch;
-    return 'parse-$timestamp-$_parseRequestSequence';
+    return '$prefix-$timestamp-$_requestSequence';
+  }
+
+  String _buildParseRequestId() {
+    return _buildRequestId('parse');
   }
 
   // 下载订阅配置并返回更新后的订阅对象。
@@ -173,8 +180,13 @@ class SubscriptionService {
       // 验证配置文件
       _validateConfig(parsedConfigContent);
 
+      final chainRuntimeConfig = _chainProxyService.analyzeAndApply(
+        parsedConfigContent,
+        subscription,
+      );
+
       // 【重要】保存原始订阅文件，不应用任何覆写
-      // 覆写将在生成 runtime_config.yaml 时应用
+      // 覆写和链式代理注入将在运行时配置生成时应用
       final configPath = PathService.instance.getSubscriptionConfigPath(
         subscription.id,
       );
@@ -190,6 +202,7 @@ class SubscriptionService {
         lastUpdatedAt: DateTime.now(),
         info: info,
         isUpdating: false,
+        builtinChainProxyNames: chainRuntimeConfig.builtinChainProxyNames,
       );
     } catch (e) {
       Logger.error('下载订阅失败：${subscription.name} - $e');
@@ -286,12 +299,111 @@ class SubscriptionService {
     return await configFile.readAsString();
   }
 
+  Future<ChainProxyRuntimeConfig> buildChainProxyRuntimeConfig(
+    Subscription subscription,
+  ) async {
+    final rawConfig = await readSubscriptionConfig(subscription);
+    return _chainProxyService.analyzeAndApply(rawConfig, subscription);
+  }
+
+  Future<String> buildChainProxyConfigContent(Subscription subscription) async {
+    final runtimeConfig = await buildChainProxyRuntimeConfig(subscription);
+    return runtimeConfig.configContent;
+  }
+
+  Future<List<String>> loadChainProxyCandidateNamesFromSubscription(
+    Subscription subscription,
+  ) async {
+    final rawConfig = await readSubscriptionConfig(subscription);
+    return _extractChainProxyCandidateNames(rawConfig);
+  }
+
+  Future<String> parseRemoteSubscriptionContent(
+    String url, {
+    SubscriptionProxyMode proxyMode = SubscriptionProxyMode.direct,
+    String userAgent = ClashDefaults.defaultUserAgent,
+    required int mixedPort,
+  }) async {
+    final requestId = _buildRequestId('chain-proxy-candidates');
+    final completer = Completer<DownloadSubscriptionResponse>();
+    StreamSubscription? downloadSubscription;
+
+    try {
+      downloadSubscription = DownloadSubscriptionResponse.rustSignalStream
+          .listen((result) {
+            if (completer.isCompleted) {
+              return;
+            }
+            if (result.message.requestId != requestId) {
+              return;
+            }
+            completer.complete(result.message);
+            downloadSubscription?.cancel();
+          });
+
+      final downloadRequest = DownloadSubscriptionRequest(
+        requestId: requestId,
+        url: url,
+        proxyMode: _convertProxyMode(proxyMode),
+        userAgent: userAgent,
+        timeoutSeconds: Uint64(
+          BigInt.from(ClashDefaults.subscriptionDownloadTimeout),
+        ),
+        mixedPort: mixedPort,
+      );
+      downloadRequest.sendSignalToRust();
+
+      final downloadResult = await completer.future.timeout(
+        Duration(seconds: ClashDefaults.subscriptionDownloadTimeout + 5),
+        onTimeout: () {
+          throw Exception('订阅下载超时');
+        },
+      );
+
+      if (!downloadResult.isSuccessful) {
+        throw Exception(downloadResult.errorMessage ?? '下载失败');
+      }
+
+      return await _parseSubscriptionContent(downloadResult.content);
+    } finally {
+      await downloadSubscription?.cancel();
+    }
+  }
+
+  List<String> _extractChainProxyCandidateNames(String content) {
+    final yamlDoc = loadYaml(content);
+    if (yamlDoc is! YamlMap) {
+      throw Exception('配置文件不是有效的 YAML');
+    }
+
+    final proxies = yamlDoc['proxies'];
+    if (proxies is! YamlList) {
+      throw Exception('配置文件缺少 proxies 列表');
+    }
+
+    final candidateNames = <String>[];
+    for (final item in proxies) {
+      if (item is! YamlMap) {
+        continue;
+      }
+      final name = item['name'];
+      final type = item['type'];
+      if (name is! String || name.isEmpty) {
+        continue;
+      }
+      if (type is! String || type.isEmpty) {
+        continue;
+      }
+      candidateNames.add(name);
+    }
+    return candidateNames;
+  }
+
   // 读取带覆写的订阅配置，供核心使用。
   // 订阅文件已包含覆写，该方法仅用于兼容性读取。
   Future<String> readSubscriptionConfigWithOverrides(
     Subscription subscription,
   ) async {
-    // 直接读取订阅配置（已包含所有覆写）
     return await readSubscriptionConfig(subscription);
   }
 
@@ -443,12 +555,17 @@ class SubscriptionService {
 
   // 保存本地订阅文件
   // 将本地文件内容保存到订阅目录
-  Future<void> saveLocalSubscription(
+  Future<List<String>> saveLocalSubscription(
     Subscription subscription,
     String content,
   ) async {
     // 验证配置文件格式
     _validateConfig(content);
+
+    final runtimeConfig = _chainProxyService.analyzeAndApply(
+      content,
+      subscription,
+    );
 
     // 【重要】保存原始订阅文件，不应用任何覆写
     // 覆写将在生成 runtime_config.yaml 时应用
@@ -462,6 +579,7 @@ class SubscriptionService {
     await configFile.writeAsString(content);
 
     Logger.info('本地订阅保存成功（已保存原始配置）：${subscription.name}');
+    return runtimeConfig.builtinChainProxyNames;
   }
 
   // 应用覆写（DNS 覆写 → 规则覆写），规则覆写优先级更高。

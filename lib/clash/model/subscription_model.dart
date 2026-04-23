@@ -46,6 +46,64 @@ enum AutoUpdateMode {
   }
 }
 
+// 自定义链式代理条目
+class CustomChainProxy {
+  final String id;
+  final String displayName;
+  final List<String> nodeNames;
+
+  const CustomChainProxy({
+    required this.id,
+    required this.displayName,
+    required this.nodeNames,
+  });
+
+  CustomChainProxy copyWith({
+    String? id,
+    String? displayName,
+    List<String>? nodeNames,
+  }) {
+    return CustomChainProxy(
+      id: id ?? this.id,
+      displayName: displayName ?? this.displayName,
+      nodeNames: nodeNames ?? this.nodeNames,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'displayName': displayName,
+    'nodeNames': nodeNames,
+  };
+
+  factory CustomChainProxy.fromJson(Map<String, dynamic> json) {
+    final nodeNamesValue = json['nodeNames'];
+    if (nodeNamesValue is List) {
+      return CustomChainProxy(
+        id: json['id'] as String,
+        displayName: json['displayName'] as String,
+        nodeNames: List<String>.from(nodeNamesValue),
+      );
+    }
+
+    final sourceNodeName = json['sourceNodeName'] as String?;
+    final dialerProxyName = json['dialerProxyName'] as String?;
+    final fallbackNodeNames = <String>[];
+    if (sourceNodeName != null && sourceNodeName.isNotEmpty) {
+      fallbackNodeNames.add(sourceNodeName);
+    }
+    if (dialerProxyName != null && dialerProxyName.isNotEmpty) {
+      fallbackNodeNames.add(dialerProxyName);
+    }
+
+    return CustomChainProxy(
+      id: json['id'] as String,
+      displayName: json['displayName'] as String,
+      nodeNames: fallbackNodeNames,
+    );
+  }
+}
+
 // 订阅信息（流量统计）
 class SubscriptionInfo {
   final int upload; // 已上传（字节）
@@ -138,6 +196,9 @@ class Subscription {
   final bool hasConfigLoadFailed; // 配置加载失败标记（用于 UI 显示警告）
   final bool autoTestAllDelaysEnabled; // 是否启用自动测试全部延迟
   final int autoTestAllDelaysIntervalMinutes; // 自动测试全部延迟间隔（分钟）
+  final List<String> builtinChainProxyNames; // 原始配置中解析出的链式代理名称
+  final List<String> disabledBuiltinChainProxyNames; // 已禁用的原始链式代理名称
+  final List<CustomChainProxy> customChainProxies; // 用户添加的链式代理配置
 
   const Subscription({
     required this.id,
@@ -159,6 +220,9 @@ class Subscription {
     this.hasConfigLoadFailed = false,
     this.autoTestAllDelaysEnabled = false,
     this.autoTestAllDelaysIntervalMinutes = 10,
+    this.builtinChainProxyNames = const [],
+    this.disabledBuiltinChainProxyNames = const [],
+    this.customChainProxies = const [],
   });
 
   // 创建新订阅
@@ -221,6 +285,9 @@ class Subscription {
     bool? hasConfigLoadFailed,
     bool? autoTestAllDelaysEnabled,
     int? autoTestAllDelaysIntervalMinutes,
+    List<String>? builtinChainProxyNames,
+    List<String>? disabledBuiltinChainProxyNames,
+    List<CustomChainProxy>? customChainProxies,
   }) {
     return Subscription(
       id: id ?? this.id,
@@ -247,6 +314,11 @@ class Subscription {
       autoTestAllDelaysIntervalMinutes:
           autoTestAllDelaysIntervalMinutes ??
           this.autoTestAllDelaysIntervalMinutes,
+      builtinChainProxyNames:
+          builtinChainProxyNames ?? this.builtinChainProxyNames,
+      disabledBuiltinChainProxyNames:
+          disabledBuiltinChainProxyNames ?? this.disabledBuiltinChainProxyNames,
+      customChainProxies: customChainProxies ?? this.customChainProxies,
     );
   }
 
@@ -269,6 +341,9 @@ class Subscription {
     'hasConfigLoadFailed': hasConfigLoadFailed,
     'autoTestAllDelaysEnabled': autoTestAllDelaysEnabled,
     'autoTestAllDelaysIntervalMinutes': autoTestAllDelaysIntervalMinutes,
+    'builtinChainProxyNames': builtinChainProxyNames,
+    'disabledBuiltinChainProxyNames': disabledBuiltinChainProxyNames,
+    'customChainProxies': customChainProxies.map((item) => item.toJson()).toList(),
   };
 
   factory Subscription.fromJson(Map<String, dynamic> json) {
@@ -307,6 +382,22 @@ class Subscription {
           json['autoTestAllDelaysEnabled'] as bool? ?? false,
       autoTestAllDelaysIntervalMinutes:
           json['autoTestAllDelaysIntervalMinutes'] as int? ?? 10,
+      builtinChainProxyNames: json['builtinChainProxyNames'] != null
+          ? List<String>.from(json['builtinChainProxyNames'] as List)
+          : const [],
+      disabledBuiltinChainProxyNames:
+          json['disabledBuiltinChainProxyNames'] != null
+          ? List<String>.from(json['disabledBuiltinChainProxyNames'] as List)
+          : const [],
+      customChainProxies: json['customChainProxies'] != null
+          ? (json['customChainProxies'] as List)
+                .map(
+                  (item) => CustomChainProxy.fromJson(
+                    Map<String, dynamic>.from(item as Map),
+                  ),
+                )
+                .toList()
+          : const [],
     );
   }
 

@@ -25,6 +25,9 @@ class OptionItem<T> {
 // 通用选项选择器：支持横向/纵向排列的单选选项卡片。
 // 用于导入方式、更新模式、代理模式等选择场景。
 class OptionSelectorWidget<T> extends StatelessWidget {
+  // 测试 Key 前缀
+  final String? itemKeyPrefix;
+
   // 标题
   final String title;
 
@@ -48,6 +51,7 @@ class OptionSelectorWidget<T> extends StatelessWidget {
 
   const OptionSelectorWidget({
     super.key,
+    this.itemKeyPrefix,
     required this.title,
     required this.titleIcon,
     this.titleColor,
@@ -147,7 +151,15 @@ class OptionSelectorWidget<T> extends StatelessWidget {
               left: isFirst ? 0 : spacing,
               right: isLast ? 0 : spacing,
             ),
-            child: _buildOptionCard(context, option, isDark, colorScheme),
+            child: _buildOptionCard(
+              context,
+              option,
+              isDark,
+              colorScheme,
+              key: itemKeyPrefix == null
+                  ? null
+                  : ValueKey('$itemKeyPrefix-$index'),
+            ),
           ),
         );
       }),
@@ -163,11 +175,20 @@ class OptionSelectorWidget<T> extends StatelessWidget {
     final isMobile = PlatformHelper.isMobile;
     return Column(
       children: options.map((option) {
+        final index = options.indexOf(option);
         return Padding(
           padding: EdgeInsets.only(
             bottom: option == options.last ? 0 : (isMobile ? 6 : 8),
           ),
-          child: _buildOptionCard(context, option, isDark, colorScheme),
+          child: _buildOptionCard(
+            context,
+            option,
+            isDark,
+            colorScheme,
+            key: itemKeyPrefix == null
+                ? null
+                : ValueKey('$itemKeyPrefix-$index'),
+          ),
         );
       }).toList(),
     );
@@ -178,8 +199,9 @@ class OptionSelectorWidget<T> extends StatelessWidget {
     BuildContext context,
     OptionItem<T> option,
     bool isDark,
-    ColorScheme colorScheme,
-  ) {
+    ColorScheme colorScheme, {
+    Key? key,
+  }) {
     final isSelected = option.value == selectedValue;
     final effectiveTitleColor = titleColor ?? colorScheme.primary;
     final isMobile = PlatformHelper.isMobile;
@@ -198,6 +220,7 @@ class OptionSelectorWidget<T> extends StatelessWidget {
         : (isHorizontal ? 11.0 : 12.0);
 
     return Material(
+      key: key,
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(

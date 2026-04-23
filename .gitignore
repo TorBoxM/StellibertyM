@@ -67,6 +67,7 @@ AGENTS.md
 **/GeneratedPluginRegistrant.m
 **/generated_plugin_registrant.cc
 **/generated_plugin_registrant.h
+**/generated_plugins.cmake
 
 # Dart 编译缓存
 *.dill

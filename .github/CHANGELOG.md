@@ -1,8 +1,8 @@
-- 新增链式代理配置，可为订阅单独设置多跳链式路径
+- 优化代理页滚动体验，节点名称提示会在悬停片刻后再显示，减少滚动时的遮挡
 
 <details>
 <summary>English Version</summary>
 
-- Added chain proxy configuration so each subscription can use its own multi-hop chain path
+- Improved scrolling on the proxy page by showing node name tips only after hovering briefly, reducing interruptions while scrolling
 
 </details>

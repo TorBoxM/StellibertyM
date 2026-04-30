@@ -8,6 +8,7 @@ class ModernTooltip extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final double? verticalOffset;
+  final Duration? waitDuration;
   final bool isFeedbackEnabled;
 
   const ModernTooltip({
@@ -18,6 +19,7 @@ class ModernTooltip extends StatelessWidget {
     this.padding,
     this.margin,
     this.verticalOffset,
+    this.waitDuration,
     this.isFeedbackEnabled = true,
   });
 
@@ -55,6 +57,7 @@ class ModernTooltip extends StatelessWidget {
       margin: margin ?? const EdgeInsets.all(8),
       preferBelow: preferBelow,
       verticalOffset: verticalOffset ?? 16,
+      waitDuration: waitDuration,
       enableFeedback: isFeedbackEnabled,
       child: child,
     );

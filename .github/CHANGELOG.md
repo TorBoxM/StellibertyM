@@ -1,10 +1,8 @@
-- 修复 Reality 节点配置生成异常，避免部分 VLESS 节点无法使用
-- 优化代理页滚动体验，节点名称提示会在悬停 1 秒后再显示，减少滚动时的遮挡
+- 修复 JS 覆写偶尔未生效的问题，避免代理分组和 DNS 设置在启动或切换配置时丢失
 
 <details>
 <summary>English Version</summary>
 
-- Fixed Reality node configuration generation to prevent some VLESS nodes from failing to connect
-- Improved scrolling on the proxy page by showing node name tips after hovering for 1 second, reducing interruptions while scrolling
+- Fixed an issue where JS overrides could occasionally fail to apply, preventing proxy groups and DNS settings from being lost during startup or configuration changes
 
 </details>

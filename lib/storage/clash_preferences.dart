@@ -250,7 +250,7 @@ class ClashPreferences {
   // ==================== IPv6 ====================
 
   // 获取 IPv6 是否启用
-  bool getIpv6() => _getBool(_kIpv6, false);
+  bool getIpv6() => _getBool(_kIpv6, true);
 
   // 保存 IPv6 启用状态
   Future<void> setIpv6(bool enabled) => _setBool(_kIpv6, enabled);
@@ -303,7 +303,7 @@ class ClashPreferences {
   // ==================== 统一延迟 ====================
 
   // 获取统一延迟是否启用
-  bool getUnifiedDelayEnabled() => _getBool(_kUnifiedDelayEnabled, false);
+  bool getUnifiedDelayEnabled() => _getBool(_kUnifiedDelayEnabled, true);
 
   // 保存统一延迟启用状态
   Future<void> setUnifiedDelayEnabled(bool enabled) =>
@@ -722,7 +722,7 @@ class ClashPreferences {
 
   // 获取懒惰模式是否启用（默认 false）
   // 懒惰模式：启动应用后，待内核加载完毕自动开启系统代理
-  bool getLazyMode() => _getBool(_kLazyMode, false);
+  bool getLazyMode() => _getBool(_kLazyMode, true);
 
   // 保存懒惰模式启用状态
   Future<void> setLazyMode(bool enabled) => _setBool(_kLazyMode, enabled);

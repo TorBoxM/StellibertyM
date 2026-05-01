@@ -1,16 +1,6 @@
-name: 正式版构建
+name: 正式版构建101.2.283
 
 on:
-  push:
-    branches:
-      - '**'
-    paths-ignore:
-      - '.github/workflows/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '*.md'
-      - 'LICENSE'
-      - '.gitignore'
-      - 'docs/**'
   workflow_dispatch:
 
 permissions:
@@ -98,24 +88,6 @@ jobs:
             echo "version=未知" >> $env:GITHUB_OUTPUT
           }
 
-      - name: 读取更新日志
-        id: changelog
-        run: |
-          changelog_file=".github/CHANGELOG.md"
-          if [ ! -f "${changelog_file}" ]; then
-            echo "::error::缺少更新日志文件: ${changelog_file}"
-            exit 1
-          fi
-
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📋 更新日志预览："
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          cat "${changelog_file}"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-          changelog_base64=$(base64 -w 0 "${changelog_file}")
-          echo "changelog=$changelog_base64" >> $GITHUB_OUTPUT
-
   # ------------ 构建 job（依赖 prepare） ------------
   build:
     name: 构建 ${{ matrix.platform }}-${{ matrix.arch }}
@@ -128,21 +100,6 @@ jobs:
           - platform: windows
             os: windows-latest
             arch: x64
-          - platform: windows
-            os: windows-11-arm
-            arch: arm64
-          - platform: linux
-            os: ubuntu-22.04
-            arch: x64
-          - platform: linux
-            os: ubuntu-24.04-arm
-            arch: arm64
-          # - platform: android
-          #   os: ubuntu-latest
-          #   arch: x64
-          # - platform: android
-          #   os: ubuntu-latest
-          #   arch: arm64
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -164,13 +121,6 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ (matrix.os == 'windows-11-arm' || matrix.os == 'ubuntu-24.04-arm') && 'master' || 'stable' }}
-
-      - name: 配置 Java（Android）
-        if: matrix.platform == 'android'
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
 
       - name: 配置 Rust
         uses: dtolnay/rust-toolchain@stable
@@ -213,18 +163,6 @@ jobs:
 
       - name: 生成多语言文件
         run: dart run slang
-
-      - name: 配置 Android 签名
-        if: matrix.platform == 'android' && env.ANDROID_KEYSTORE_BASE64 != ''
-        shell: bash
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > ${{ runner.temp }}/release.jks
-          echo "ANDROID_KEYSTORE_PATH=${{ runner.temp }}/release.jks" >> $GITHUB_ENV
-          echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-          echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
-          echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
       - name: 运行构建脚本
         shell: bash
@@ -277,129 +215,3 @@ jobs:
           name: ${{ needs.prepare.outputs.pkg }}-${{ matrix.platform }}-${{ matrix.arch }}
           path: dist/*
           retention-days: 90
-
-  # ------------ 创建正式发布 ------------
-  release:
-    name: 创建正式发布
-    needs: [prepare, build]
-    runs-on: ubuntu-latest
-    if: "!cancelled() && (needs.build.result == 'success' || needs.build.result == 'failure')"
-
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: 解码更新日志
-        id: decode_changelog
-        run: |
-          echo "📝 正在解码更新日志..."
-          
-          # 从 prepare job 获取 base64 编码的更新日志
-          changelog_base64="${{ needs.prepare.outputs.changelog }}"
-          
-          if [ -n "$changelog_base64" ]; then
-            # 解码 base64
-            echo "$changelog_base64" | base64 -d > changelog.md
-            
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "📋 解码的更新日志预览："
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            cat changelog.md
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
-            
-            # 输出到 GitHub Actions
-            {
-              echo 'changelog<<EOF'
-              cat changelog.md
-              echo ""
-              echo EOF
-            } >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ 未找到更新日志，使用默认内容"
-            echo "changelog=## 📋 更新日志\n\n暂无更新日志信息。" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 下载构建产物
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-
-      - name: 创建 GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare.outputs.tag }}
-          name: ${{ needs.prepare.outputs.pkg_capitalized }} ${{ needs.prepare.outputs.version }} Latest
-          body: |
-            ### 📦 构建信息
-
-            | 项目 | 内容 |
-            |------|------|
-            | **包名** | `${{ needs.prepare.outputs.pkg }}` |
-            | **版本号** | `${{ needs.prepare.outputs.version }}` |
-            | **Mihomo 核心** | `${{ needs.prepare.outputs.mihomo_version }}` |
-
-            ${{ steps.decode_changelog.outputs.changelog }}
-
-            ---
-
-            ## ❓ 故障排查
-
-            ### Linux 启动问题
-
-            如果无法启动应用，请确保已为应用文件夹赋予权限：
-
-            ```bash
-            # 进入应用目录
-            cd /path/to/stelliberty
-
-            # 赋予权限
-            chmod 777 -R ./stelliberty
-            ```
-            
-            ### 端口被占用（Windows）
-            
-            如果遇到端口冲突：
-            
-            ```bash
-            # 1. 查找占用端口的进程
-            netstat -ano | findstr :端口号
-            
-            # 2. 结束进程（以管理员身份运行）
-            taskkill /F /PID XXX
-            ```
-            
-            > ⚠️ **重要**：必须以管理员身份运行命令提示符。服务模式启动的核心进程需要提升权限才能终止。
-            
-            ### 软件工作不正常
-            
-            **路径要求**（ZIP 和 EXE 均适用）：
-            - 路径中不应包含特殊字符（空格除外）
-            - 路径中不应包含非 ASCII 字符（如中文字符）
-            - 支持空格：`D:\Program Files\Stelliberty` ✅
-            
-            **EXE 安装程序的位置限制**：
-            
-            如果使用 EXE 安装程序，还有额外的安装位置限制：
-            - **系统盘（C:）**：仅允许 `%LOCALAPPDATA%\Programs\*`（如 `C:\Users\用户名\AppData\Local\Programs\Stelliberty`）
-            - **其他盘（D:、E: 等）**：无限制
-            
-            > 💡 如需安装到 EXE 不允许的位置，请使用**便携版 ZIP**（无位置限制，但仍可能受系统目录权限影响）。
-            
-            ### 缺少运行库（Windows）
-            
-            如果应用程序在 Windows 上无法启动或立即崩溃，可能是缺少必需的 Visual C++ 运行库。
-            
-            **解决方案：**
-            
-            安装 Visual C++ 运行库：[vcredist - Visual C++ 运行库合集](https://gitlab.com/stdout12/vcredist)
-
-          files: artifacts/**/*
-          draft: false
-          prerelease: false
-          overwrite_files: true
-          make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -237,32 +237,10 @@ class AppTrayManager {
 
       final menu = Menu(
         items: [
-          MenuItem(key: 'close_menu', label: translate.tray.close_menu),
           MenuItem(
             key: 'show_window',
             label: translate.tray.show_window,
             disabled: isWindowVisible, // 窗口可见时禁用
-          ),
-          MenuItem.separator(),
-          MenuItem.submenu(
-            key: 'copy_terminal_proxy',
-            label: translate.tray.copy_terminal_proxy,
-            submenu: Menu(
-              items: [
-                MenuItem(
-                  key: 'copy_terminal_proxy_powershell',
-                  label: translate.tray.terminal_powershell,
-                ),
-                MenuItem(
-                  key: 'copy_terminal_proxy_cmd',
-                  label: translate.tray.terminal_cmd,
-                ),
-                MenuItem(
-                  key: 'copy_terminal_proxy_bash',
-                  label: translate.tray.terminal_bash,
-                ),
-              ],
-            ),
           ),
           MenuItem.separator(),
           // 出站模式子菜单

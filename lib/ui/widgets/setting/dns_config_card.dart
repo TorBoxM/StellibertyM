@@ -34,7 +34,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
   bool _preferH3 = false;
   bool _respectRules = false;
   bool _useHosts = false;
-  bool _useSystemHosts = false;
+  bool _useSystemHosts = true;
   bool _directNameserverFollowPolicy = false;
 
   // Fallback 过滤器状态
@@ -651,7 +651,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _nameserverPolicyController,
         label: trans.dns_settings.nameserver_policy,
-        hint: '*.google.com=8.8.8.8,8.8.4.4, +.cn=223.5.5.5',
+        hint: 'dns.google=8.8.8.8,8.8.4.4',
         maxLines: 3,
       ),
 
@@ -660,7 +660,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _hostsController,
         label: trans.dns_settings.hosts,
-        hint: 'localhost=127.0.0.1,*.test.com=1.2.3.4',
+        hint: 'localhost=127.0.0.1',
         maxLines: 3,
       ),
 
@@ -669,7 +669,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _nameserverController,
         label: trans.dns_settings.nameserver,
-        hint: '8.8.8.8,https://doh.pub/dns-query',
+        hint: 'tls://dns.alidns.com',
         maxLines: 2,
       ),
 
@@ -678,7 +678,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _defaultNameserverController,
         label: trans.dns_settings.default_nameserver,
-        hint: '8.8.8.8,https://doh.pub/dns-query',
+        hint: 'system,223.5.5.5',
         maxLines: 2,
       ),
 
@@ -687,7 +687,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _fallbackController,
         label: trans.dns_settings.fallback,
-        hint: '8.8.8.8,https://doh.pub/dns-query',
+        hint: 'tls://dns.google',
         maxLines: 2,
       ),
 
@@ -696,7 +696,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _proxyServerNameserverController,
         label: trans.dns_settings.proxy_server_nameserver,
-        hint: 'https://doh.pub/dns-query,https://dns.alidns.com/dns-query',
+        hint: 'tls://dns.alidns.com',
         maxLines: 2,
       ),
 
@@ -705,7 +705,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _directNameserverController,
         label: trans.dns_settings.direct_nameserver,
-        hint: 'system,223.6.6.6',
+        hint: 'tls://dns.alidns.com',
         maxLines: 2,
       ),
 
@@ -714,7 +714,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _fakeIpFilterController,
         label: trans.dns_settings.fake_ip_filter,
-        hint: '*.lan,*.local,localhost.ptlogin2.qq.com',
+        hint: '*.lan,*.arpa,*.local,localhost',
         maxLines: 3,
       ),
 
@@ -761,7 +761,7 @@ class _DnsConfigCardState extends State<DnsConfigCard> {
       _buildMultilineTextField(
         controller: _fallbackDomainController,
         label: trans.dns_settings.fallback_domain,
-        hint: '+.google.com,+.facebook.com,+.youtube.com',
+        hint: '+.google.com,+.youtube.com',
         maxLines: 2,
       ),
     ];

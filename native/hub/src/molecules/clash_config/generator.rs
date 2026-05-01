@@ -11,6 +11,8 @@ use crate::molecules::OverrideConfig;
 // Dart → Rust：生成运行时配置请求
 #[derive(Debug, Clone, Serialize, Deserialize, DartSignal)]
 pub struct GenerateRuntimeConfigRequest {
+    pub request_id: String,
+
     // 基础配置内容（来自订阅）
     pub base_config_content: String,
 
@@ -24,6 +26,7 @@ pub struct GenerateRuntimeConfigRequest {
 // Rust → Dart：生成运行时配置响应
 #[derive(Debug, Clone, Serialize, Deserialize, RustSignal)]
 pub struct GenerateRuntimeConfigResponse {
+    pub request_id: String,
     pub is_successful: bool,
     pub result_config: String,
     pub error_message: String,
@@ -32,8 +35,12 @@ pub struct GenerateRuntimeConfigResponse {
 impl GenerateRuntimeConfigRequest {
     // 处理生成运行时配置请求
     pub fn handle(self) -> GenerateRuntimeConfigResponse {
-        log::debug!("覆写数量：{}", self.overrides.len());
-        log::debug!("运行时参数：{:?}", self.runtime_params);
+        log::debug!("[{}] 覆写数量：{}", self.request_id, self.overrides.len());
+        log::debug!(
+            "[{}] 运行时参数：{:?}",
+            self.request_id,
+            self.runtime_params
+        );
 
         match generate_runtime_config_internal(
             &self.base_config_content,
@@ -41,13 +48,15 @@ impl GenerateRuntimeConfigRequest {
             &self.runtime_params,
         ) {
             Ok(config) => GenerateRuntimeConfigResponse {
+                request_id: self.request_id,
                 is_successful: true,
                 result_config: config,
                 error_message: String::new(),
             },
             Err(e) => {
-                log::error!("生成运行时配置失败：{}", e);
+                log::error!("[{}] 生成运行时配置失败：{}", self.request_id, e);
                 GenerateRuntimeConfigResponse {
+                    request_id: self.request_id,
                     is_successful: false,
                     result_config: String::new(),
                     error_message: e,
@@ -149,9 +158,22 @@ pub fn init() {
         let receiver = GenerateRuntimeConfigRequest::get_dart_signal_receiver();
         while let Some(dart_signal) = receiver.recv().await {
             let message = dart_signal.message;
+            let request_id = message.request_id.clone();
             tokio::spawn(async move {
-                let response = message.handle();
-                response.send_signal_to_dart();
+                // QuickJS 同步执行，放入 blocking pool 避免卡住事件循环
+                match tokio::task::spawn_blocking(move || message.handle()).await {
+                    Ok(response) => response.send_signal_to_dart(),
+                    Err(e) => {
+                        log::error!("[{}] 生成运行时配置任务失败：{}", request_id, e);
+                        GenerateRuntimeConfigResponse {
+                            request_id,
+                            is_successful: false,
+                            result_config: String::new(),
+                            error_message: format!("生成运行时配置任务失败：{}", e),
+                        }
+                        .send_signal_to_dart();
+                    }
+                }
             });
         }
     });

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/clash/services/dns_service.dart';
 import 'package:stelliberty/services/log_print_service.dart';
@@ -147,42 +148,53 @@ class ConfigInjector {
         skipAuthPrefixes: skipAuthPrefixes,
       );
 
-      // 3. 调用 Rust 处理
-      final request = GenerateRuntimeConfigRequest(
-        baseConfigContent: content,
-        overrides: overrides,
-        runtimeParams: params,
-      );
+      final requestId =
+          'gen-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(params)}';
+      final completer = Completer<GenerateRuntimeConfigResponse>();
+      final subscription = GenerateRuntimeConfigResponse.rustSignalStream
+          .listen((signal) {
+            if (signal.message.requestId == requestId &&
+                !completer.isCompleted) {
+              completer.complete(signal.message);
+            }
+          });
 
-      request.sendSignalToRust();
+      try {
+        final request = GenerateRuntimeConfigRequest(
+          requestId: requestId,
+          baseConfigContent: content,
+          overrides: overrides,
+          runtimeParams: params,
+        );
 
-      final response = await GenerateRuntimeConfigResponse
-          .rustSignalStream
-          .first
-          .timeout(
-            const Duration(seconds: 5),
-            onTimeout: () {
-              throw Exception('Rust 配置生成超时');
-            },
-          );
+        request.sendSignalToRust();
 
-      if (!response.message.isSuccessful) {
-        Logger.error('配置生成失败：${response.message.errorMessage}');
-        return null;
+        final response = await completer.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            throw Exception('Rust 配置生成超时');
+          },
+        );
+
+        if (!response.isSuccessful) {
+          Logger.error('配置生成失败：${response.errorMessage}');
+          return null;
+        }
+
+        final resultConfig = response.resultConfig;
+        final runtimeConfigPath = PathService.instance.getRuntimeConfigPath();
+        await File(runtimeConfigPath).writeAsString(resultConfig);
+
+        final sizeKb = (resultConfig.length / 1024).toStringAsFixed(1);
+        Logger.info('运行时配置已生成（${sizeKb}KB）');
+
+        return GeneratedRuntimeConfig(
+          runtimeConfigPath: runtimeConfigPath,
+          configContent: resultConfig,
+        );
+      } finally {
+        await subscription.cancel();
       }
-
-      // 4. 写入 runtime_config.yaml
-      final resultConfig = response.message.resultConfig;
-      final runtimeConfigPath = PathService.instance.getRuntimeConfigPath();
-      await File(runtimeConfigPath).writeAsString(resultConfig);
-
-      final sizeKb = (resultConfig.length / 1024).toStringAsFixed(1);
-      Logger.info('运行时配置已生成（${sizeKb}KB）');
-
-      return GeneratedRuntimeConfig(
-        runtimeConfigPath: runtimeConfigPath,
-        configContent: resultConfig,
-      );
     } catch (e) {
       Logger.error('生成运行时配置失败：$e');
       return null;

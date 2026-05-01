@@ -255,21 +255,33 @@ class OverrideService {
       return baseConfigContent;
     }
 
-    // 调用 Rust 处理所有覆写
     Logger.info('调用 Rust 处理 ${overrideConfigs.length} 个覆写…');
+    final requestId =
+        'apply-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(overrideConfigs)}';
+    final completer = Completer<signals.ApplyOverridesResponse>();
+    final subscription = signals.ApplyOverridesResponse.rustSignalStream.listen(
+      (signal) {
+        if (signal.message.requestId == requestId && !completer.isCompleted) {
+          completer.complete(signal.message);
+        }
+      },
+    );
+
     try {
       final request = signals.ApplyOverridesRequest(
+        requestId: requestId,
         baseConfigContent: baseConfigContent,
         overrides: overrideConfigs,
       );
 
-      // 发送请求到 Rust
       request.sendSignalToRust();
 
-      // 等待 Rust 响应
-      final response =
-          await signals.ApplyOverridesResponse.rustSignalStream.first;
-      final result = response.message;
+      final result = await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Rust 覆写处理超时');
+        },
+      );
 
       if (!result.isSuccessful) {
         Logger.error('Rust 覆写处理失败：${result.errorMessage}');
@@ -284,6 +296,8 @@ class OverrideService {
       final errorMsg = 'Rust 覆写处理异常：$e';
       Logger.error(errorMsg);
       throw Exception(errorMsg);
+    } finally {
+      await subscription.cancel();
     }
   }
 
@@ -319,20 +333,32 @@ class OverrideService {
       content: yamlContent,
     );
 
-    // 调用 Rust 处理
+    final requestId =
+        'apply-yaml-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(overrideMap)}';
+    final completer = Completer<signals.ApplyOverridesResponse>();
+    final subscription = signals.ApplyOverridesResponse.rustSignalStream.listen(
+      (signal) {
+        if (signal.message.requestId == requestId && !completer.isCompleted) {
+          completer.complete(signal.message);
+        }
+      },
+    );
+
     try {
       final request = signals.ApplyOverridesRequest(
+        requestId: requestId,
         baseConfigContent: baseContent,
         overrides: [tempOverride],
       );
 
-      // 发送请求到 Rust
       request.sendSignalToRust();
 
-      // 等待 Rust 响应
-      final response =
-          await signals.ApplyOverridesResponse.rustSignalStream.first;
-      final result = response.message;
+      final result = await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Rust YAML 覆写处理超时');
+        },
+      );
 
       if (!result.isSuccessful) {
         Logger.error('Rust YAML 覆写失败：${result.errorMessage}');
@@ -347,6 +373,8 @@ class OverrideService {
       final errorMsg = 'Rust YAML 覆写异常：$e';
       Logger.error(errorMsg);
       throw Exception(errorMsg);
+    } finally {
+      await subscription.cancel();
     }
   }
 

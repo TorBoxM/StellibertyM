@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:stelliberty/services/log_print_service.dart';
@@ -167,36 +168,45 @@ class OverrideTest {
       );
     }
 
-    // 调用 Rust 处理所有覆写
     Logger.info('调用 Rust 处理 ${overrideConfigs.length} 个覆写...');
 
-    final request = ApplyOverridesRequest(
-      baseConfigContent: baseConfig,
-      overrides: overrideConfigs,
-    );
+    final requestId = 'test-apply-${DateTime.now().microsecondsSinceEpoch}';
+    final completer = Completer<ApplyOverridesResponse>();
+    final subscription = ApplyOverridesResponse.rustSignalStream.listen((
+      signal,
+    ) {
+      if (signal.message.requestId == requestId && !completer.isCompleted) {
+        completer.complete(signal.message);
+      }
+    });
 
-    // 发送请求到 Rust
-    request.sendSignalToRust();
+    try {
+      final request = ApplyOverridesRequest(
+        requestId: requestId,
+        baseConfigContent: baseConfig,
+        overrides: overrideConfigs,
+      );
 
-    // 等待响应（设置超时）
-    final response = await ApplyOverridesResponse.rustSignalStream.first
-        .timeout(
-          const Duration(seconds: 30),
-          onTimeout: () {
-            throw Exception('Rust 覆写处理超时（30 秒）');
-          },
-        );
+      request.sendSignalToRust();
 
-    final result = response.message;
+      final result = await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Rust 覆写处理超时（30 秒）');
+        },
+      );
 
-    if (!result.isSuccessful) {
-      throw Exception('Rust 覆写处理失败: ${result.errorMessage}');
+      if (!result.isSuccessful) {
+        throw Exception('Rust 覆写处理失败: ${result.errorMessage}');
+      }
+
+      Logger.info('Rust 覆写处理成功');
+      Logger.info('   最终配置长度: ${result.resultConfig.length} 字节');
+
+      return result.resultConfig;
+    } finally {
+      await subscription.cancel();
     }
-
-    Logger.info('Rust 覆写处理成功');
-    Logger.info('   最终配置长度: ${result.resultConfig.length} 字节');
-
-    return result.resultConfig;
   }
 
   // 使用 Clash 核心测试配置

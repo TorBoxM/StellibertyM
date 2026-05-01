@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 // Dart → Rust：应用覆写请求
 #[derive(Deserialize, DartSignal)]
 pub struct ApplyOverridesRequest {
+    pub request_id: String,
     pub base_config_content: String,
     pub overrides: Vec<OverrideConfig>,
 }
@@ -17,6 +18,7 @@ pub struct ApplyOverridesRequest {
 // Rust → Dart：应用覆写响应
 #[derive(Serialize, RustSignal)]
 pub struct ApplyOverridesResponse {
+    pub request_id: String,
     pub is_successful: bool,
     pub result_config: String,
     pub error_message: String,
@@ -41,13 +43,18 @@ pub struct ParseSubscriptionResponse {
 
 impl ApplyOverridesRequest {
     pub fn handle(self) {
-        log::info!("收到应用覆写请求，覆写数量：{}", self.overrides.len());
+        log::info!(
+            "[{}] 收到应用覆写请求，覆写数量：{}",
+            self.request_id,
+            self.overrides.len()
+        );
 
         let mut processor = match OverrideProcessor::new() {
             Ok(p) => p,
             Err(e) => {
-                log::error!("初始化覆写处理器失败：{}", e);
+                log::error!("[{}] 初始化覆写处理器失败：{}", self.request_id, e);
                 let response = ApplyOverridesResponse {
+                    request_id: self.request_id,
                     is_successful: false,
                     result_config: String::new(),
                     error_message: format!("初始化处理器失败：{}", e),
@@ -62,8 +69,9 @@ impl ApplyOverridesRequest {
         let parsed_config = match ProxyParser::parse_subscription(&self.base_config_content) {
             Ok(config) => config,
             Err(e) => {
-                log::error!("订阅解析失败：{}", e);
+                log::error!("[{}] 订阅解析失败：{}", self.request_id, e);
                 let response = ApplyOverridesResponse {
+                    request_id: self.request_id,
                     is_successful: false,
                     result_config: String::new(),
                     error_message: format!("订阅解析失败：{}", e),
@@ -74,12 +82,17 @@ impl ApplyOverridesRequest {
             }
         };
 
-        log::info!("订阅解析成功，配置长度：{}字节", parsed_config.len());
+        log::info!(
+            "[{}] 订阅解析成功，配置长度：{}字节",
+            self.request_id,
+            parsed_config.len()
+        );
 
         match processor.apply_overrides(&parsed_config, self.overrides) {
             Ok(result) => {
-                log::info!("覆写处理成功");
+                log::info!("[{}] 覆写处理成功", self.request_id);
                 let response = ApplyOverridesResponse {
+                    request_id: self.request_id,
                     is_successful: true,
                     result_config: result,
                     error_message: String::new(),
@@ -88,8 +101,9 @@ impl ApplyOverridesRequest {
                 response.send_signal_to_dart();
             }
             Err(e) => {
-                log::error!("覆写处理失败：{}", e);
+                log::error!("[{}] 覆写处理失败：{}", self.request_id, e);
                 let response = ApplyOverridesResponse {
+                    request_id: self.request_id,
                     is_successful: false,
                     result_config: String::new(),
                     error_message: e,
@@ -146,7 +160,22 @@ pub fn init() {
     spawn(async {
         let receiver = ApplyOverridesRequest::get_dart_signal_receiver();
         while let Some(dart_signal) = receiver.recv().await {
-            dart_signal.message.handle();
+            let message = dart_signal.message;
+            let request_id = message.request_id.clone();
+            tokio::spawn(async move {
+                // QuickJS 同步执行，放入 blocking pool 避免卡住事件循环
+                if let Err(e) = tokio::task::spawn_blocking(move || message.handle()).await {
+                    log::error!("[{}] 覆写处理任务失败：{}", request_id, e);
+                    ApplyOverridesResponse {
+                        request_id,
+                        is_successful: false,
+                        result_config: String::new(),
+                        error_message: format!("覆写处理任务失败：{}", e),
+                        logs: vec![],
+                    }
+                    .send_signal_to_dart();
+                }
+            });
         }
     });
 

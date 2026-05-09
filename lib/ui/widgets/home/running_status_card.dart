@@ -125,43 +125,15 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMetricSpanRow(
-            context,
-            left: _buildMetric(
-              context,
-              label: trans.home.running_status_uptime,
-              value: uptimeDisplay,
-              color: colorScheme.primary,
-              icon: Icons.timer_outlined,
-              iconColor: colorScheme.primary,
-            ),
-            right: _buildMetric(
-              context,
-              label: trans.home.memory_usage,
-              value: combinedMemory,
-              color: colorScheme.secondary,
-              icon: Icons.memory,
-              iconColor: colorScheme.secondary,
-            ),
-          ),
-          const SizedBox(height: 16),
           _buildMetricRow(
             context,
             items: [
               _buildMetric(
                 context,
-                label: trans.home.running_status_platform,
-                value: platform,
-                color: colorScheme.onSurface,
-                icon: platformIcon,
-                iconColor: colorScheme.tertiary,
-              ),
-              _buildMetric(
-                context,
-                label: trans.home.core_version,
-                value: coreVersion,
-                color: colorScheme.onSurface,
-                icon: Icons.code,
+                label: trans.home.running_status_uptime,
+                value: uptimeDisplay,
+                color: colorScheme.primary,
+                icon: Icons.timer_outlined,
                 iconColor: colorScheme.primary,
               ),
               _buildMetric(
@@ -172,27 +144,45 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
                 icon: Icons.settings_suggest,
                 iconColor: colorScheme.secondary,
               ),
+              _buildMetric(
+                context,
+                label: trans.home.core_status,
+                value: coreStatus,
+                color: coreStatusColor,
+                icon: Icons.circle,
+                iconColor: coreStatusColor,
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          _buildMetricSpanRow(
+          _buildMetricRow(
             context,
-            left: _buildMetric(
-              context,
-              label: trans.home.core_status,
-              value: coreStatus,
-              color: coreStatusColor,
-              icon: Icons.circle,
-              iconColor: coreStatusColor,
-            ),
-            right: _buildMetric(
-              context,
-              label: trans.home.proxy_address,
-              value: proxyAddress,
-              color: proxyAddressColor,
-              icon: Icons.lan,
-              iconColor: colorScheme.primary,
-            ),
+            items: [
+              _buildMetric(
+                context,
+                label: trans.home.memory_usage,
+                value: combinedMemory,
+                color: colorScheme.secondary,
+                icon: Icons.memory,
+                iconColor: colorScheme.secondary,
+              ),
+              _buildMetric(
+                context,
+                label: trans.home.proxy_address,
+                value: proxyAddress,
+                color: proxyAddressColor,
+                icon: Icons.lan,
+                iconColor: colorScheme.primary,
+              ),
+              _buildMetric(
+                context,
+                label: trans.home.core_version,
+                value: coreVersion,
+                color: colorScheme.onSurface,
+                icon: Icons.code,
+                iconColor: colorScheme.primary,
+              ),
+            ],
           ),
         ],
       ),
@@ -310,22 +300,22 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
       mainAxisSize: MainAxisSize.min,
       children: [
         ModernTooltip(
-          message: trans.home.update_core,
-          child: _HeaderActionButton(
-            icon: Icons.system_update_alt,
-            color: actionColor,
-            isBusy: _isCoreUpdating,
-            onPressed: canUpdate ? () => _updateCore(context) : null,
-          ),
-        ),
-        const SizedBox(width: 8),
-        ModernTooltip(
           message: trans.proxy.restart_core,
           child: _HeaderActionButton(
             icon: Icons.restart_alt,
             color: actionColor,
             isBusy: _isCoreRestarting,
             onPressed: canRestart ? () => _restartCore(context) : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+        ModernTooltip(
+          message: trans.home.update_core,
+          child: _HeaderActionButton(
+            icon: Icons.system_update_alt,
+            color: actionColor,
+            isBusy: _isCoreUpdating,
+            onPressed: canUpdate ? () => _updateCore(context) : null,
           ),
         ),
       ],

@@ -1,6 +1,6 @@
 {
   "common": {
-    "app_name": "Stelliberty",
+    "app_name": "TorBox",
     "settings": "Settings",
     "confirm": "Confirm",
     "ok": "OK",
@@ -479,7 +479,7 @@
     "hotkey_toggle_proxy": "Toggle System Proxy",
     "hotkey_toggle_proxy_desc": "Quickly toggle system proxy on/off",
     "hotkey_toggle_tun": "Toggle TUN Mode",
-    "hotkey_toggle_tun_desc": "Quickly toggle virtual network adapter mode",
+    "hotkey_toggle_tun_desc": "Quickly toggle Tun Mode",
     "hotkey_show_window": "Show/Hide Window",
     "hotkey_show_window_desc": "Quickly show or hide main window",
     "hotkey_exit_app": "Exit Application",
@@ -585,11 +585,11 @@
       "empty_to_disable": "Leave empty to disable"
     },
     "tun_mode": {
-      "title": "Virtual Network Adapter Configuration",
-      "subtitle": "Advanced virtual network adapter parameters",
+      "title": "Tun Mode Configuration",
+      "subtitle": "Advanced Tun Mode parameters",
       
       "network_stack": "Network Stack",
-      "device_name": "Virtual Network Adapter Name",
+      "device_name": "Tun Mode Name",
       "mtu": "Maximum Transmission Unit (MTU)",
       "auto_route": "Auto Route",
       "auto_detect_interface": "Auto Detect Interface",
@@ -614,8 +614,8 @@
       },
       "system_integration": {
         "title": "System Integration",
-        "subtitle": "System Proxy, TUN Virtual Network Adapter",
-        "subtitle_windows": "System Proxy, TUN Virtual Network Adapter, UWP Loopback"
+        "subtitle": "System Proxy, Tun Mode",
+        "subtitle_windows": "System Proxy, Tun Mode, UWP Loopback"
       },
       "dns_config": {
         "title": "DNS Config",
@@ -712,7 +712,7 @@
     "restart_core": "Restart Core",
     "running": "Running",
     "stopped": "Stopped",
-    "tun_mode": "Virtual Network Adapter",
+    "tun_mode": "Tun Mode",
     "no_subscription": "No subscription configuration available",
     "please_add_subscription": "Please add a subscription first",
     "no_proxy_groups": "No proxy groups available",
@@ -735,10 +735,10 @@
     "switch_failed": "Switch failed: {error}",
     "need_admin_permission": "Administrator permission required",
     "understood": "Understood",
-    "tun_enabled": "Virtual network adapter enabled",
-    "tun_disabled": "Virtual network adapter disabled",
+    "tun_enabled": "Tun Mode enabled",
+    "tun_disabled": "Tun Mode disabled",
     "tun_restarting": ", restarting Clash...",
-    "tun_switch_failed": "Failed to switch virtual network adapter",
+    "tun_switch_failed": "Failed to switch Tun Mode",
     "scroll_left": "Scroll left",
     "scroll_right": "Scroll right",
     "test_delay": "Test Delay",
@@ -750,7 +750,7 @@
     "located_to": "Located to: {name}",
     "proxy_control": "System Proxy",
     "restarting_core": "Restarting...",
-    "tun_mode_label": "Virtual Network Adapter Mode",
+    "tun_mode_label": "Tun Mode",
     "tun_requires_admin": "Requires administrator or root privileges",
     "tun_requires_service": "Service installation required to enable TUN mode",
     "switched_to_mode": "Switched to {name}",
@@ -783,11 +783,11 @@
     "empty_no_proxy_groups": "No proxy groups"
   },
   "admin": {
-    "windows": "Virtual network adapter requires administrator privileges.\n\nPlease right-click the application icon, select \"Run as administrator\", and restart the application.",
-    "linux": "Virtual network adapter requires root privileges.\n\nNecessary permissions will be granted to the Clash core file.",
-    "macos": "Virtual network adapter requires administrator privileges.\n\nA system authorization dialog will appear, please enter the administrator password.",
-    "android": "Android platform does not support virtual network adapter.",
-    "generic": "Virtual network adapter requires administrator privileges."
+    "windows": "Tun Mode requires administrator privileges.",
+    "linux": "Tun Mode requires root privileges.",
+    "macos": "Tun Mode requires administrator privileges.",
+    "android": "Android platform does not support Tun Mode.",
+    "generic": "Tun Mode requires administrator privileges."
   },
   "dns_settings": {
     "title": "DNS Settings",
@@ -860,7 +860,7 @@
     "show_window": "Show Window",
     "close_menu": "Close Menu",
     "toggle_proxy": "System Proxy",
-    "toggle_tun": "Virtual Network Adapter",
+    "toggle_tun": "Tun Mode",
     "outbound_mode": "Outbound Mode",
     "rule_mode": "Rule Mode",
     "global_mode": "Global Mode",
@@ -951,7 +951,7 @@
     "saving": "Saving..."
   },
   "tun_config": {
-    "title": "Virtual Network Adapter Configuration",
+    "title": "Tun Mode Configuration",
     "service_mode": "Service Mode",
     "service_installed": "Installed - TUN mode requires administrator privileges",
     "service_not_installed": "Not installed - Install to enable TUN mode",
@@ -1006,10 +1006,10 @@
     "core_status_running": "Running",
     "core_status_stopped": "Stopped",
     "core_status_restarting": "Restarting",
-    "traffic_stats": "Network Speed",
+    "traffic_stats": "Speed｜Traffic",
     "upload": "Upload",
     "download": "Download",
-    "reset": "Reset",
+    "reset": "Reset Traffic",
     "proxy_address": "Proxy Address",
     "core_version": "Core Version",
     "clash_info": "Clash Info",
@@ -1049,15 +1049,15 @@
     "system_proxy_status": "System Proxy Status",
     "system_proxy_enabled": "System proxy enabled, traffic will be forwarded through proxy",
     "system_proxy_disabled": "System proxy disabled",
-    "tun_requires_windows": "Requires service installation or run as Administrator\n\nGo to \"Settings > System Integration > Virtual Network Adapter Configuration\" to install service",
-    "tun_requires_linux": "Requires service installation or run as root\n\nGo to \"Settings > System Integration > Virtual Network Adapter Configuration\" to install service",
-    "tun_requires_macos": "Requires service installation or run as Administrator\n\nGo to \"Settings > System Integration > Virtual Network Adapter Configuration\" to install service",
+    "tun_requires_windows": "Requires service installation or run as Administrator",
+    "tun_requires_linux": "Requires service installation or run as root",
+    "tun_requires_macos": "Requires service installation or run as Administrator",
     "enable_tun": "Enable TUN",
     "disable_tun": "Disable TUN",
     "tun_stack_label": "Stack: ",
     "tun_device_label": "Device: ",
-    "tun_status_available": "Virtual network adapter available",
-    "tun_status_unavailable": "Virtual network adapter unavailable",
+    "tun_status_available": "Tun Mode available",
+    "tun_status_unavailable": "Tun Mode unavailable",
     "node_status": "Node Status",
     "current_node": "Current Node",
     "network_delay": "Network Delay",

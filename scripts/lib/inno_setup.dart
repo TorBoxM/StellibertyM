@@ -621,8 +621,10 @@ Future<void> packInnoSetup({
 
   log('▶️  正在使用 Inno Setup 打包为安装程序...');
 
-  // 检查 Inno Setup 6 是否安装
+  // 检查 Inno Setup 是否安装
   final innoSetupPaths = [
+    r'C:\Program Files (x86)\Inno Setup 7\ISCC.exe',
+    r'C:\Program Files\Inno Setup 7\ISCC.exe',
     r'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
     r'C:\Program Files\Inno Setup 6\ISCC.exe',
   ];

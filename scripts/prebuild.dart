@@ -399,7 +399,7 @@ Future<String?> _getInnoSetupVersion() async {
   try {
     final result = await Process.run('powershell', [
       '-Command',
-      "Get-ItemProperty 'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Inno Setup 6_is1' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayVersion",
+      "Get-ItemProperty 'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Inno Setup 7_is1','HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Inno Setup 6_is1' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty DisplayVersion",
     ]);
 
     if (result.exitCode == 0) {
@@ -414,6 +414,8 @@ Future<String?> _getInnoSetupVersion() async {
 
   // 方法2: 检查常见安装路径（回退方案）
   final paths = [
+    r'C:\Program Files (x86)\Inno Setup 7\ISCC.exe',
+    r'C:\Program Files\Inno Setup 7\ISCC.exe',
     r'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
     r'C:\Program Files\Inno Setup 6\ISCC.exe',
   ];
@@ -421,7 +423,7 @@ Future<String?> _getInnoSetupVersion() async {
   for (final path in paths) {
     if (await File(path).exists()) {
       // 文件存在，但无法准确获取版本号，返回通用版本
-      return '6.0.0'; // 推测为 Inno Setup 6
+      return path.contains('Inno Setup 7') ? '7.0.0' : '6.0.0';
     }
   }
 

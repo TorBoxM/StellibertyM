@@ -404,20 +404,41 @@ Future<String> downloadInnoSetup({required String tempDir}) async {
     throw Exception('获取版本信息失败: HTTP ${response.statusCode}');
   }
 
-  final data = json.decode(response.body);
+  final data = json.decode(response.body) as Map<String, dynamic>;
   final tagName = data['tag_name'] as String; // 例如: "is-6_6_1"
+  final releaseName = data['name'] as String?;
+  final assets = data['assets'] as List<dynamic>;
 
   // 解析版本号（is-6_6_1 -> 6.6.1）
   final latestVersion = tagName.replaceFirst('is-', '').replaceAll('_', '.');
 
-  // 构建下载 URL
-  final downloadUrl =
-      'https://github.com/jrsoftware/issrc/releases/download/$tagName/innosetup-$latestVersion.exe';
+  final installerAssets = assets.whereType<Map<String, dynamic>>().where((
+    asset,
+  ) {
+    final name = asset['name'] as String?;
+    return name != null &&
+        name.startsWith('innosetup-') &&
+        name.endsWith('.exe');
+  }).toList();
 
-  log('✅ 最新版本: $latestVersion');
-  log('📥 正在下载 Inno Setup $latestVersion...');
+  if (installerAssets.isEmpty) {
+    throw Exception('未找到 Inno Setup 安装包资产');
+  }
 
-  final installerPath = p.join(tempDir, 'innosetup-setup.exe');
+  final installerAsset = installerAssets.firstWhere((asset) {
+    final name = asset['name'] as String;
+    return name.contains('-x64.') || name.contains('-x64-');
+  }, orElse: () => installerAssets.first);
+  final installerName = installerAsset['name'] as String;
+  final downloadUrl = installerAsset['browser_download_url'] as String?;
+  if (downloadUrl == null || downloadUrl.isEmpty) {
+    throw Exception('Inno Setup 安装包缺少下载地址: $installerName');
+  }
+
+  log('✅ 最新版本: ${releaseName ?? latestVersion}');
+  log('📥 正在下载 Inno Setup 安装包: $installerName');
+
+  final installerPath = p.join(tempDir, installerName);
 
   // 下载安装程序（使用代理）
   final client = HttpClient();

@@ -261,6 +261,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   // 代理节点快照版本。
   // 每次重新加载或刷新代理列表时递增，用于丢弃旧测速结果。
   int _proxyNodesVersion = 0;
+  int get proxyNodesVersion => _proxyNodesVersion;
 
   // 正在测试延迟的节点集合
   final Set<String> _testingNodes = {};
@@ -912,6 +913,8 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
       _errorMessage = '加载代理列表失败：$e';
       Logger.error(_errorMessage!);
     } finally {
+      notifyListeners();
+
       totalStopwatch.stop();
       Logger.info(
         '加载完成: ${_allProxyGroups.length} 个代理组（${proxyGroups.length} 可见），${_proxyNodes.length} 个节点（耗时：${totalStopwatch.elapsedMilliseconds}ms）',

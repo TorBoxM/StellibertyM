@@ -18,12 +18,14 @@ import 'package:stelliberty/clash/model/clash_model.dart';
 // 代理页面状态数据类（用于优化 Selector）
 class _ProxyPageState {
   final int proxyGroupsLength;
+  final int proxyNodesVersion;
   final String? errorMessage;
   final bool isCoreRunning;
   final String outboundMode;
 
   const _ProxyPageState({
     required this.proxyGroupsLength,
+    required this.proxyNodesVersion,
     required this.errorMessage,
     required this.isCoreRunning,
     required this.outboundMode,
@@ -35,6 +37,7 @@ class _ProxyPageState {
       other is _ProxyPageState &&
           runtimeType == other.runtimeType &&
           proxyGroupsLength == other.proxyGroupsLength &&
+          proxyNodesVersion == other.proxyNodesVersion &&
           errorMessage == other.errorMessage &&
           isCoreRunning == other.isCoreRunning &&
           outboundMode == other.outboundMode;
@@ -42,6 +45,7 @@ class _ProxyPageState {
   @override
   int get hashCode =>
       proxyGroupsLength.hashCode ^
+      proxyNodesVersion.hashCode ^
       errorMessage.hashCode ^
       isCoreRunning.hashCode ^
       outboundMode.hashCode;
@@ -239,6 +243,7 @@ class _ProxyPageWidgetState extends State<ProxyPage> {
           child: Selector<ClashProvider, _ProxyPageState>(
             selector: (_, clash) => _ProxyPageState(
               proxyGroupsLength: clash.proxyGroups.length,
+              proxyNodesVersion: clash.proxyNodesVersion,
               errorMessage: clash.errorMessage,
               isCoreRunning: clash.isCoreRunning,
               outboundMode: clash.outboundMode,

@@ -933,6 +933,173 @@ StartupNotify=true
   }
 }
 
+Future<void> packMacosInstallers({
+  required String projectRoot,
+  required String sourceDir,
+  required String outputDir,
+  required String appName,
+  required String version,
+  required String arch,
+  required bool isDebug,
+}) async {
+  final debugSuffix = isDebug ? '-debug' : '';
+  final appNameCapitalized =
+      '${appName.substring(0, 1).toUpperCase()}${appName.substring(1)}';
+  final appPath = await _findMacosApp(sourceDir);
+
+  await packDmg(
+    appPath: appPath,
+    outputPath: p.join(
+      outputDir,
+      '$appNameCapitalized-v$version-macos-$arch$debugSuffix.dmg',
+    ),
+    volumeName: appNameCapitalized,
+  );
+
+  await packPkg(
+    projectRoot: projectRoot,
+    appPath: appPath,
+    outputPath: p.join(
+      outputDir,
+      '$appNameCapitalized-v$version-macos-$arch$debugSuffix.pkg',
+    ),
+    appName: appName,
+    version: version,
+  );
+}
+
+Future<void> packDmg({
+  required String appPath,
+  required String outputPath,
+  required String volumeName,
+}) async {
+  log('▶️  正在打包为 DMG...');
+
+  await Directory(p.dirname(outputPath)).create(recursive: true);
+  final result = await Process.run('hdiutil', [
+    'create',
+    '-volname',
+    volumeName,
+    '-srcfolder',
+    appPath,
+    '-ov',
+    '-format',
+    'UDZO',
+    outputPath,
+  ]);
+
+  if (result.exitCode != 0) {
+    log('❌ DMG 打包失败');
+    log(result.stderr);
+    throw Exception('hdiutil 打包失败');
+  }
+
+  final fileSize = await File(outputPath).length();
+  final sizeInMB = (fileSize / (1024 * 1024)).toStringAsFixed(2);
+  log('✅ DMG 打包完成: ${p.basename(outputPath)} ($sizeInMB MB)');
+}
+
+Future<void> packPkg({
+  required String projectRoot,
+  required String appPath,
+  required String outputPath,
+  required String appName,
+  required String version,
+}) async {
+  log('▶️  正在打包为 PKG...');
+
+  final appNameLower = appName.toLowerCase();
+  final identifier = await _readMacosBundleIdentifier(
+    projectRoot,
+    appNameLower,
+  );
+  final tempDir = await Directory.systemTemp.createTemp('macos_pkg_');
+
+  try {
+    final componentPkg = p.join(tempDir.path, '$appNameLower-component.pkg');
+    final buildResult = await Process.run('pkgbuild', [
+      '--component',
+      appPath,
+      '--install-location',
+      '/Applications',
+      '--identifier',
+      identifier,
+      '--version',
+      version,
+      componentPkg,
+    ]);
+
+    if (buildResult.exitCode != 0) {
+      log('❌ PKG 组件打包失败');
+      log(buildResult.stderr);
+      throw Exception('pkgbuild 打包失败');
+    }
+
+    await Directory(p.dirname(outputPath)).create(recursive: true);
+    final productResult = await Process.run('productbuild', [
+      '--package',
+      componentPkg,
+      outputPath,
+    ]);
+
+    if (productResult.exitCode != 0) {
+      log('❌ PKG 打包失败');
+      log(productResult.stderr);
+      throw Exception('productbuild 打包失败');
+    }
+
+    final fileSize = await File(outputPath).length();
+    final sizeInMB = (fileSize / (1024 * 1024)).toStringAsFixed(2);
+    log('✅ PKG 打包完成: ${p.basename(outputPath)} ($sizeInMB MB)');
+  } finally {
+    await tempDir.delete(recursive: true);
+  }
+}
+
+Future<String> _findMacosApp(String sourceDir) async {
+  final sourceDirectory = Directory(sourceDir);
+  if (!await sourceDirectory.exists()) {
+    throw Exception('构建目录不存在: $sourceDir');
+  }
+
+  final apps = await sourceDirectory
+      .list(recursive: false)
+      .where((entity) => entity is Directory && entity.path.endsWith('.app'))
+      .cast<Directory>()
+      .toList();
+
+  if (apps.isEmpty) {
+    throw Exception('未找到 macOS .app 产物: $sourceDir');
+  }
+
+  apps.sort((a, b) => a.path.compareTo(b.path));
+  return apps.first.path;
+}
+
+Future<String> _readMacosBundleIdentifier(
+  String projectRoot,
+  String appNameLower,
+) async {
+  final appInfoFile = File(
+    p.join(projectRoot, 'macos', 'Runner', 'Configs', 'AppInfo.xcconfig'),
+  );
+  if (!await appInfoFile.exists()) return 'com.$appNameLower.app';
+
+  final lines = await appInfoFile.readAsLines();
+  for (final line in lines) {
+    final trimmedLine = line.trim();
+    if (!trimmedLine.startsWith('PRODUCT_BUNDLE_IDENTIFIER')) continue;
+
+    final parts = trimmedLine.split('=');
+    if (parts.length < 2) continue;
+
+    final identifier = parts.sublist(1).join('=').trim();
+    if (identifier.isNotEmpty) return identifier;
+  }
+
+  return 'com.$appNameLower.app';
+}
+
 // 辅助函数：递归复制目录
 Future<void> _copyDirectory(Directory source, Directory destination) async {
   if (!await destination.exists()) {
@@ -978,12 +1145,13 @@ Future<void> main(List<String> args) async {
       'with-installer',
       negatable: false,
       help:
-          '同时生成 ZIP 便携版和平台特定安装包（Windows: ZIP + EXE, Linux: ZIP + deb + rpm + AppImage）',
+          '同时生成便携版和平台特定安装包（Windows: ZIP + EXE, Linux: ZIP + deb + rpm + AppImage, macOS: DMG + PKG）',
     )
     ..addFlag(
       'installer-only',
       negatable: false,
-      help: '只生成平台特定安装包，不含 ZIP（Windows: 仅 EXE, Linux: 仅 deb + rpm + AppImage）',
+      help:
+          '只生成平台特定安装包，不含便携版（Windows: EXE, Linux: deb + rpm + AppImage, macOS: DMG + PKG）',
     )
     ..addFlag('help', abbr: 'h', negatable: false, help: '显示帮助信息');
 
@@ -1010,11 +1178,9 @@ Future<void> main(List<String> args) async {
       '  dart run scripts/build.dart --with-debug               # Release + Debug ZIP',
     );
     log(
-      '  dart run scripts/build.dart --with-installer           # Release ZIP + EXE',
+      '  dart run scripts/build.dart --with-installer           # Release + 平台安装包',
     );
-    log(
-      '  dart run scripts/build.dart --installer-only           # Release EXE only',
-    );
+    log('  dart run scripts/build.dart --installer-only           # 仅平台安装包');
     log('  dart run scripts/build.dart --with-debug --with-installer  # 完整打包');
     log('  dart run scripts/build.dart --clean                    # 干净构建');
     log(
@@ -1062,19 +1228,15 @@ Future<void> main(List<String> args) async {
   // 默认：只生成 ZIP
   // --with-installer：生成 ZIP + 平台安装包
   // --installer-only：只生成平台安装包
-  final shouldPackZip = !installerOnly;
   final shouldPackInstaller =
       (withInstaller || installerOnly) &&
-      (Platform.isWindows || Platform.isLinux);
+      (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+  final shouldPackZip = !installerOnly && !(Platform.isMacOS && withInstaller);
 
-  if (installerOnly && !(Platform.isWindows || Platform.isLinux)) {
-    log('❌ 错误: --installer-only 仅支持 Windows 和 Linux 平台');
+  if (installerOnly &&
+      !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    log('❌ 错误: --installer-only 仅支持 Windows、Linux 和 macOS 平台');
     exit(1);
-  }
-
-  if (withInstaller && !(Platform.isWindows || Platform.isLinux)) {
-    log('⚠️  警告: --with-installer 在非 Windows/Linux 平台只生成 ZIP');
-    log('    （平台特定安装包仅 Windows 和 Linux 支持）');
   }
 
   // 版本构建逻辑（简化版）：
@@ -1136,7 +1298,7 @@ Future<void> main(List<String> args) async {
       );
 
       if (needZipPack) {
-        // 桌面平台：打包成 ZIP 或/和 EXE
+        // 桌面平台：打包成便携版或平台安装包
         final sourceDir = getBuildOutputDir(projectRoot, platform, true);
         final platformSuffix = platform; // 使用完整平台名：windows, macos, linux
         final arch = _getCurrentArchitecture();
@@ -1151,7 +1313,7 @@ Future<void> main(List<String> args) async {
           await packZip(sourceDir: sourceDir, outputPath: outputPath);
         }
 
-        // 打包为平台安装包
+        // 打包平台安装包
         if (shouldPackInstaller) {
           if (Platform.isWindows) {
             // Windows: Inno Setup EXE
@@ -1171,6 +1333,17 @@ Future<void> main(List<String> args) async {
           } else if (Platform.isLinux) {
             // Linux: deb + rpm + AppImage
             await packLinuxInstallers(
+              projectRoot: projectRoot,
+              sourceDir: sourceDir,
+              outputDir: outputDir,
+              appName: appName,
+              version: version,
+              arch: arch,
+              isDebug: false,
+            );
+          } else if (Platform.isMacOS) {
+            // macOS: DMG + PKG
+            await packMacosInstallers(
               projectRoot: projectRoot,
               sourceDir: sourceDir,
               outputDir: outputDir,
@@ -1260,7 +1433,7 @@ Future<void> main(List<String> args) async {
       );
 
       if (needZipPack) {
-        // 桌面平台：打包成 ZIP 或/和 EXE
+        // 桌面平台：打包成便携版或平台安装包
         final sourceDir = getBuildOutputDir(projectRoot, platform, false);
         final platformSuffix = platform; // 使用完整平台名：windows, macos, linux
         final arch = _getCurrentArchitecture();
@@ -1275,7 +1448,7 @@ Future<void> main(List<String> args) async {
           await packZip(sourceDir: sourceDir, outputPath: outputPath);
         }
 
-        // 打包为平台安装包
+        // 打包平台安装包
         if (shouldPackInstaller) {
           if (Platform.isWindows) {
             // Windows: Inno Setup EXE
@@ -1295,6 +1468,17 @@ Future<void> main(List<String> args) async {
           } else if (Platform.isLinux) {
             // Linux: deb + rpm + AppImage
             await packLinuxInstallers(
+              projectRoot: projectRoot,
+              sourceDir: sourceDir,
+              outputDir: outputDir,
+              appName: appName,
+              version: version,
+              arch: arch,
+              isDebug: true,
+            );
+          } else if (Platform.isMacOS) {
+            // macOS: DMG + PKG
+            await packMacosInstallers(
               projectRoot: projectRoot,
               sourceDir: sourceDir,
               outputDir: outputDir,

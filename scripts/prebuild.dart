@@ -161,6 +161,8 @@ Future<void> main(List<String> args) async {
           await setupInnoSetup(projectRoot: projectRoot);
         } else if (Platform.isLinux) {
           await setupLinuxPackagingTools(projectRoot: projectRoot, arch: arch);
+        } else if (Platform.isMacOS) {
+          log('✅ macOS 打包工具由系统提供');
         }
         log('✅ 打包工具安装完成。');
       }
@@ -279,7 +281,7 @@ Future<void> copyTrayIcons({
   if (platform == 'windows') {
     platformSubDir = 'windows';
     fileExtension = '.ico';
-  } else if (platform == 'darwin') {
+  } else if (platform == 'macos') {
     // macOS 使用 PNG
     platformSubDir = 'macos';
     fileExtension = '.png';

@@ -403,11 +403,9 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           latestSubscription.disabledBuiltinChainProxyNames,
       customChainProxies: latestSubscription.customChainProxies,
       isLocalImport: latestSubscription.isLocalFile,
-      localFilePath: latestSubscription.isLocalFile
-          ? PathService.instance.getSubscriptionConfigPath(
-              latestSubscription.id,
-            )
-          : null,
+      localFilePath: PathService.instance.getSubscriptionConfigPath(
+        latestSubscription.id,
+      ),
       existingRemoteUrl: latestSubscription.isLocalFile
           ? null
           : latestSubscription.url,

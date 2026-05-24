@@ -27,7 +27,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  actions: write
 
 jobs:
   # ------------ 提前准备（读取包名 & 生成 tag & 读取版本号） ------------
@@ -127,7 +128,6 @@ jobs:
   build:
     name: 构建 ${{ matrix.platform }}-${{ matrix.arch }}
     needs: prepare
-    if: needs.prepare.outputs.version_changed == 'false' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -248,164 +248,22 @@ jobs:
           if [ "${{ matrix.platform }}" = "android" ]; then
             ARGS="--android --android-arch=${{ matrix.arch }}"
           else
-            ARGS=""
-            if [ "$RUNNER_OS" != "macOS" ]; then
-              ARGS="--with-installer"
-            fi
+            ARGS="--with-installer"
           fi
           dart run scripts/build.dart $ARGS
 
-      - name: 复制构建产物到 dist
-        shell: bash
-        run: |
-          echo "📦 正在复制构建产物..."
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            pwsh -c '
-              New-Item -ItemType Directory -Force -Path dist | Out-Null
-              if (Test-Path "build/packages") {
-                Copy-Item -Path "build/packages/*" -Destination "dist/" -Recurse -Force
-                Write-Host "✅ 构建产物已复制到 dist/"
-                Write-Host ""
-                Write-Host "📦 产物列表:"
-                Get-ChildItem -Path "dist/" | ForEach-Object {
-                  $size = if ($_.PSIsContainer) { "目录" } else { "$([math]::Round($_.Length / 1MB, 2)) MB" }
-                  Write-Host "  - $($_.Name) ($size)"
-                }
-              } else {
-                Write-Host "❌ 错误: build/packages 目录不存在"
-                exit 1
-              }
-            '
-          else
-            mkdir -p dist
-            if [ -d "build/packages" ]; then
-              cp -r build/packages/* dist/
-              echo "✅ 构建产物已复制到 dist/"
-              echo ""
-              echo "📦 产物列表:"
-              ls -lh dist/
-            else
-              echo "❌ 错误: build/packages 目录不存在"
-              exit 1
-            fi
-          fi
-
-      - name: 上传构建产物
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ needs.prepare.outputs.pkg }}-${{ matrix.platform }}-${{ matrix.arch }}
-          path: dist/*
-          retention-days: 7
-          # 添加唯一标识符以避免不同架构间的文件名冲突
-          if-no-files-found: warn
-
-  # ------------ 上传到发布页 ------------
-  release:
-    name: 发布构建
+  # ------------ 触发正式版构建 ------------
+  trigger_release:
+    name: 触发正式版构建
     needs: [prepare, build]
-    if: "!cancelled() && (needs.build.result == 'success' || needs.build.result == 'failure')"
+    if: github.event_name == 'push' && needs.prepare.outputs.version_changed == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
 
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v6
-
-      - name: 解码提交信息
-        id: decode_commit
-        run: |
-          echo "📝 正在解码提交信息..."
-          
-          # 从 prepare job 获取 base64 编码的提交信息
-          subject_base64="${{ needs.prepare.outputs.commit_subject }}"
-          body_base64="${{ needs.prepare.outputs.commit_body }}"
-          
-          if [ -n "$subject_base64" ]; then
-            # 解码 base64
-            commit_subject=$(echo "$subject_base64" | base64 -d)
-            echo "✅ 提交标题: $commit_subject"
-            
-            # 输出到 GitHub Actions
-            {
-              echo 'subject<<EOF'
-              echo "$commit_subject"
-              echo EOF
-            } >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ 未找到提交标题"
-            echo "subject=未知提交" >> $GITHUB_OUTPUT
-          fi
-          
-          if [ -n "$body_base64" ]; then
-            # 解码 base64
-            commit_body=$(echo "$body_base64" | base64 -d)
-            echo "✅ 提交正文已解码"
-            
-            # 输出到 GitHub Actions
-            {
-              echo 'body<<EOF'
-              echo "$commit_body"
-              echo EOF
-            } >> $GITHUB_OUTPUT
-          else
-            echo "⚠️ 未找到提交正文"
-            echo "body=" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 下载构建产物
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-
-      - name: 预发布构建产物
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare.outputs.tag }}
-          name: Beta ${{ needs.prepare.outputs.datetime }}
-          body: |
-            ## 🚀 Beta 测试版本
-            
-            > ⚠️ 这是自动构建的测试版本，可能存在未知问题，仅供测试使用。
-            
-            ### 📦 构建信息
-            
-            | 项目 | 内容 |
-            |------|------|
-            | **包名** | `${{ needs.prepare.outputs.pkg }}` |
-            | **应用版本** | `${{ needs.prepare.outputs.version }}` |
-            | **构建时间** | ${{ needs.prepare.outputs.datetime }} (UTC) |
-            | **提交哈希** | [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) |
-            
-            ### 📝 本次更新
-
-            **提交者**: ${{ needs.prepare.outputs.commit_author }}
-            **提交时间**: ${{ needs.prepare.outputs.commit_date }}
-
-            **提交标题**:
-            ```
-            ${{ steps.decode_commit.outputs.subject }}
-            ```
-
-            **提交详情**:
-            ```
-            ${{ steps.decode_commit.outputs.body }}
-            ```
-            
-            ---
-            
-            ### 📥 下载说明
-            
-            支持平台：
-            - **Windows**: `x64`, `arm64`
-            - **Linux**: `amd64`, `arm64`
-            - **macOS**: `arm64`
-            - **Android**: `x64`, `arm64`
-            
-            所有构建产物已打包上传，请根据需要下载。
-
-          files: artifacts/**/*
-          prerelease: true
-          overwrite_files: true
-          make_latest: true
+      - name: 触发正式版工作流
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release-build.yml --ref "${{ github.ref_name }}"
+          echo "✅ 已触发正式版构建：${{ needs.prepare.outputs.version }}"
 

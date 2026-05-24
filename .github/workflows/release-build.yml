@@ -1,16 +1,6 @@
 name: 正式版构建
 
 on:
-  push:
-    branches:
-      - '**'
-    paths-ignore:
-      - '.github/workflows/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '*.md'
-      - 'LICENSE'
-      - '.gitignore'
-      - 'docs/**'
   workflow_dispatch:
 
 permissions:

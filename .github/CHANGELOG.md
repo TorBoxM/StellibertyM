@@ -1,8 +1,10 @@
-- 修复更新当前订阅后切到代理页时节点列表不立即刷新的问题
+- 修复编辑远程订阅的链式代理时提示配置路径不可用的问题
+- 已添加 macOS 安装包生成，欢迎 macOS 用户协助测试
 
 <details>
 <summary>English Version</summary>
 
-- Fixed proxy nodes not refreshing immediately after updating the active subscription
+- Fixed the unavailable configuration path error when editing chain proxies for remote subscriptions
+- Added macOS installer generation, and macOS users are welcome to help test it
 
 </details>

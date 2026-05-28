@@ -264,6 +264,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run release-build.yml --ref "${{ github.ref_name }}"
+          gh workflow run release-build.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
           echo "✅ 已触发正式版构建：${{ needs.prepare.outputs.version }}"
 

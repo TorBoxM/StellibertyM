@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:stelliberty/clash/model/clash_model.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
 import 'package:stelliberty/ui/widgets/proxy/proxy_group_card_vertical.dart';
@@ -118,7 +119,7 @@ class _ProxyGroupListVerticalState extends State<ProxyGroupListVertical> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: filteredGroups.length,
               // 设置缓存范围为总高度，确保滚动条准确
-              cacheExtent: totalHeight,
+              scrollCacheExtent: ScrollCacheExtent.pixels(totalHeight),
               itemBuilder: (context, index) {
                 final group = filteredGroups[index];
                 final groupName = group.name;

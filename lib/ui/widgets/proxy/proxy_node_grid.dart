@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:stelliberty/atomic/platform_helper.dart';
 import 'package:stelliberty/clash/providers/clash_provider.dart';
@@ -194,7 +195,7 @@ class _ProxyNodeGridWidgetState extends State<ProxyNodeGrid> {
                       ),
                       itemCount: sortedGroup.all.length,
                       // 优化渲染性能
-                      cacheExtent: 500.0,
+                      scrollCacheExtent: const ScrollCacheExtent.pixels(500.0),
                       addAutomaticKeepAlives: true,
                       addRepaintBoundaries: true,
                       itemBuilder: (context, index) {

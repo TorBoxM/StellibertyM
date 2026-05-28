@@ -3,7 +3,9 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 
 #include <memory>
 
@@ -27,8 +29,16 @@ class FlutterWindow : public Win32Window {
   // Flutter 项目配置
   flutter::DartProject project_;
 
+  void HandleSessionMethodCall(
+      const flutter::MethodCall<flutter::EncodableValue>& call,
+      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+  void DisableSystemProxyForSessionEnd();
+
   // Flutter 视图控制器
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> session_channel_;
+  bool should_disable_system_proxy_on_session_end_ = false;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

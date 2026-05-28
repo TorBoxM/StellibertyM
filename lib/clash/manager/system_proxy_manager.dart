@@ -1,6 +1,7 @@
 import 'package:stelliberty/services/system_proxy_service.dart';
 import 'package:stelliberty/storage/clash_preferences.dart';
 import 'package:stelliberty/services/log_print_service.dart';
+import 'package:stelliberty/services/window_state_service.dart';
 
 // Clash 系统代理管理器
 // 负责系统代理的启用和禁用
@@ -57,6 +58,7 @@ class SystemProxyManager {
       );
 
       _hasEnabledSystemProxy = true;
+      await AppWindowListener.setSystemProxyOwnership(true);
       if (shouldUsePacMode) {
         Logger.info('系统代理已更新 (PAC 模式)');
       } else {
@@ -92,6 +94,7 @@ class SystemProxyManager {
 
       _isSystemProxyEnabled = true;
       _hasEnabledSystemProxy = true;
+      await AppWindowListener.setSystemProxyOwnership(true);
       _onSystemProxyStateChanged?.call(true);
       _notifyListeners();
       return true;
@@ -118,6 +121,7 @@ class SystemProxyManager {
       await SystemProxy.disable();
       _isSystemProxyEnabled = false;
       _hasEnabledSystemProxy = false;
+      await AppWindowListener.setSystemProxyOwnership(false);
       _onSystemProxyStateChanged?.call(false);
       _notifyListeners();
       return true;

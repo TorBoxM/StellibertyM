@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rinf/rinf.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:stelliberty/storage/preferences.dart';
@@ -218,6 +219,8 @@ class _WindowState {
 // 窗口监听器，拦截窗口关闭事件
 class AppWindowListener with WindowListener {
   static final AppWindowListener _instance = AppWindowListener._internal();
+  static const _sessionChannel = MethodChannel('io.github.stelliberty/session');
+
   factory AppWindowListener() => _instance;
   AppWindowListener._internal();
 
@@ -232,6 +235,14 @@ class AppWindowListener with WindowListener {
   void onWindowClose() async {
     Logger.info('窗口监听器拦截到关闭事件');
     await WindowExitHandler.handleWindowClose();
+  }
+
+  static Future<void> setSystemProxyOwnership(bool value) async {
+    if (!Platform.isWindows) {
+      return;
+    }
+
+    await _sessionChannel.invokeMethod<void>('setSystemProxyOwnership', value);
   }
 
   // 销毁监听器

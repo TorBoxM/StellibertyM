@@ -196,9 +196,8 @@ class _OverrideSelectorDialogState extends State<OverrideSelectorDialog> {
       padding: const EdgeInsets.all(24),
       itemCount: _orderedOverrides.length,
       buildDefaultDragHandles: false,
-      onReorder: (oldIndex, newIndex) {
+      onReorderItem: (oldIndex, newIndex) {
         setState(() {
-          if (oldIndex < newIndex) newIndex -= 1;
           final item = _orderedOverrides.removeAt(oldIndex);
           _orderedOverrides.insert(newIndex, item);
         });

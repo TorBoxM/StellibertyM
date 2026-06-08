@@ -154,6 +154,7 @@ class SubscriptionService {
           BigInt.from(ClashDefaults.subscriptionDownloadTimeout),
         ),
         mixedPort: mixedPort,
+        ageSecretKey: _normalizeAgeSecretKey(subscription.ageSecretKey),
       );
       downloadRequest.sendSignalToRust();
 
@@ -235,6 +236,11 @@ class SubscriptionService {
       total: rustInfo.total?.toInt() ?? 0,
       expire: rustInfo.expire?.toInt() ?? 0,
     );
+  }
+
+  String? _normalizeAgeSecretKey(String secretKey) {
+    final trimmed = secretKey.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   // 验证配置文件格式
@@ -322,6 +328,7 @@ class SubscriptionService {
     String url, {
     SubscriptionProxyMode proxyMode = SubscriptionProxyMode.direct,
     String userAgent = ClashDefaults.defaultUserAgent,
+    String ageSecretKey = '',
     required int mixedPort,
   }) async {
     final requestId = _buildRequestId('chain-proxy-candidates');
@@ -350,6 +357,7 @@ class SubscriptionService {
           BigInt.from(ClashDefaults.subscriptionDownloadTimeout),
         ),
         mixedPort: mixedPort,
+        ageSecretKey: _normalizeAgeSecretKey(ageSecretKey),
       );
       downloadRequest.sendSignalToRust();
 

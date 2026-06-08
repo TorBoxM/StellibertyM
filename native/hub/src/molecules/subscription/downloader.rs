@@ -5,7 +5,12 @@ use crate::molecules::ProxyMode;
 use reqwest::{Client, Proxy};
 use rinf::{DartSignal, RustSignal};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use std::time::Duration;
+
+const AGE_ARMOR_HEADER: &str = "-----BEGIN AGE ENCRYPTED FILE-----";
+const AGE_X25519_SECRET_KEY_PREFIX: &str = "AGE-SECRET-KEY-1";
+const AGE_HYBRID_SECRET_KEY_PREFIX: &str = "AGE-SECRET-KEY-PQ-1";
 
 // Dart → Rust：下载订阅请求
 #[derive(Deserialize, DartSignal)]
@@ -16,6 +21,7 @@ pub struct DownloadSubscriptionRequest {
     pub user_agent: String,
     pub timeout_seconds: u64,
     pub mixed_port: u16, // Clash 混合端口
+    pub age_secret_key: Option<String>,
 }
 
 // Rust → Dart：下载订阅响应
@@ -47,6 +53,7 @@ impl DownloadSubscriptionRequest {
             &self.user_agent,
             self.timeout_seconds,
             self.mixed_port,
+            self.age_secret_key.as_deref(),
         )
         .await;
 
@@ -89,6 +96,7 @@ pub async fn download_subscription(
     user_agent: &str,
     timeout_seconds: u64,
     mixed_port: u16,
+    age_secret_key: Option<&str>,
 ) -> Result<(String, Option<SubscriptionInfoData>), Box<dyn std::error::Error + Send + Sync>> {
     log::info!("开始下载订阅：{}", url);
     log::info!("代理模式：{:?}", proxy_mode);
@@ -124,9 +132,89 @@ pub async fn download_subscription(
         return Err("订阅内容为空".into());
     }
 
+    let content = decrypt_age_content_if_needed(&content, age_secret_key)?;
+    if content.is_empty() {
+        return Err("订阅内容为空".into());
+    }
+
     log::info!("订阅下载成功，内容长度：{} 字节", content.len());
 
     Ok((content, subscription_info))
+}
+
+fn decrypt_age_content_if_needed(
+    content: &str,
+    age_secret_key: Option<&str>,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    if !content.starts_with(AGE_ARMOR_HEADER) {
+        return Ok(content.to_string());
+    }
+
+    let Some(secret_key) = age_secret_key.map(str::trim).filter(|key| !key.is_empty()) else {
+        return Err("订阅内容已使用 age 加密，请填写 age-secret-key".into());
+    };
+
+    let (identities, has_hybrid_secret_key) = parse_x25519_identities(secret_key)?;
+
+    for identity in identities {
+        match age::decrypt(&identity, content.as_bytes()) {
+            Ok(bytes) => {
+                let decrypted = String::from_utf8(bytes)
+                    .map_err(|e| format!("age 解密结果不是有效 UTF-8：{}", e))?;
+                log::info!("订阅 age 解密成功");
+                return Ok(decrypted);
+            }
+            Err(e) => {
+                log::debug!("当前 age-secret-key 无法解密订阅：{}", e);
+            }
+        }
+    }
+
+    if has_hybrid_secret_key {
+        return Err(
+            "当前内置解密仅支持 x25519 age-secret-key，暂不支持 mlkem768-x25519 key".into(),
+        );
+    }
+
+    Err("age-secret-key 无法解密订阅内容".into())
+}
+
+fn parse_x25519_identities(
+    secret_key: &str,
+) -> Result<(Vec<age::x25519::Identity>, bool), Box<dyn std::error::Error + Send + Sync>> {
+    let mut identities = Vec::new();
+    let mut has_hybrid_secret_key = false;
+
+    for line in secret_key.lines().map(str::trim) {
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        if line.starts_with(AGE_HYBRID_SECRET_KEY_PREFIX) {
+            has_hybrid_secret_key = true;
+            continue;
+        }
+
+        if !line.starts_with(AGE_X25519_SECRET_KEY_PREFIX) {
+            return Err(format!("age-secret-key 类型无效：{}", line).into());
+        }
+
+        let identity = age::x25519::Identity::from_str(line)
+            .map_err(|e| format!("age-secret-key 格式无效：{}", e))?;
+        identities.push(identity);
+    }
+
+    if identities.is_empty() && has_hybrid_secret_key {
+        return Err(
+            "当前内置解密仅支持 x25519 age-secret-key，暂不支持 mlkem768-x25519 key".into(),
+        );
+    }
+
+    if identities.is_empty() {
+        return Err("age-secret-key 未包含有效私钥".into());
+    }
+
+    Ok((identities, has_hybrid_secret_key))
 }
 
 // 创建 HTTP 客户端
@@ -217,4 +305,43 @@ pub fn init() {
             });
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decrypt_age_content_if_needed;
+    use age::secrecy::ExposeSecret;
+
+    #[test]
+    fn decrypt_age_content_with_x25519_secret_key()
+    -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let identity = age::x25519::Identity::generate();
+        let recipient = identity.to_public();
+        let plaintext = "proxies:\n  - name: test\nproxy-groups:\n  - name: PROXY\n";
+        let encrypted = age::encrypt_and_armor(&recipient, plaintext.as_bytes())?;
+        let secret_key = identity.to_string();
+
+        let decrypted =
+            decrypt_age_content_if_needed(&encrypted, Some(secret_key.expose_secret()))?;
+
+        assert_eq!(decrypted, plaintext);
+        Ok(())
+    }
+
+    #[test]
+    fn reject_hybrid_secret_key_with_clear_error()
+    -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let identity = age::x25519::Identity::generate();
+        let recipient = identity.to_public();
+        let encrypted = age::encrypt_and_armor(&recipient, b"proxies: []")?;
+
+        let err =
+            match decrypt_age_content_if_needed(&encrypted, Some("AGE-SECRET-KEY-PQ-1INVALID")) {
+                Ok(_) => return Err("预期 PQ key 会被当前内置解密拒绝".into()),
+                Err(e) => e,
+            };
+
+        assert!(err.to_string().contains("mlkem768-x25519"));
+        Ok(())
+    }
 }

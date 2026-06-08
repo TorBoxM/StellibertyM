@@ -193,6 +193,7 @@ class Subscription {
   final List<String> overrideSortPreferences; // 规则覆写排序偏好（完整顺序，包括未选中的）
   final List<String> failedOverrideIds; // 失败的覆写 ID 列表(启动失败时记录)
   final String userAgent; // User-Agent（仅远程订阅有效，默认为 clash.meta）
+  final String ageSecretKey; // age 加密订阅解密私钥
   final bool hasConfigLoadFailed; // 配置加载失败标记（用于 UI 显示警告）
   final bool autoTestAllDelaysEnabled; // 是否启用自动测试全部延迟
   final int autoTestAllDelaysIntervalMinutes; // 自动测试全部延迟间隔（分钟）
@@ -217,6 +218,7 @@ class Subscription {
     this.overrideSortPreferences = const [],
     this.failedOverrideIds = const [],
     this.userAgent = ClashDefaults.defaultUserAgent,
+    this.ageSecretKey = '',
     this.hasConfigLoadFailed = false,
     this.autoTestAllDelaysEnabled = false,
     this.autoTestAllDelaysIntervalMinutes = 10,
@@ -282,6 +284,7 @@ class Subscription {
     List<String>? overrideSortPreferences,
     List<String>? failedOverrideIds,
     String? userAgent,
+    String? ageSecretKey,
     bool? hasConfigLoadFailed,
     bool? autoTestAllDelaysEnabled,
     int? autoTestAllDelaysIntervalMinutes,
@@ -308,6 +311,7 @@ class Subscription {
           overrideSortPreferences ?? this.overrideSortPreferences,
       failedOverrideIds: failedOverrideIds ?? this.failedOverrideIds,
       userAgent: userAgent ?? this.userAgent,
+      ageSecretKey: ageSecretKey ?? this.ageSecretKey,
       hasConfigLoadFailed: hasConfigLoadFailed ?? this.hasConfigLoadFailed,
       autoTestAllDelaysEnabled:
           autoTestAllDelaysEnabled ?? this.autoTestAllDelaysEnabled,
@@ -338,12 +342,15 @@ class Subscription {
     'overrideSortPreferences': overrideSortPreferences,
     'failedOverrideIds': failedOverrideIds,
     'userAgent': userAgent,
+    'ageSecretKey': ageSecretKey,
     'hasConfigLoadFailed': hasConfigLoadFailed,
     'autoTestAllDelaysEnabled': autoTestAllDelaysEnabled,
     'autoTestAllDelaysIntervalMinutes': autoTestAllDelaysIntervalMinutes,
     'builtinChainProxyNames': builtinChainProxyNames,
     'disabledBuiltinChainProxyNames': disabledBuiltinChainProxyNames,
-    'customChainProxies': customChainProxies.map((item) => item.toJson()).toList(),
+    'customChainProxies': customChainProxies
+        .map((item) => item.toJson())
+        .toList(),
   };
 
   factory Subscription.fromJson(Map<String, dynamic> json) {
@@ -377,6 +384,7 @@ class Subscription {
           ? List<String>.from(json['failedOverrideIds'] as List)
           : const [],
       userAgent: json['userAgent'] as String? ?? ClashDefaults.defaultUserAgent,
+      ageSecretKey: json['ageSecretKey'] as String? ?? '',
       hasConfigLoadFailed: json['hasConfigLoadFailed'] as bool? ?? false,
       autoTestAllDelaysEnabled:
           json['autoTestAllDelaysEnabled'] as bool? ?? false,

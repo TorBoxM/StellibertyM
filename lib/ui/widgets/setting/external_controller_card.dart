@@ -84,6 +84,14 @@ class _ExternalControllerCardState extends State<ExternalControllerCard> {
       await prefs.setExternalControllerSecret(secret);
 
       if (mounted) {
+        final clashProvider = context.read<ClashProvider>();
+        clashProvider.refreshConfigState();
+        if (_isEnabled) {
+          await clashProvider.setExternalController(_isEnabled);
+        }
+      }
+
+      if (mounted) {
         ModernToast.success(trans.external_controller.save_success);
       }
     } catch (e) {

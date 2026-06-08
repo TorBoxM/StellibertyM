@@ -15,6 +15,7 @@ class ConfigState {
   final String findProcessMode;
   final String clashCoreLogLevel;
   final String externalController;
+  final String externalControllerSecret;
   final String testUrl;
   final String outboundMode;
 
@@ -47,6 +48,7 @@ class ConfigState {
     this.findProcessMode = ClashDefaults.defaultFindProcessMode,
     this.clashCoreLogLevel = ClashDefaults.defaultLogLevel,
     this.externalController = '',
+    this.externalControllerSecret = '',
     this.testUrl = ClashDefaults.defaultTestUrl,
     this.outboundMode = ClashDefaults.defaultOutboundMode,
     this.isTunEnabled = false,
@@ -80,6 +82,7 @@ class ConfigState {
       externalController: prefs.getExternalControllerEnabled()
           ? prefs.getExternalControllerAddress()
           : '',
+      externalControllerSecret: prefs.getExternalControllerSecret(),
       testUrl: prefs.getTestUrl(),
       outboundMode: prefs.getOutboundMode(),
       isTunEnabled: prefs.getTunEnable(),
@@ -110,6 +113,7 @@ class ConfigState {
     String? findProcessMode,
     String? clashCoreLogLevel,
     String? externalController,
+    String? externalControllerSecret,
     String? testUrl,
     String? outboundMode,
     bool? isTunEnabled,
@@ -140,6 +144,8 @@ class ConfigState {
       findProcessMode: findProcessMode ?? this.findProcessMode,
       clashCoreLogLevel: clashCoreLogLevel ?? this.clashCoreLogLevel,
       externalController: externalController ?? this.externalController,
+      externalControllerSecret:
+          externalControllerSecret ?? this.externalControllerSecret,
       testUrl: testUrl ?? this.testUrl,
       outboundMode: outboundMode ?? this.outboundMode,
       isTunEnabled: isTunEnabled ?? this.isTunEnabled,

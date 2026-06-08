@@ -86,11 +86,13 @@ class SubscriptionManager {
     String url, {
     SubscriptionProxyMode proxyMode = SubscriptionProxyMode.direct,
     String userAgent = ClashDefaults.defaultUserAgent,
+    String ageSecretKey = '',
   }) async {
     return await _service.parseRemoteSubscriptionContent(
       url,
       proxyMode: proxyMode,
       userAgent: userAgent,
+      ageSecretKey: ageSecretKey,
       mixedPort: _getMixedPort(),
     );
   }

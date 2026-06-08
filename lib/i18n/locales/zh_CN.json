@@ -214,6 +214,8 @@
     "auto_delay_test_interval_hint": "0（该值表示禁用）",
     "auto_delay_test_interval_error": "请输入有效的分钟数，0 表示禁用",
     "auto_delay_test_interval_disabled": "禁用",
+    "age_secret_key_label": "Age 解密私钥",
+    "age_secret_key_hint": "可选，AGE-SECRET-KEY-...",
     "proxy_mode_title": "更新代理模式",
     "proxy_mode_direct": "直接连接，不使用代理",
     "proxy_mode_direct_title": "直连",

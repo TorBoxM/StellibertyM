@@ -137,11 +137,13 @@ class SubscriptionProvider extends ChangeNotifier {
     String url, {
     SubscriptionProxyMode proxyMode = SubscriptionProxyMode.direct,
     String userAgent = ClashDefaults.defaultUserAgent,
+    String ageSecretKey = '',
   }) async {
     return await _manager.parseRemoteSubscriptionContent(
       url,
       proxyMode: proxyMode,
       userAgent: userAgent,
+      ageSecretKey: ageSecretKey,
     );
   }
 
@@ -321,6 +323,7 @@ class SubscriptionProvider extends ChangeNotifier {
     bool downloadNow = true,
     SubscriptionProxyMode proxyMode = SubscriptionProxyMode.direct,
     String? userAgent,
+    String ageSecretKey = '',
     bool autoTestAllDelaysEnabled = false,
     int autoTestAllDelaysIntervalMinutes = 10,
     List<String> disabledBuiltinChainProxyNames = const [],
@@ -350,6 +353,7 @@ class SubscriptionProvider extends ChangeNotifier {
         shouldUpdateOnStartup: shouldUpdateOnStartup,
         proxyMode: proxyMode,
         userAgent: effectiveUserAgent,
+        ageSecretKey: ageSecretKey,
         autoTestAllDelaysEnabled: autoTestAllDelaysEnabled,
         autoTestAllDelaysIntervalMinutes: autoTestAllDelaysIntervalMinutes,
         disabledBuiltinChainProxyNames: disabledBuiltinChainProxyNames,
@@ -1282,6 +1286,7 @@ class SubscriptionProvider extends ChangeNotifier {
     bool? shouldUpdateOnStartup,
     SubscriptionProxyMode? proxyMode,
     String? userAgent,
+    String? ageSecretKey,
     bool? autoTestAllDelaysEnabled,
     int? autoTestAllDelaysIntervalMinutes,
     List<String>? disabledBuiltinChainProxyNames,
@@ -1306,6 +1311,7 @@ class SubscriptionProvider extends ChangeNotifier {
             shouldUpdateOnStartup ?? subscription.shouldUpdateOnStartup,
         proxyMode: proxyMode ?? subscription.proxyMode,
         userAgent: userAgent ?? subscription.userAgent,
+        ageSecretKey: ageSecretKey ?? subscription.ageSecretKey,
         autoTestAllDelaysEnabled:
             autoTestAllDelaysEnabled ?? subscription.autoTestAllDelaysEnabled,
         autoTestAllDelaysIntervalMinutes:

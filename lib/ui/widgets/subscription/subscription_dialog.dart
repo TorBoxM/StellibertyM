@@ -37,6 +37,7 @@ class SubscriptionDialog extends StatefulWidget {
   final bool? initialUpdateOnStartup;
   final SubscriptionProxyMode? initialProxyMode;
   final String? initialUserAgent;
+  final String? initialAgeSecretKey;
   final bool? initialAutoTestAllDelaysEnabled;
   final int? initialAutoTestAllDelaysIntervalMinutes;
   final List<String> initialBuiltinChainProxyNames;
@@ -58,6 +59,7 @@ class SubscriptionDialog extends StatefulWidget {
     this.initialUpdateOnStartup,
     this.initialProxyMode,
     this.initialUserAgent,
+    this.initialAgeSecretKey,
     this.initialAutoTestAllDelaysEnabled,
     this.initialAutoTestAllDelaysIntervalMinutes,
     this.initialBuiltinChainProxyNames = const [],
@@ -109,6 +111,7 @@ class SubscriptionDialog extends StatefulWidget {
         initialUpdateOnStartup: subscription.shouldUpdateOnStartup,
         initialProxyMode: subscription.proxyMode,
         initialUserAgent: subscription.userAgent,
+        initialAgeSecretKey: subscription.ageSecretKey,
         initialAutoTestAllDelaysEnabled: subscription.autoTestAllDelaysEnabled,
         initialAutoTestAllDelaysIntervalMinutes:
             subscription.autoTestAllDelaysIntervalMinutes,
@@ -133,6 +136,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
   late final TextEditingController _intervalController;
   late final TextEditingController _autoDelayTestIntervalController;
   late final TextEditingController _userAgentController;
+  late final TextEditingController _ageSecretKeyController;
   late final FocusNode _autoDelayTestIntervalFocusNode;
   late int _autoDelayTestIntervalMinutes;
   late AutoUpdateMode _autoUpdateMode;
@@ -182,6 +186,9 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     _userAgentController = TextEditingController(
       text: widget.initialUserAgent ?? '',
     );
+    _ageSecretKeyController = TextEditingController(
+      text: widget.initialAgeSecretKey ?? '',
+    );
 
     // 初始化自动更新模式和代理模式
     _autoUpdateMode = widget.initialAutoUpdateMode ?? AutoUpdateMode.disabled;
@@ -205,6 +212,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
       _handleAutoDelayTestIntervalChanged,
     );
     _userAgentController.addListener(_checkForChanges);
+    _ageSecretKeyController.addListener(_checkForChanges);
     _autoDelayTestIntervalFocusNode.addListener(
       _handleAutoDelayTestFocusChanged,
     );
@@ -250,6 +258,12 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
       final currentUA = _userAgentController.text.trim();
       final initialUA = widget.initialUserAgent ?? '';
       if (currentUA != initialUA) {
+        return true;
+      }
+
+      final currentAgeSecretKey = _ageSecretKeyController.text.trim();
+      final initialAgeSecretKey = widget.initialAgeSecretKey ?? '';
+      if (currentAgeSecretKey != initialAgeSecretKey) {
         return true;
       }
     }
@@ -375,6 +389,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
       _handleAutoDelayTestIntervalChanged,
     );
     _userAgentController.removeListener(_checkForChanges);
+    _ageSecretKeyController.removeListener(_checkForChanges);
     _autoDelayTestIntervalFocusNode.removeListener(
       _handleAutoDelayTestFocusChanged,
     );
@@ -384,6 +399,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     _intervalController.dispose();
     _autoDelayTestIntervalController.dispose();
     _userAgentController.dispose();
+    _ageSecretKeyController.dispose();
     _autoDelayTestIntervalFocusNode.dispose();
     super.dispose();
   }
@@ -521,6 +537,8 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
               ),
               const SizedBox(height: _dialogItemSpacing),
               _buildUserAgentField(),
+              const SizedBox(height: _dialogItemSpacing),
+              _buildAgeSecretKeyField(),
             ] else if (shouldShowLocalFileSelector) ...[
               const SizedBox(height: _dialogItemSpacing),
               _buildFileSelector(),
@@ -635,6 +653,17 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     );
   }
 
+  Widget _buildAgeSecretKeyField() {
+    final dialogTrans = context.translate.subscription_dialog;
+    return TextInputField(
+      controller: _ageSecretKeyController,
+      label: dialogTrans.age_secret_key_label,
+      hint: dialogTrans.age_secret_key_hint,
+      icon: Icons.key,
+      shouldObscureText: true,
+    );
+  }
+
   // 构建导入方式选择器
   Widget _buildImportModeSelector() {
     final dialogTrans = context.translate.subscription_dialog;
@@ -708,6 +737,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
     try {
       // 获取 UA 值，如果为空则使用默认值
       final userAgent = _userAgentController.text.trim();
+      final ageSecretKey = _ageSecretKeyController.text.trim();
       final result = SubscriptionDialogResult(
         name: _nameController.text.trim(),
         url: _importMethod == SubscriptionImportMethod.link
@@ -720,6 +750,7 @@ class _SubscriptionDialogState extends State<SubscriptionDialog> {
         localFilePath: _selectedFile?.file.path,
         proxyMode: _proxyMode,
         userAgent: userAgent.isEmpty ? _defaultUserAgent : userAgent,
+        ageSecretKey: ageSecretKey,
         autoTestAllDelaysIntervalMinutes: _autoDelayTestIntervalMinutes,
         autoTestAllDelaysEnabled: _autoDelayTestIntervalMinutes > 0,
         builtinChainProxyNames: _builtinChainProxyNames,
@@ -795,6 +826,7 @@ class SubscriptionDialogResult {
   final String? localFilePath;
   final SubscriptionProxyMode proxyMode;
   final String userAgent;
+  final String ageSecretKey;
   final bool autoTestAllDelaysEnabled;
   final int autoTestAllDelaysIntervalMinutes;
   final List<String> builtinChainProxyNames;
@@ -811,6 +843,7 @@ class SubscriptionDialogResult {
     this.localFilePath,
     this.proxyMode = SubscriptionProxyMode.direct,
     String? userAgent,
+    this.ageSecretKey = '',
     this.autoTestAllDelaysEnabled = false,
     this.autoTestAllDelaysIntervalMinutes = 10,
     this.builtinChainProxyNames = const [],

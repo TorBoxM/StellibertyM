@@ -41,6 +41,9 @@ class TextInputField extends StatelessWidget {
   // 键盘类型
   final TextInputType? keyboardType;
 
+  // 是否隐藏输入内容
+  final bool shouldObscureText;
+
   const TextInputField({
     super.key,
     required this.controller,
@@ -55,6 +58,7 @@ class TextInputField extends StatelessWidget {
     this.enabled = true,
     this.inputFormatters,
     this.keyboardType,
+    this.shouldObscureText = false,
   });
 
   @override
@@ -93,6 +97,7 @@ class TextInputField extends StatelessWidget {
           validator: validator,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
+          obscureText: shouldObscureText,
           style: TextStyle(fontSize: fontSize),
           decoration: InputDecoration(
             labelText: label,

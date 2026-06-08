@@ -134,6 +134,7 @@ class ClashProvider extends ChangeNotifier with WidgetsBindingObserver {
   String get findProcessMode => _configState.findProcessMode;
   String get clashCoreLogLevel => _configState.clashCoreLogLevel;
   String get externalController => _configState.externalController;
+  String get externalControllerSecret => _configState.externalControllerSecret;
   bool get isExternalControllerEnabled =>
       _configState.isExternalControllerEnabled;
   String get testUrl => _configState.testUrl;

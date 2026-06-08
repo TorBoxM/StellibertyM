@@ -73,6 +73,7 @@ class ChainProxyDialog extends StatefulWidget {
   final bool isLocalImport;
   final String? localFilePath;
   final String? existingRemoteUrl;
+  final String remoteAgeSecretKey;
   final bool isEditMode;
   final String? existingProfileName;
 
@@ -85,6 +86,7 @@ class ChainProxyDialog extends StatefulWidget {
     required this.isLocalImport,
     this.localFilePath,
     this.existingRemoteUrl,
+    this.remoteAgeSecretKey = '',
     required this.isEditMode,
     this.existingProfileName,
   });
@@ -98,6 +100,7 @@ class ChainProxyDialog extends StatefulWidget {
     required bool isLocalImport,
     String? localFilePath,
     String? existingRemoteUrl,
+    String remoteAgeSecretKey = '',
     required bool isEditMode,
     String? existingProfileName,
   }) {
@@ -112,6 +115,7 @@ class ChainProxyDialog extends StatefulWidget {
         isLocalImport: isLocalImport,
         localFilePath: localFilePath,
         existingRemoteUrl: existingRemoteUrl,
+        remoteAgeSecretKey: remoteAgeSecretKey,
         isEditMode: isEditMode,
         existingProfileName: existingProfileName,
       ),
@@ -146,13 +150,17 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
     _disabledBuiltinChainProxyNames = List<String>.from(
       widget.disabledBuiltinChainProxyNames,
     );
-    _customChainProxies = List<CustomChainProxy>.from(widget.customChainProxies);
+    _customChainProxies = List<CustomChainProxy>.from(
+      widget.customChainProxies,
+    );
     _drafts = _customChainProxies
         .map(
           (item) => _ChainProxyDraft(
             id: item.id,
             displayName: item.displayName,
-            hopCount: item.nodeNames.isEmpty ? _defaultHopCount : item.nodeNames.length,
+            hopCount: item.nodeNames.isEmpty
+                ? _defaultHopCount
+                : item.nodeNames.length,
             selectedNodeNames: List<String>.from(item.nodeNames),
           ),
         )
@@ -189,7 +197,10 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
         if (item is! YamlMap) continue;
         final name = item['name'];
         final dialerProxy = item['dialer-proxy'];
-        if (name is String && name.isNotEmpty && dialerProxy is String && dialerProxy.isNotEmpty) {
+        if (name is String &&
+            name.isNotEmpty &&
+            dialerProxy is String &&
+            dialerProxy.isNotEmpty) {
           builtinChainNames.add(name);
         }
       }
@@ -202,7 +213,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
         if (name is! String || name.isEmpty) continue;
         if (type is! String || type.isEmpty) continue;
         if (builtinChainNames.contains(name)) continue;
-        if (_customChainProxies.any((proxy) => proxy.displayName == name)) continue;
+        if (_customChainProxies.any((proxy) => proxy.displayName == name)) {
+          continue;
+        }
         candidates.add(_ChainProxyCandidate(name: name, type: type));
       }
 
@@ -251,7 +264,10 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
     }
 
     final subscriptionProvider = context.read<SubscriptionProvider>();
-    return await subscriptionProvider.parseRemoteSubscriptionContent(remoteUrl);
+    return await subscriptionProvider.parseRemoteSubscriptionContent(
+      remoteUrl,
+      ageSecretKey: widget.remoteAgeSecretKey,
+    );
   }
 
   _ChainProxyDraft _createEmptyDraft() {
@@ -283,9 +299,7 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
     return blocked.toSet().toList();
   }
 
-  void _enterDraftMode({
-    _ChainProxyDraft? initialDraft,
-  }) {
+  void _enterDraftMode({_ChainProxyDraft? initialDraft}) {
     final nextDraft = initialDraft ?? _createEmptyDraft();
     setState(() {
       _isEditingDraft = true;
@@ -322,7 +336,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
       if (index == -1) return;
 
       final current = _drafts[index];
-      final nextSelectedNodeNames = List<String>.from(current.selectedNodeNames);
+      final nextSelectedNodeNames = List<String>.from(
+        current.selectedNodeNames,
+      );
       while (nextSelectedNodeNames.length > nextHopCount) {
         nextSelectedNodeNames.removeLast();
       }
@@ -422,7 +438,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
         orElse: () => _ChainProxyDraft(
           id: item.id,
           displayName: item.displayName,
-          hopCount: item.nodeNames.isEmpty ? _defaultHopCount : item.nodeNames.length,
+          hopCount: item.nodeNames.isEmpty
+              ? _defaultHopCount
+              : item.nodeNames.length,
           selectedNodeNames: List<String>.from(item.nodeNames),
         ),
       );
@@ -458,7 +476,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
                 onPressed: () => _exitDraftMode(discardDraft: true),
               ),
               DialogActionButton(
-                key: const ValueKey('subscription_chain_proxy_draft_save_button'),
+                key: const ValueKey(
+                  'subscription_chain_proxy_draft_save_button',
+                ),
                 label: trans.save_button,
                 icon: Icons.check,
                 onPressed: currentDraft == null ? null : _saveCurrentDraft,
@@ -469,7 +489,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
                 key: const ValueKey('subscription_chain_proxy_add_mode_button'),
                 label: trans.chain_proxy_add_button,
                 icon: Icons.add,
-                onPressed: _isLoadingCandidates ? null : () => _enterDraftMode(),
+                onPressed: _isLoadingCandidates
+                    ? null
+                    : () => _enterDraftMode(),
               ),
             ],
       actionsRight: [
@@ -604,7 +626,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
   }) {
     final trans = context.translate.subscription_dialog;
     final slots = List.generate(draft.hopCount, (index) {
-      final value = index < selectedNodeNames.length ? selectedNodeNames[index] : '';
+      final value = index < selectedNodeNames.length
+          ? selectedNodeNames[index]
+          : '';
       return value;
     });
 
@@ -644,12 +668,18 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
                     borderRadius: BorderRadius.circular(12),
                     color: Theme.of(context).brightness == Brightness.dark
                         ? Colors.white.withValues(alpha: isActive ? 0.08 : 0.03)
-                        : Colors.white.withValues(alpha: isActive ? 0.72 : 0.45),
+                        : Colors.white.withValues(
+                            alpha: isActive ? 0.72 : 0.45,
+                          ),
                     border: Border.all(
                       color: isActive
                           ? Theme.of(context).colorScheme.primary
                           : Colors.white.withValues(
-                              alpha: Theme.of(context).brightness == Brightness.dark ? 0.1 : 0.3,
+                              alpha:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? 0.1
+                                  : 0.3,
                             ),
                       width: isActive ? 1.6 : 1,
                     ),
@@ -661,7 +691,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
                         '${trans.chain_proxy_path_slot_label} ${index + 1}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -703,7 +735,8 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
           runSpacing: 8,
           children: _candidates.map((candidate) {
             final isSelected = activeSlotValue == candidate.name;
-            final isBlocked = blockedNodes.contains(candidate.name) && !isSelected;
+            final isBlocked =
+                blockedNodes.contains(candidate.name) && !isSelected;
             return ChoiceChip(
               label: Text(candidate.name),
               selected: isSelected,
@@ -751,10 +784,14 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
                   Expanded(child: Text(name)),
                   const SizedBox(width: 12),
                   IconButton(
-                    key: ValueKey('subscription_chain_proxy_builtin_toggle_$name'),
+                    key: ValueKey(
+                      'subscription_chain_proxy_builtin_toggle_$name',
+                    ),
                     onPressed: () => _toggleBuiltinChainProxy(name),
                     icon: Icon(
-                      enabled ? Icons.block_outlined : Icons.check_circle_outline,
+                      enabled
+                          ? Icons.block_outlined
+                          : Icons.check_circle_outline,
                     ),
                   ),
                 ],
@@ -814,7 +851,9 @@ class _ChainProxyDialogState extends State<ChainProxyDialog> {
                       initialDraft: _ChainProxyDraft(
                         id: item.id,
                         displayName: item.displayName,
-                        hopCount: item.nodeNames.isEmpty ? _defaultHopCount : item.nodeNames.length,
+                        hopCount: item.nodeNames.isEmpty
+                            ? _defaultHopCount
+                            : item.nodeNames.length,
                         selectedNodeNames: List<String>.from(item.nodeNames),
                       ),
                     ),

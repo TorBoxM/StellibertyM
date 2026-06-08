@@ -372,6 +372,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           shouldUpdateOnStartup: result.shouldUpdateOnStartup,
           proxyMode: result.proxyMode,
           userAgent: result.userAgent,
+          ageSecretKey: result.ageSecretKey,
           autoTestAllDelaysEnabled: result.autoTestAllDelaysEnabled,
           autoTestAllDelaysIntervalMinutes:
               result.autoTestAllDelaysIntervalMinutes,
@@ -409,6 +410,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       existingRemoteUrl: latestSubscription.isLocalFile
           ? null
           : latestSubscription.url,
+      remoteAgeSecretKey: latestSubscription.ageSecretKey,
       isEditMode: true,
       existingProfileName: latestSubscription.name,
     );
@@ -464,6 +466,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         shouldUpdateOnStartup: result.shouldUpdateOnStartup,
         proxyMode: result.proxyMode,
         userAgent: result.userAgent,
+        ageSecretKey: result.ageSecretKey,
         autoTestAllDelaysEnabled: result.autoTestAllDelaysEnabled,
         autoTestAllDelaysIntervalMinutes:
             result.autoTestAllDelaysIntervalMinutes,

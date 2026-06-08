@@ -125,43 +125,15 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMetricSpanRow(
-            context,
-            left: _buildMetric(
-              context,
-              label: trans.home.running_status_uptime,
-              value: uptimeDisplay,
-              color: colorScheme.primary,
-              icon: Icons.timer_outlined,
-              iconColor: colorScheme.primary,
-            ),
-            right: _buildMetric(
-              context,
-              label: trans.home.memory_usage,
-              value: combinedMemory,
-              color: colorScheme.secondary,
-              icon: Icons.memory,
-              iconColor: colorScheme.secondary,
-            ),
-          ),
-          const SizedBox(height: 16),
           _buildMetricRow(
             context,
             items: [
               _buildMetric(
                 context,
-                label: trans.home.running_status_platform,
-                value: platform,
-                color: colorScheme.onSurface,
-                icon: platformIcon,
-                iconColor: colorScheme.tertiary,
-              ),
-              _buildMetric(
-                context,
-                label: trans.home.core_version,
-                value: coreVersion,
-                color: colorScheme.onSurface,
-                icon: Icons.code,
+                label: trans.home.running_status_uptime,
+                value: uptimeDisplay,
+                color: colorScheme.primary,
+                icon: Icons.timer_outlined,
                 iconColor: colorScheme.primary,
               ),
               _buildMetric(
@@ -172,27 +144,45 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
                 icon: Icons.settings_suggest,
                 iconColor: colorScheme.secondary,
               ),
+              _buildMetric(
+                context,
+                label: trans.home.core_status,
+                value: coreStatus,
+                color: coreStatusColor,
+                icon: Icons.circle,
+                iconColor: coreStatusColor,
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          _buildMetricSpanRow(
+          _buildMetricRow(
             context,
-            left: _buildMetric(
-              context,
-              label: trans.home.core_status,
-              value: coreStatus,
-              color: coreStatusColor,
-              icon: Icons.circle,
-              iconColor: coreStatusColor,
-            ),
-            right: _buildMetric(
-              context,
-              label: trans.home.proxy_address,
-              value: proxyAddress,
-              color: proxyAddressColor,
-              icon: Icons.lan,
-              iconColor: colorScheme.primary,
-            ),
+            items: [
+              _buildMetric(
+                context,
+                label: trans.home.memory_usage,
+                value: combinedMemory,
+                color: colorScheme.secondary,
+                icon: Icons.memory,
+                iconColor: colorScheme.secondary,
+              ),
+              _buildMetric(
+                context,
+                label: trans.home.proxy_address,
+                value: proxyAddress,
+                color: proxyAddressColor,
+                icon: Icons.lan,
+                iconColor: colorScheme.primary,
+              ),
+              _buildMetric(
+                context,
+                label: trans.home.core_version,
+                value: coreVersion,
+                color: colorScheme.onSurface,
+                icon: Icons.code,
+                iconColor: colorScheme.primary,
+              ),
+            ],
           ),
         ],
       ),
@@ -309,16 +299,6 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ModernTooltip(
-          message: trans.home.update_core,
-          child: _HeaderActionButton(
-            icon: Icons.system_update_alt,
-            color: actionColor,
-            isBusy: _isCoreUpdating,
-            onPressed: canUpdate ? () => _updateCore(context) : null,
-          ),
-        ),
-        const SizedBox(width: 8),
         ModernTooltip(
           message: trans.proxy.restart_core,
           child: _HeaderActionButton(
@@ -449,110 +429,6 @@ class _RunningStatusCardState extends State<RunningStatusCard> {
         ),
       ],
     );
-  }
-
-  Future<void> _updateCore(BuildContext context) async {
-    final trans = context.translate;
-
-    if (_isCoreUpdating) return;
-
-    final clashProvider = context.read<ClashProvider>();
-
-    setState(() {
-      _isCoreUpdating = true;
-    });
-
-    Logger.info('开始更新 Clash 核心');
-
-    if (context.mounted) {
-      ModernToast.info(trans.home.updating_core);
-    }
-
-    final wasRunning = clashProvider.isCoreRunning;
-    final currentConfigPath = clashProvider.currentConfigPath;
-
-    try {
-      Logger.info('检查核心版本');
-      final currentVersion = await CoreUpdateService.getCurrentCoreVersion();
-
-      final latestVersionTag = await CoreUpdateService.getLatestRelease();
-      final latestVersion = latestVersionTag.replaceFirst('v', '');
-
-      Logger.info('当前版本: ${currentVersion ?? "未知"}, 最新版本: $latestVersion');
-
-      if (currentVersion != null) {
-        final comparison = CoreUpdateService.compareVersions(
-          currentVersion,
-          latestVersion,
-        );
-        if (comparison >= 0) {
-          Logger.info('核心已是最新版本: $currentVersion');
-          if (context.mounted) {
-            ModernToast.info(trans.home.core_already_latest);
-          }
-          return;
-        }
-      }
-
-      Logger.info('开始下载核心文件');
-      final (version, coreBytes) = await CoreUpdateService.downloadCore();
-
-      Logger.info('核心下载成功: $version，准备替换');
-
-      if (wasRunning) {
-        Logger.info('停止核心以便更新');
-        await clashProvider.stop();
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
-
-      final coreDir = await CoreUpdateService.getCoreDirectory();
-      await CoreUpdateService.replaceCore(
-        coreDir: coreDir,
-        coreBytes: coreBytes,
-      );
-
-      Logger.info('核心文件替换成功');
-
-      if (wasRunning && currentConfigPath != null) {
-        Logger.info('重新启动核心');
-        await Future.delayed(const Duration(milliseconds: 500));
-        await clashProvider.start(configPath: currentConfigPath);
-      }
-
-      await CoreUpdateService.deleteOldCore(coreDir);
-
-      if (context.mounted) {
-        ModernToast.success(
-          trans.home.core_updated_to.replaceAll('{version}', version),
-        );
-      }
-    } catch (e) {
-      Logger.error('核心更新失败: $e');
-
-      if (wasRunning &&
-          !clashProvider.isCoreRunning &&
-          currentConfigPath != null) {
-        try {
-          Logger.info('文件替换失败，重新启动旧核心');
-          await Future.delayed(const Duration(milliseconds: 500));
-          await clashProvider.start(configPath: currentConfigPath);
-        } catch (e) {
-          Logger.error('重启核心失败: $e');
-        }
-      }
-
-      if (context.mounted) {
-        ModernToast.error(
-          trans.home.core_update_error.replaceAll('{error}', e.toString()),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCoreUpdating = false;
-        });
-      }
-    }
   }
 
   Future<void> _restartCore(BuildContext context) async {

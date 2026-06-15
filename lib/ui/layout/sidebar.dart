@@ -64,18 +64,18 @@ class HomeSidebar extends StatelessWidget {
                       onTap: () => provider.switchView(ContentView.connections),
                     ),
                     HomeSidebarItem(
-                      key: const ValueKey('sidebar_logs'),
-                      icon: Icons.description_rounded,
-                      title: trans.sidebar.logs,
-                      isSelected: currentView == ContentView.logs,
-                      onTap: () => provider.switchView(ContentView.logs),
-                    ),
-                    HomeSidebarItem(
                       key: const ValueKey('sidebar_rules'),
                       icon: Icons.rule_rounded,
                       title: trans.sidebar.rules,
                       isSelected: currentView == ContentView.rules,
                       onTap: () => provider.switchView(ContentView.rules),
+                    ),
+                    HomeSidebarItem(
+                      key: const ValueKey('sidebar_logs'),
+                      icon: Icons.description_rounded,
+                      title: trans.sidebar.logs,
+                      isSelected: currentView == ContentView.logs,
+                      onTap: () => provider.switchView(ContentView.logs),
                     ),
                     HomeSidebarItem(
                       key: const ValueKey('sidebar_subscriptions'),

@@ -231,7 +231,7 @@ class AppPreferences {
   // 获取最小化到托盘状态
   bool getMinimizeToTray() {
     _ensureInit();
-    return _prefs!.getBool(_kMinimizeToTray) ?? false; // 默认禁用
+    return _prefs!.getBool(_kMinimizeToTray) ?? true; // 默认禁用
   }
 
   // 保存最小化到托盘状态
@@ -243,7 +243,7 @@ class AppPreferences {
   // 获取应用日志启用状态
   bool getAppLogEnabled() {
     _ensureInit();
-    return _prefs!.getBool(_kAppLogEnabled) ?? true; // 默认启用
+    return _prefs!.getBool(_kAppLogEnabled) ?? false; // 默认启用
   }
 
   // 保存应用日志启用状态

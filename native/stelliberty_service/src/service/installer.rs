@@ -381,7 +381,12 @@ use std::process::Command;
 const SERVICE_FILE: &str = "/etc/systemd/system/StellibertyService.service";
 
 #[cfg(target_os = "linux")]
-fn get_service_unit(binary_path: &str) -> String {
+fn get_service_unit(
+    binary_path: &str,
+    socket_owner: Option<crate::unix_permissions::UnixSocketOwner>,
+) -> String {
+    let socket_owner_env = get_socket_owner_env(socket_owner);
+
     format!(
         r#"[Unit]
 Description=Stelliberty Service
@@ -390,7 +395,7 @@ After=network.target
 [Service]
 Type=simple
 UMask=0077
-ExecStart={binary_path}
+{socket_owner_env}ExecStart={binary_path}
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal
@@ -417,11 +422,67 @@ WantedBy=multi-user.target
 }
 
 #[cfg(target_os = "linux")]
+fn get_socket_owner_env(socket_owner: Option<crate::unix_permissions::UnixSocketOwner>) -> String {
+    socket_owner.map_or_else(String::new, |owner| {
+        format!(
+            "Environment={}={}\nEnvironment={}={}\n",
+            crate::unix_permissions::SERVICE_USER_UID_ENV,
+            owner.uid,
+            crate::unix_permissions::SERVICE_USER_GID_ENV,
+            owner.gid
+        )
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn is_service_unit_current(unit_content: &str) -> bool {
+    fs::read_to_string(SERVICE_FILE)
+        .map(|current| current == unit_content)
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+fn read_existing_socket_owner() -> Option<crate::unix_permissions::UnixSocketOwner> {
+    let unit_content = fs::read_to_string(SERVICE_FILE).ok()?;
+    let uid =
+        find_unit_environment_value(&unit_content, crate::unix_permissions::SERVICE_USER_UID_ENV)?;
+    let gid =
+        find_unit_environment_value(&unit_content, crate::unix_permissions::SERVICE_USER_GID_ENV)?;
+
+    Some(crate::unix_permissions::UnixSocketOwner::new(uid, gid))
+}
+
+#[cfg(target_os = "linux")]
+fn find_unit_environment_value(unit_content: &str, key: &str) -> Option<u32> {
+    let prefix = format!("Environment={}=", key);
+
+    unit_content
+        .lines()
+        .find_map(|line| line.strip_prefix(&prefix))
+        .and_then(|value| value.parse::<u32>().ok())
+}
+
+#[cfg(target_os = "linux")]
 pub fn install_service() -> Result<()> {
     println!("正在安装 Stelliberty Service (systemd)...");
 
     let service_binary = std::env::current_exe().context("无法获取当前程序路径")?;
     println!("服务程序: {}", service_binary.display());
+
+    let socket_owner =
+        crate::unix_permissions::resolve_invoking_user().or_else(read_existing_socket_owner);
+    if let Some(owner) = socket_owner {
+        println!(
+            "服务 Socket 将允许桌面用户访问: UID={}, GID={}",
+            owner.uid, owner.gid
+        );
+    } else {
+        println!("警告: 未识别桌面用户，服务 Socket 将保留默认所有者");
+    }
+
+    let private_service_binary = get_service_private_binary()?;
+    let unit_content =
+        get_service_unit(&private_service_binary.display().to_string(), socket_owner);
 
     // 检查服务是否已安装
     if Path::new(SERVICE_FILE).exists() {
@@ -429,9 +490,15 @@ pub fn install_service() -> Result<()> {
 
         // 检查是否需要更新
         let needs_update = check_service_needs_update(&service_binary)?;
+        let unit_needs_update = !is_service_unit_current(&unit_content);
 
-        if needs_update {
-            println!("检测到服务需要更新");
+        if needs_update || unit_needs_update {
+            if needs_update {
+                println!("检测到服务程序需要更新");
+            }
+            if unit_needs_update {
+                println!("检测到 systemd unit 需要更新");
+            }
 
             // 获取当前服务状态
             let status = Command::new("systemctl")
@@ -459,10 +526,19 @@ pub fn install_service() -> Result<()> {
                 println!("服务已停止");
             }
 
-            // 更新服务二进制文件（原地覆盖）
-            println!("正在更新服务文件...");
-            update_service_binary(&service_binary)?;
-            println!("服务文件更新成功");
+            if needs_update {
+                // 更新服务二进制文件（原地覆盖）
+                println!("正在更新服务文件...");
+                update_service_binary(&service_binary)?;
+                println!("服务文件更新成功");
+            }
+
+            if unit_needs_update {
+                println!("正在更新 systemd unit...");
+                fs::write(SERVICE_FILE, &unit_content)
+                    .context("更新 systemd unit 文件失败，请确保以 root 身份运行")?;
+                println!("systemd unit 更新成功");
+            }
 
             // 重载 systemd 配置
             println!("正在重载 systemd...");
@@ -516,8 +592,6 @@ pub fn install_service() -> Result<()> {
     update_service_binary(&service_binary)?;
 
     // 注册服务（使用私有目录中的二进制文件）
-    let private_service_binary = get_service_private_binary()?;
-    let unit_content = get_service_unit(&private_service_binary.display().to_string());
     fs::write(SERVICE_FILE, unit_content)
         .context("创建 systemd unit 文件失败，请确保以 root 身份运行")?;
 

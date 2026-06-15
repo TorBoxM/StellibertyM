@@ -176,13 +176,11 @@ impl IpcServer {
         let listener = UnixListener::bind(IPC_PATH)
             .map_err(|e| IpcError::Other(format!("创建 Unix Socket 失败: {}", e)))?;
 
-        // 设置 Unix Socket 文件权限为 0600（仅所有者可读写）
+        // root 服务创建后，桌面用户仍需访问控制通道。
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(IPC_PATH, std::fs::Permissions::from_mode(0o600))
-                .map_err(|e| IpcError::Other(format!("设置 Unix Socket 权限失败: {}", e)))?;
-            log::info!("Unix Socket 权限已设置为 0600（仅所有者可读写）");
+            crate::unix_permissions::apply_socket_permissions(IPC_PATH, 0o600)
+                .map_err(IpcError::Other)?;
         }
 
         // 发送就绪信号

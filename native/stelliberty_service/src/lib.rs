@@ -6,6 +6,8 @@ pub mod clash;
 pub mod ipc;
 pub mod logger;
 pub mod service;
+#[cfg(unix)]
+pub mod unix_permissions;
 
 use anyhow::Result;
 use std::sync::Arc;

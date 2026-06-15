@@ -70,6 +70,9 @@ impl ClashManager {
             log::warn!("清理孤立进程失败：{}", e);
         }
 
+        #[cfg(unix)]
+        Self::cleanup_clash_api_socket();
+
         log::info!("启动 Clash 核心");
         log::info!("核心路径: {}", core_path);
         log::info!("配置文件: {}", config_path);
@@ -157,7 +160,64 @@ impl ClashManager {
         }) = Some(std::time::Instant::now());
 
         log::info!("Clash 核心已启动，PID: {}", pid);
+
+        #[cfg(unix)]
+        if let Err(e) = Self::wait_and_apply_clash_api_socket_permissions() {
+            log::warn!("修正 Clash API Socket 权限失败：{}", e);
+        }
+
         Ok(())
+    }
+
+    #[cfg(unix)]
+    fn clash_api_socket_path() -> &'static str {
+        #[cfg(debug_assertions)]
+        {
+            "/tmp/stelliberty_dev.sock"
+        }
+
+        #[cfg(not(debug_assertions))]
+        {
+            "/tmp/stelliberty.sock"
+        }
+    }
+
+    #[cfg(unix)]
+    fn cleanup_clash_api_socket() {
+        let socket_path = Self::clash_api_socket_path();
+
+        match std::fs::remove_file(socket_path) {
+            Ok(()) => {
+                log::debug!("已清理旧 Clash API Socket：{}", socket_path);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => {
+                log::warn!("清理旧 Clash API Socket 失败：{}：{}", socket_path, e);
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    fn wait_and_apply_clash_api_socket_permissions() -> Result<(), String> {
+        use std::path::Path;
+        use std::time::{Duration, Instant};
+
+        const WAIT_TIMEOUT: Duration = Duration::from_secs(5);
+        const POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+        let socket_path = Self::clash_api_socket_path();
+        let start = Instant::now();
+
+        while start.elapsed() <= WAIT_TIMEOUT {
+            if Path::new(socket_path).exists() {
+                crate::unix_permissions::apply_socket_permissions(socket_path, 0o600)?;
+                return Ok(());
+            }
+
+            std::thread::sleep(POLL_INTERVAL);
+        }
+
+        Err(format!("等待 Clash API Socket 创建超时：{}", socket_path))
     }
 
     // 强制停止 Clash（Windows 使用 taskkill）

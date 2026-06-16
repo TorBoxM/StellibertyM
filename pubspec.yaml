@@ -3,7 +3,7 @@ description: "星辰自由"
 
 publish_to: 'none'
 
-version: 101.2.290
+version: 10.3.0
 
 environment:
   sdk: '^3.8.0'
